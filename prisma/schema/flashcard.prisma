@@ -1,34 +1,39 @@
 // ─── Flashcard (Ôn tập) ───────────────────────────────────────
 
 model FlashcardSet {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
+  description String?    // Mô tả bộ flashcard
   subjectId   String
-  classId     String
+  gradeId     String     // Lớp học
+  topicName   String     // Chủ đề tự do (VD: "Phương trình bậc 2")
+  difficulty  Difficulty // Độ khó ở cấp bộ
   createdById String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   subject   Subject @relation(fields: [subjectId], references: [id])
-  class     Class   @relation(fields: [classId], references: [id])
+  grade     Grade   @relation(fields: [gradeId], references: [id])
   createdBy User    @relation(fields: [createdById], references: [id])
 
-  items    FlashcardItem[]
+  cards    FlashcardCard[]
   sessions FlashcardSession[]
 
   @@map("flashcard_sets")
 }
 
-// Các câu hỏi trong bộ flashcard (kèm thứ tự)
-model FlashcardItem {
-  id         String @id @default(cuid())
-  setId      String
-  questionId String
-  order      Int
+// Mỗi card là 1 ảnh (front) + caption tùy chọn (back)
+model FlashcardCard {
+  id        String   @id @default(cuid())
+  setId     String
+  imageUrl  String   // Cloudinary URL
+  caption   String?  // Chú thích / mặt sau (tùy chọn)
+  order     Int
+  createdAt DateTime @default(now())
 
-  set      FlashcardSet @relation(fields: [setId], references: [id])
-  question Question     @relation(fields: [questionId], references: [id])
+  set FlashcardSet @relation(fields: [setId], references: [id], onDelete: Cascade)
 
-  @@map("flashcard_items")
+  @@map("flashcard_cards")
 }
 
 // Phiên ôn tập của học sinh

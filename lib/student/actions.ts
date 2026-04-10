@@ -12,7 +12,10 @@ export async function startExamAction(examId: string): Promise<void> {
   const studentId = session.user.id;
 
   // Kiểm tra học sinh có trong lớp được giao đề
-  const exam = await prisma.exam.findUnique({ where: { id: examId } });
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: { id: true, classId: true, allowRetake: true },
+  });
   if (!exam) redirect("/student/exams");
 
   const inClass = await prisma.studentClass.findFirst({
@@ -28,11 +31,11 @@ export async function startExamAction(examId: string): Promise<void> {
     redirect(`/student/exams/${examId}/take?attemptId=${existing.id}`);
   }
 
-  // Không cho thi lại nếu đã submit
+  // Không cho thi lại nếu đã submit (trừ khi allowRetake = true)
   const submitted = await prisma.examAttempt.findFirst({
     where: { studentId, examId, submittedAt: { not: null } },
   });
-  if (submitted) {
+  if (submitted && !exam.allowRetake) {
     redirect(`/student/exams/${examId}/results/${submitted.id}`);
   }
 
@@ -109,4 +112,38 @@ export async function submitExamAction(
   });
 
   redirect(`/student/exams/${attempt.examId}/results/${attemptId}`);
+}
+
+// ── Bắt đầu / hoàn thành phiên flashcard ─────────────────────
+export async function startFlashcardSessionAction(
+  setId: string,
+): Promise<{ sessionId: string }> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  const studentId = session.user.id;
+
+  // Nếu đang có session chưa hoàn thành → dùng lại
+  const existing = await prisma.flashcardSession.findFirst({
+    where: { setId, studentId, completedAt: null },
+    orderBy: { startedAt: "desc" },
+  });
+  if (existing) return { sessionId: existing.id };
+
+  const created = await prisma.flashcardSession.create({
+    data: { setId, studentId },
+  });
+  return { sessionId: created.id };
+}
+
+export async function completeFlashcardSessionAction(
+  sessionId: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  await prisma.flashcardSession.updateMany({
+    where: { id: sessionId, studentId: session.user.id },
+    data: { completedAt: new Date() },
+  });
 }

@@ -33,7 +33,9 @@ export async function suggestQuestions(params: {
   count?: number;
 }): Promise<SuggestedQuestion[]> {
   const { subject, topic, difficulty, grade, count = 3 } = params;
-  const difficultyLabel = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" }[difficulty];
+  const difficultyLabel = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" }[
+    difficulty
+  ];
 
   const userMessage = `Trả về JSON array gồm ${count} câu hỏi trắc nghiệm. Môn: ${subject}. Chủ đề: "${topic}". Độ khó: ${difficultyLabel}. Cấp học: ${grade}. Mỗi phương án A/B/C/D đủ dài và gây nhầm lẫn hợp lý. Chỉ JSON, không text khác.`;
 
@@ -47,7 +49,8 @@ export async function suggestQuestions(params: {
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "[]";
   // Extract JSON array from anywhere in the response (Claude may prepend explanation)
   const match = raw.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error("No JSON array in response: " + raw.substring(0, 200));
+  if (!match)
+    throw new Error("No JSON array in response: " + raw.substring(0, 200));
   return JSON.parse(match[0]) as SuggestedQuestion[];
 }
 
@@ -73,8 +76,18 @@ export type FeedbackParams = {
   topicBreakdown: { topic: string; correct: number; total: number }[];
 };
 
-export async function generateExamFeedback(params: FeedbackParams): Promise<string> {
-  const { studentName, examTitle, subject, score, correct, total, topicBreakdown } = params;
+export async function generateExamFeedback(
+  params: FeedbackParams,
+): Promise<string> {
+  const {
+    studentName,
+    examTitle,
+    subject,
+    score,
+    correct,
+    total,
+    topicBreakdown,
+  } = params;
 
   const breakdown = topicBreakdown
     .map((t) => `  – ${t.topic}: ${t.correct}/${t.total} câu đúng`)

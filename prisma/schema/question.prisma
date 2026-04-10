@@ -26,9 +26,8 @@ model Question {
   subject   Subject @relation(fields: [subjectId], references: [id])
   createdBy User    @relation(fields: [createdById], references: [id])
 
-  examQuestions  ExamQuestion[]
-  flashcardItems FlashcardItem[]
-  examAnswers    ExamAnswer[]
+  examQuestions ExamQuestion[]
+  examAnswers   ExamAnswer[]
 
   @@map("questions")
 }

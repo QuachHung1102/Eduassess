@@ -72,7 +72,7 @@ export default async function ExamResultsPage({
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
                 <tr>
-                  {["Học sinh", "Email", "Bắt đầu", "Nộp lúc", "Điểm", "Trạng thái"].map((h) => (
+                  {["Học sinh", "Email", "Bắt đầu", "Nộp lúc", "Điểm", "Trạng thái", ""].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide"
@@ -131,6 +131,16 @@ export default async function ExamResultsPage({
                           <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-medium">
                             Đang làm
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isSubmitted && (
+                          <Link
+                            href={`/teacher/exams/${id}/results/${attempt.id}`}
+                            className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                          >
+                            Chi tiết →
+                          </Link>
                         )}
                       </td>
                     </tr>

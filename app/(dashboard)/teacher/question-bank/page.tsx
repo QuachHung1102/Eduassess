@@ -173,6 +173,9 @@ export default async function QuestionBankPage({
                   <tr key={q.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 max-w-xs">
                       <p className="truncate text-gray-900" title={q.content}>{q.content}</p>
+                      {q.isUnivExam && (
+                        <span className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">🎓 Ôn thi ĐH</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{q.subject.name}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">

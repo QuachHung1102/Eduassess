@@ -231,6 +231,81 @@ export async function getAdminClassDetail(classId: string) {
   });
 }
 
+// ── Flashcards ───────────────────────────────────────────────
+export async function getAdminFlashcardSets(filters?: {
+  subjectId?: string;
+  gradeId?: string;
+  topicName?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+  search?: string;
+}) {
+  return prisma.flashcardSet.findMany({
+    where: {
+      ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+      ...(filters?.gradeId ? { gradeId: filters.gradeId } : {}),
+      ...(filters?.topicName ? { topicName: filters.topicName } : {}),
+      ...(filters?.difficulty ? { difficulty: filters.difficulty } : {}),
+      ...(filters?.search
+        ? {
+            OR: [
+              { title: { contains: filters.search, mode: "insensitive" } },
+              { topicName: { contains: filters.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      subject: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
+      createdBy: { select: { name: true, role: true } },
+      cards: {
+        select: { id: true, imageUrl: true },
+        orderBy: { order: "asc" },
+        take: 1,
+      },
+      _count: { select: { cards: true, sessions: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getAdminFlashcardSetDetail(setId: string) {
+  return prisma.flashcardSet.findUnique({
+    where: { id: setId },
+    include: {
+      subject: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
+      createdBy: { select: { name: true, role: true } },
+      cards: { orderBy: { order: "asc" } },
+      _count: { select: { sessions: true } },
+    },
+  });
+}
+
+export async function getAdminFlashcardFilters() {
+  const [subjects, grades, topics] = await Promise.all([
+    prisma.subject.findMany({
+      where: { flashcardSets: { some: {} } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.grade.findMany({
+      where: { flashcardSets: { some: {} } },
+      orderBy: [{ gradeNumber: "asc" }, { level: "asc" }],
+    }),
+    prisma.flashcardSet.findMany({
+      distinct: ["topicName"],
+      select: { topicName: true },
+      orderBy: { topicName: "asc" },
+    }),
+  ]);
+
+  return {
+    subjects,
+    grades,
+    topics: topics.map((item) => item.topicName),
+  };
+}
+
 // ── Teacher permissions overview ─────────────────────────────
 export async function getAdminTeacherPermissions(): Promise<{
   id: string;

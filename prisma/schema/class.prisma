@@ -9,7 +9,6 @@ model Class {
   teacherClasses TeacherClass[]
   studentClasses StudentClass[]
   exams          Exam[]
-  flashcardSets  FlashcardSet[]
 
   @@map("classes")
 }

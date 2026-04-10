@@ -220,6 +220,48 @@ export async function getTeacherExamAttempts(examId: string) {
   return { exam, attempts, totalQuestions };
 }
 
+// Chi tiết bài làm của một học sinh (teacher xem)
+export async function getTeacherAttemptDetail(attemptId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const attempt = await prisma.examAttempt.findUnique({
+    where: { id: attemptId },
+    include: {
+      student: { select: { name: true, email: true } },
+      exam: {
+        select: {
+          id: true,
+          title: true,
+          createdById: true,
+          examQuestions: {
+            orderBy: { order: "asc" },
+            include: {
+              question: {
+                select: {
+                  id: true,
+                  content: true,
+                  options: true,
+                  explanation: true,
+                  difficulty: true,
+                  topic: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+      answers: true,
+    },
+  });
+
+  if (!attempt) return null;
+  // Verify exam belongs to this teacher
+  if (attempt.exam.createdById !== session.user.id) return null;
+
+  return attempt;
+}
+
 // Lấy một câu hỏi theo id (chỉ của giáo viên hiện tại)
 export async function getTeacherQuestionById(questionId: string) {
   const session = await auth();
@@ -232,4 +274,120 @@ export async function getTeacherQuestionById(questionId: string) {
       subject: true,
     },
   });
+}
+
+// ── Flashcard management (teacher) ───────────────────────────
+
+export async function getTeacherFlashcardSets() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const sets = await prisma.flashcardSet.findMany({
+    include: {
+      subject: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
+      createdBy: { select: { id: true, name: true, role: true } },
+      cards: {
+        select: { id: true, imageUrl: true },
+        orderBy: { order: "asc" },
+        take: 1,
+      },
+      _count: { select: { cards: true, sessions: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return sets.map((set) => ({
+    ...set,
+    canManage: set.createdById === session.user.id,
+  }));
+}
+
+export async function getTeacherFlashcardSetDetail(setId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const set = await prisma.flashcardSet.findFirst({
+    where: { id: setId },
+    include: {
+      subject: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
+      createdBy: { select: { id: true, name: true, role: true } },
+      cards: {
+        orderBy: { order: "asc" },
+      },
+      _count: { select: { sessions: true } },
+    },
+  });
+
+  if (!set) return null;
+
+  return {
+    ...set,
+    canManage: set.createdById === session.user.id,
+  };
+}
+
+export async function getTeacherFlashcardFilters() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { subjects: [], grades: [], topics: [] };
+  }
+
+  const [subjects, grades, topics] = await Promise.all([
+    prisma.subject.findMany({
+      where: {
+        flashcardSets: {
+          some: { createdById: session.user.id },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.grade.findMany({
+      where: {
+        flashcardSets: {
+          some: { createdById: session.user.id },
+        },
+      },
+      orderBy: [{ gradeNumber: "asc" }, { level: "asc" }],
+    }),
+    prisma.flashcardSet.findMany({
+      where: { createdById: session.user.id },
+      distinct: ["topicName"],
+      select: { topicName: true },
+      orderBy: { topicName: "asc" },
+    }),
+  ]);
+
+  return {
+    subjects,
+    grades,
+    topics: topics.map((item) => item.topicName),
+  };
+}
+
+export async function getTeacherFlashcardRandomSet(filters?: {
+  subjectId?: string;
+  gradeId?: string;
+  topicName?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+}) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const sets = await prisma.flashcardSet.findMany({
+    where: {
+      createdById: session.user.id,
+      ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+      ...(filters?.gradeId ? { gradeId: filters.gradeId } : {}),
+      ...(filters?.topicName ? { topicName: filters.topicName } : {}),
+      ...(filters?.difficulty ? { difficulty: filters.difficulty } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (sets.length === 0) return null;
+
+  const randomIndex = Math.floor(Math.random() * sets.length);
+  return getTeacherFlashcardSetDetail(sets[randomIndex].id);
 }

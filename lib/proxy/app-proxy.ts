@@ -7,7 +7,7 @@ export function appProxy(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
   const role = req.auth?.user?.role as Role | undefined;
 
-  if (role && (pathname === "/login" || pathname === "/register")) {
+  if (role && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL(ROLE_HOME[role], req.url));
   }
 

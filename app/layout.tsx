@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const beVietnamPro = Be_Vietnam_Pro({
+  variable: "--font-be-vietnam-pro",
+  subsets: ["latin", "vietnamese"],
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -14,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "EduAssess - Công cụ Hỗ trợ Đánh giá Chuẩn Đầu Ra",
-  description: "Nền tảng hỗ trợ giáo viên đánh giá và phân hóa học sinh các môn Khoa học Tự nhiên",
+  description:
+    "Nền tảng học tập trực quan giúp giáo viên đánh giá chuẩn đầu ra và giúp học sinh ôn tập chủ động hơn mỗi ngày.",
 };
 
 export default function RootLayout({
@@ -24,8 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="vi"
+      className={`${beVietnamPro.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

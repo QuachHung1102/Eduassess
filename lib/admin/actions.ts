@@ -38,6 +38,18 @@ export async function adminDeleteQuestionAction(questionId: string) {
   return { success: true };
 }
 
+// ── Delete an exam ────────────────────────────────────────────
+export async function adminDeleteExamAction(examId: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  await prisma.exam.delete({ where: { id: examId } });
+  revalidatePath("/admin/exams");
+  return { success: true };
+}
+
 // ── Approve / Reject a question ───────────────────────────────
 export async function adminUpdateQuestionStatusAction(
   questionId: string,

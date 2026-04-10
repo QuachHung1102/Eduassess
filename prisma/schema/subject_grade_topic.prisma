@@ -19,8 +19,9 @@ model Grade {
   level       SchoolLevel
   gradeNumber Int         // 1–12
 
-  topics  Topic[]
-  classes Class[]
+  topics        Topic[]
+  classes       Class[]
+  flashcardSets FlashcardSet[]
 
   @@unique([level, gradeNumber])
   @@map("grades")

@@ -36,9 +36,7 @@ export async function getStudentStats() {
   const scores = submittedAttempts.map((a) => a.score).filter((s): s is number => s !== null);
   const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
 
-  const flashcardSets = await prisma.flashcardSet.count({
-    where: { classId: { in: classIds } },
-  });
+  const flashcardSets = await prisma.flashcardSet.count();
 
   return { pendingExams, completedExams, avgScore, flashcardSets };
 }
@@ -242,25 +240,129 @@ export async function getStudentProgress() {
   });
 }
 
-// ── Flashcard sets for student's classes ─────────────────────
-export async function getStudentFlashcardSets() {
+// ── Flashcard sets available to all students ─────────────────
+export async function getStudentFlashcardSets(filters?: {
+  subjectId?: string;
+  gradeId?: string;
+  topicName?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+  search?: string;
+}) {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  const studentClasses = await prisma.studentClass.findMany({
-    where: { studentId: session.user.id },
-    select: { classId: true },
-  });
-  const classIds = studentClasses.map((sc) => sc.classId);
-
   return prisma.flashcardSet.findMany({
-    where: { classId: { in: classIds } },
+    where: {
+      ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+      ...(filters?.gradeId ? { gradeId: filters.gradeId } : {}),
+      ...(filters?.topicName ? { topicName: filters.topicName } : {}),
+      ...(filters?.difficulty ? { difficulty: filters.difficulty } : {}),
+      ...(filters?.search
+        ? {
+            OR: [
+              { title: { contains: filters.search, mode: "insensitive" } },
+              { topicName: { contains: filters.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     include: {
       subject: { select: { name: true } },
-      class: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
       createdBy: { select: { name: true } },
-      _count: { select: { items: true, sessions: true } },
+      cards: {
+        select: { id: true, imageUrl: true, caption: true },
+        orderBy: { order: "asc" },
+        take: 1,
+      },
+      _count: { select: { cards: true, sessions: true } },
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function getStudentFlashcardSetDetail(setId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const studentId = session.user.id;
+
+  const set = await prisma.flashcardSet.findUnique({
+    where: { id: setId },
+    include: {
+      subject: { select: { name: true } },
+      grade: { select: { gradeNumber: true, level: true } },
+      createdBy: { select: { name: true } },
+      cards: {
+        orderBy: { order: "asc" },
+      },
+    },
+  });
+  if (!set) return null;
+
+  // Last session stats
+  const lastSession = await prisma.flashcardSession.findFirst({
+    where: { setId, studentId },
+    orderBy: { startedAt: "desc" },
+  });
+
+  const totalSessions = await prisma.flashcardSession.count({
+    where: { setId, studentId },
+  });
+
+  return { ...set, lastSession, totalSessions };
+}
+
+export async function getStudentFlashcardFilters() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { subjects: [], grades: [], topics: [] };
+  }
+
+  const [subjects, grades, topics] = await Promise.all([
+    prisma.subject.findMany({
+      where: { flashcardSets: { some: {} } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.grade.findMany({
+      where: { flashcardSets: { some: {} } },
+      orderBy: [{ gradeNumber: "asc" }, { level: "asc" }],
+    }),
+    prisma.flashcardSet.findMany({
+      distinct: ["topicName"],
+      select: { topicName: true },
+      orderBy: { topicName: "asc" },
+    }),
+  ]);
+
+  return {
+    subjects,
+    grades,
+    topics: topics.map((item) => item.topicName),
+  };
+}
+
+export async function getRandomStudentFlashcardSet(filters?: {
+  subjectId?: string;
+  gradeId?: string;
+  topicName?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+}) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const sets = await prisma.flashcardSet.findMany({
+    where: {
+      ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+      ...(filters?.gradeId ? { gradeId: filters.gradeId } : {}),
+      ...(filters?.topicName ? { topicName: filters.topicName } : {}),
+      ...(filters?.difficulty ? { difficulty: filters.difficulty } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (sets.length === 0) return null;
+
+  const randomIndex = Math.floor(Math.random() * sets.length);
+  return getStudentFlashcardSetDetail(sets[randomIndex].id);
 }

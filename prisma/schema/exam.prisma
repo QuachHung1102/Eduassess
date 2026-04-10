@@ -8,6 +8,7 @@ model Exam {
   createdById String
   duration    Int      // Thời gian làm bài (phút)
   showAnswer  Boolean  @default(true) // Cho phép học sinh xem đáp án sau khi nộp
+  allowRetake Boolean  @default(false) // Cho phép làm lại
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

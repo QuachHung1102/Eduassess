@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminExams, getAdminSubjects } from "@/lib/admin/queries";
+import { AdminDeleteExamButton } from "./AdminDeleteExamButton";
 
 const PAGE_SIZE = 20;
 
@@ -134,12 +135,15 @@ export default async function AdminExamsPage({
                       {exam.duration} phút
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/exams/${exam.id}`}
-                        className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                      >
-                        Xem chi tiết
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/admin/exams/${exam.id}`}
+                          className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                        >
+                          Xem chi tiết
+                        </Link>
+                        <AdminDeleteExamButton examId={exam.id} />
+                      </div>
                     </td>
                   </tr>
                 ))

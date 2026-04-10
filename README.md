@@ -3,6 +3,7 @@
 Nền tảng quản lý kiểm tra và đánh giá học sinh dành cho các trường học. Hỗ trợ ba vai trò: **Admin**, **Giáo viên**, và **Học sinh**.
 
 **Tính năng chính:**
+
 - Ngân hàng câu hỏi theo môn học, khối lớp, chủ đề và độ khó
 - Gợi ý câu hỏi tự động bằng AI (Claude) với hỗ trợ công thức toán LaTeX
 - Giáo viên tạo và quản lý bài kiểm tra; học sinh làm bài trực tuyến

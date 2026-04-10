@@ -13,6 +13,7 @@ export async function createExamAction(formData: FormData) {
   const classId = formData.get("classId") as string;
   const duration = parseInt(formData.get("duration") as string, 10);
   const showAnswer = formData.get("showAnswer") === "true";
+  const allowRetake = formData.get("allowRetake") === "true";
   const easyCount = parseInt(formData.get("easyCount") as string, 10) || 0;
   const mediumCount = parseInt(formData.get("mediumCount") as string, 10) || 0;
   const hardCount = parseInt(formData.get("hardCount") as string, 10) || 0;
@@ -28,21 +29,24 @@ export async function createExamAction(formData: FormData) {
 
   // Lấy câu hỏi ngẫu nhiên theo độ khó từ ngân hàng (APPROVED)
   const [easy, medium, hard] = await Promise.all([
-    prisma.question.findMany({
-      where: { subjectId, difficulty: "EASY", status: "APPROVED" },
-      take: easyCount,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.question.findMany({
-      where: { subjectId, difficulty: "MEDIUM", status: "APPROVED" },
-      take: mediumCount,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.question.findMany({
-      where: { subjectId, difficulty: "HARD", status: "APPROVED" },
-      take: hardCount,
-      orderBy: { createdAt: "desc" },
-    }),
+    easyCount > 0
+      ? prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM questions
+          WHERE "subjectId" = ${subjectId} AND difficulty = 'EASY' AND status = 'APPROVED'
+          ORDER BY RANDOM() LIMIT ${easyCount}`
+      : [],
+    mediumCount > 0
+      ? prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM questions
+          WHERE "subjectId" = ${subjectId} AND difficulty = 'MEDIUM' AND status = 'APPROVED'
+          ORDER BY RANDOM() LIMIT ${mediumCount}`
+      : [],
+    hardCount > 0
+      ? prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM questions
+          WHERE "subjectId" = ${subjectId} AND difficulty = 'HARD' AND status = 'APPROVED'
+          ORDER BY RANDOM() LIMIT ${hardCount}`
+      : [],
   ]);
 
   const allQuestions = [...easy, ...medium, ...hard];
@@ -59,6 +63,7 @@ export async function createExamAction(formData: FormData) {
       classId,
       duration,
       showAnswer,
+      allowRetake,
       createdById: session.user.id,
       examQuestions: {
         create: allQuestions.map((q, i) => ({

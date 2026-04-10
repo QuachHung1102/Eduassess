@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import AuthShell from "@/components/auth/AuthShell";
 import { registerAction } from "@/lib/auth/actions/register";
 
 export default function RegisterPage() {
@@ -24,26 +25,28 @@ export default function RegisterPage() {
     }
   }
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-blue-600">
-            EduAssess
+    <AuthShell
+      eyebrow="Tạo tài khoản"
+      title="Bắt đầu với một trải nghiệm học tập gọn gàng hơn"
+      description="Tạo tài khoản để vào hệ thống, làm bài kiểm tra, ôn tập bằng flashcard và xem tiến bộ của bạn rõ ràng hơn theo từng môn."
+      footer={
+        <>
+          Đã có tài khoản? {" "}
+          <Link href="/login" className="font-semibold text-sky-700 hover:text-sky-800">
+            Đăng nhập
           </Link>
-          <p className="text-gray-500 text-sm mt-2">Tạo tài khoản mới</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        </>
+      }
+    >
+      <div className="rounded-[1.75rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:p-5">
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
               </div>
             )}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700">
                 Họ và tên
               </label>
               <input
@@ -53,12 +56,12 @@ export default function RegisterPage() {
                 autoComplete="name"
                 required
                 placeholder="Nguyễn Văn A"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                className="field-input"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
                 Email
               </label>
               <input
@@ -68,19 +71,19 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 placeholder="ten@truong.edu.vn"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                className="field-input"
               />
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="role" className="mb-2 block text-sm font-semibold text-slate-700">
                 Vai trò
               </label>
               <select
                 id="role"
                 name="role"
                 defaultValue="STUDENT"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                className="field-input"
               >
                 <option value="TEACHER">Giáo viên</option>
                 <option value="STUDENT">Học sinh</option>
@@ -88,7 +91,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-700">
                 Mật khẩu
               </label>
               <input
@@ -98,12 +101,12 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
                 placeholder="Tối thiểu 8 ký tự"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                className="field-input"
               />
             </div>
 
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="confirm-password" className="mb-2 block text-sm font-semibold text-slate-700">
                 Xác nhận mật khẩu
               </label>
               <input
@@ -113,27 +116,19 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
                 placeholder="Nhập lại mật khẩu"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                className="field-input"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="primary-button w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </button>
           </form>
-        </div>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Đã có tài khoản?{" "}
-          <Link href="/login" className="text-blue-600 font-medium hover:underline">
-            Đăng nhập
-          </Link>
-        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
