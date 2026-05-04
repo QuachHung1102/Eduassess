@@ -1,16 +1,17 @@
 // ─── Exam (Đề kiểm tra & Bài làm học sinh) ───────────────────
 
 model Exam {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   subjectId   String
   classId     String
   createdById String
-  duration    Int      // Thời gian làm bài (phút)
-  showAnswer  Boolean  @default(true) // Cho phép học sinh xem đáp án sau khi nộp
-  allowRetake Boolean  @default(false) // Cho phép làm lại
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  duration    Int       // Thời gian làm bài (phút)
+  showAnswer  Boolean   @default(true) // Cho phép học sinh xem đáp án sau khi nộp
+  allowRetake Boolean   @default(false) // Cho phép làm lại
+  dueAt       DateTime? // Thời hạn nộp bài (NULL = không giới hạn)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   subject   Subject @relation(fields: [subjectId], references: [id])
   class     Class   @relation(fields: [classId], references: [id])
@@ -43,6 +44,7 @@ model ExamAttempt {
   startedAt   DateTime  @default(now())
   submittedAt DateTime? // NULL = chưa nộp
   score       Float?    // % điểm (0–100), NULL = chưa chấm
+  aiFeedback  String?   // Nhận xét AI — cache lại, không regenerate cho cùng lượt nộp
 
   exam    Exam @relation(fields: [examId], references: [id])
   student User @relation(fields: [studentId], references: [id])

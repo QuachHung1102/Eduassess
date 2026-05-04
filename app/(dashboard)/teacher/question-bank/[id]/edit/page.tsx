@@ -25,7 +25,7 @@ export default async function EditQuestionPage({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <EditQuestionForm
             questionId={question.id}
             initialData={{

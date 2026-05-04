@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getStudentExams } from "@/lib/student/queries";
 import { startExamAction } from "@/lib/student/actions";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faTrophy, faBookOpen, faSchool, faFilePen, faClock, faCalendar, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 
 export default async function StudentExamsPage({
   searchParams,
@@ -42,31 +44,43 @@ export default async function StudentExamsPage({
         <div className="space-y-3">
           {pending.length === 0 ? (
             <div className="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-3xl mb-2">🎉</div>
+              <div className="text-3xl mb-2"><FaIcon icon={faTrophy} /></div>
               <p>Không có bài nào đang chờ làm</p>
             </div>
           ) : (
             pending.map((exam) => (
-              <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
+              <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <Link href={`/student/exams/${exam.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                     {exam.title}
                   </Link>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                    <span>📚 {exam.subject.name}</span>
-                    <span>🏫 Lớp {exam.class.name}</span>
-                    <span>📝 {exam._count.examQuestions} câu</span>
-                    <span>⏱ {exam.duration} phút</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><FaIcon icon={faBookOpen} />{exam.subject.name}</span>
+                    <span className="flex items-center gap-1"><FaIcon icon={faSchool} />Lớp {exam.class.name}</span>
+                    <span className="flex items-center gap-1"><FaIcon icon={faFilePen} />{exam._count.examQuestions} câu</span>
+                    <span className="flex items-center gap-1"><FaIcon icon={faClock} />{exam.duration} phút</span>
+                    {exam.dueAt && (() => {
+                      const due = new Date(exam.dueAt);
+                      const now = new Date();
+                      const hoursLeft = (due.getTime() - now.getTime()) / 3600000;
+                      const isUrgent = hoursLeft < 24;
+                      return (
+                        <span className={`flex items-center gap-1 ${isUrgent ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                          <FaIcon icon={faHourglassHalf} />
+                          Hạn: {due.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
-                <div className="shrink-0 flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {exam.attempt && exam.attempt.submittedAt === null && (
-                    <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">Đang làm dở</span>
+                    <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full whitespace-nowrap">Đang làm dở</span>
                   )}
                   <form action={startExamAction.bind(null, exam.id)}>
                     <button
                       type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
                     >
                       {exam.attempt && exam.attempt.submittedAt === null ? "Tiếp tục" : "Bắt đầu"}
                     </button>
@@ -83,7 +97,7 @@ export default async function StudentExamsPage({
         <div className="space-y-3">
           {completed.length === 0 ? (
             <div className="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-3xl mb-2">📝</div>
+              <div className="text-3xl mb-2"><FaIcon icon={faFilePen} /></div>
               <p>Chưa hoàn thành bài nào</p>
             </div>
           ) : (
@@ -92,24 +106,24 @@ export default async function StudentExamsPage({
               const scoreColor =
                 score === null ? "text-gray-500" : score >= 80 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600";
               return (
-                <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
+                <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900">{exam.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <span>📚 {exam.subject.name}</span>
-                      <span>🏫 Lớp {exam.class.name}</span>
-                      <span>🗓 {exam.attempt.submittedAt ? new Date(exam.attempt.submittedAt).toLocaleDateString("vi-VN") : ""}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
+                      <span className="flex items-center gap-1"><FaIcon icon={faBookOpen} />{exam.subject.name}</span>
+                      <span className="flex items-center gap-1"><FaIcon icon={faSchool} />Lớp {exam.class.name}</span>
+                      <span className="flex items-center gap-1"><FaIcon icon={faCalendar} />{exam.attempt.submittedAt ? new Date(exam.attempt.submittedAt).toLocaleDateString("vi-VN") : ""}</span>
                     </div>
                   </div>
-                  <div className="shrink-0 flex items-center gap-4">
-                    <span className={`text-xl font-bold ${scoreColor}`}>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className={`text-xl font-bold tabular-nums ${scoreColor}`}>
                       {score !== null ? `${score.toFixed(0)}%` : "—"}
                     </span>
                     <Link
                       href={`/student/exams/${exam.id}/results/${exam.attempt.id}`}
-                      className="text-sm text-blue-600 hover:underline"
+                      className="text-sm font-medium text-blue-600 hover:underline whitespace-nowrap"
                     >
-                      Xem kết quả
+                      Xem kết quả →
                     </Link>
                   </div>
                 </div>

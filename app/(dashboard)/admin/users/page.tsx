@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getAdminUsers } from "@/lib/admin/queries";
 import { AddUserForm } from "./AddUserForm";
 import { DeleteUserButton } from "./DeleteUserButton";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faUsers } from "@fortawesome/free-solid-svg-icons";
 
 const PAGE_SIZE = 20;
 
@@ -118,7 +120,7 @@ export default async function AdminUsersPage({
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-16 text-gray-400">
-                    <div className="text-3xl mb-2">👥</div>
+                    <div className="text-3xl mb-2"><FaIcon icon={faUsers} /></div>
                     <p>Không tìm thấy người dùng nào</p>
                   </td>
                 </tr>

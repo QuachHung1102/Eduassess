@@ -27,11 +27,7 @@ const DIFFICULTY_OPTIONS = [
   { value: "HARD", label: "Khó" },
 ] as const;
 
-const LEVEL_LABEL: Record<Grade["level"], string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { LEVEL_LABEL } from "@/lib/constants/labels";
 
 export function FlashcardSetForm({ role, subjects, grades }: Props) {
   const [isPending, startTransition] = useTransition();

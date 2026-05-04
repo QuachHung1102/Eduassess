@@ -1,18 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getRandomStudentFlashcardSet, getStudentFlashcardFilters } from "@/lib/student/queries";
-
-const DIFFICULTY_LABEL: Record<string, string> = {
-  EASY: "Dễ",
-  MEDIUM: "Trung bình",
-  HARD: "Khó",
-};
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { DIFFICULTY_LABEL, LEVEL_LABEL } from "@/lib/constants/labels";
 
 export default async function StudentRandomFlashcardsPage({
   searchParams,

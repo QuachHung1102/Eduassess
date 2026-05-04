@@ -1,19 +1,8 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getTeacherFlashcardSetDetail } from "@/lib/teacher/queries";
+import { FlashcardSetMeta } from "@/components/flashcards/FlashcardSetMeta";
 import { FlashcardSetManager } from "./FlashcardSetManager";
-
-const DIFFICULTY_LABEL: Record<string, string> = {
-  EASY: "Dễ",
-  MEDIUM: "Trung bình",
-  HARD: "Khó",
-};
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
 
 export default async function TeacherFlashcardSetPage({
   params,
@@ -33,16 +22,16 @@ export default async function TeacherFlashcardSetPage({
             ← Danh sách flashcard
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-1">{set.title}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            📚 {set.subject.name} · {LEVEL_LABEL[set.grade.level]} · Lớp {set.grade.gradeNumber}
-          </p>
-          <p className="text-gray-500 text-sm mt-1">
-            🏷️ {set.topicName} · {DIFFICULTY_LABEL[set.difficulty]} · {set.cards.length} thẻ
-          </p>
-          <p className="text-gray-500 text-sm mt-1">
-            👤 {set.createdBy.name} · {set.createdBy.role === "ADMIN" ? "Thư viện admin" : "Bộ của giáo viên"}
-          </p>
-          {set.description ? <p className="text-sm text-gray-400 mt-1">{set.description}</p> : null}
+          <FlashcardSetMeta
+            subject={set.subject.name}
+            grade={set.grade}
+            topicName={set.topicName}
+            difficulty={set.difficulty}
+            cardCount={set.cards.length}
+            createdByName={set.createdBy.name}
+            createdByRole={set.createdBy.role}
+            description={set.description}
+          />
         </div>
       </div>
 

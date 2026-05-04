@@ -5,15 +5,13 @@ import { suggestQuestionsAction } from "@/lib/ai/actions";
 import { saveAiQuestionAction } from "@/lib/teacher/actions/question";
 import type { SuggestedQuestion } from "@/lib/ai";
 import { MathText } from "@/components/MathText";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faRobot } from "@fortawesome/free-solid-svg-icons";
 
 type Subject = { id: string; name: string };
 type Grade = { id: string; level: string; gradeNumber: number };
 
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { LEVEL_LABEL } from "@/lib/constants/labels";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -52,8 +50,8 @@ function QuestionCard({
             className="shrink-0 text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5">
             {saveState === "saving" ? (
               <><svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>Đang lưu…</>
             ) : "Thêm vào ngân hàng +"}
           </button>
@@ -200,7 +198,7 @@ export function AiSuggestClient({ subjects, grades }: { subjects: Subject[]; gra
                 Đang tạo gợi ý…
               </>
             ) : (
-              <>🤖 Tạo gợi ý</>
+              <><FaIcon icon={faRobot} className="mr-1.5" /> Tạo gợi ý</>
             )}
           </button>
         </form>
@@ -210,7 +208,7 @@ export function AiSuggestClient({ subjects, grades }: { subjects: Subject[]; gra
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         {!generated && !isLoading && !error && (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-            <div className="text-4xl mb-3">🤖</div>
+            <div className="text-4xl mb-3"><FaIcon icon={faRobot} /></div>
             <p className="text-sm">Điền thông tin và nhấn &quot;Tạo gợi ý&quot; để AI tổng hợp câu hỏi</p>
             <p className="text-xs mt-1 text-gray-300">Review từng câu trước khi lưu vào ngân hàng</p>
           </div>

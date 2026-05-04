@@ -468,3 +468,15 @@ export async function getAdminExamDetail(examId: string) {
     },
   });
 }
+
+// ── Question detail (for admin edit) ─────────────────────────
+export async function getAdminQuestionById(questionId: string) {
+  return prisma.question.findUnique({
+    where: { id: questionId },
+    include: {
+      subject: true,
+      topic: { include: { grade: true } },
+      createdBy: { select: { id: true, name: true } },
+    },
+  });
+}

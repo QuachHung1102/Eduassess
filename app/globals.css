@@ -1,21 +1,153 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "katex/dist/katex.min.css";
+@import "@fortawesome/fontawesome-svg-core/styles.css";
 
 :root {
-  --background: #f7fbff;
-  --foreground: #123047;
-  --surface: rgba(255, 255, 255, 0.84);
+  /* Thá»§y â€” máº·c Ä‘á»‹nh */
+  --background: #f0f9ff;
+  --foreground: #0a1628;
+  --surface: rgba(255, 255, 255, 0.86);
   --surface-strong: #ffffff;
-  --surface-muted: #e8f3ff;
-  --primary: #0f88f2;
-  --primary-dark: #0669bb;
-  --secondary: #ff9b3d;
-  --accent: #19c2a8;
-  --border-soft: rgba(18, 48, 71, 0.1);
-  --shadow-soft: 0 24px 60px rgba(15, 70, 117, 0.14);
-  --sidebar-bg: #123047;
-  --sidebar-text: #b6cee3;
-  --sidebar-active: #4eb2ff;
+  --surface-muted: #dbeafe;
+  --primary: #0284c7;
+  --primary-dark: #0369a1;
+  --secondary: #06b6d4;
+  --accent: #38bdf8;
+  --border-soft: rgba(10, 22, 40, 0.1);
+  --shadow-soft: 0 24px 60px rgba(2, 132, 199, 0.16);
+  --sidebar-bg: #082f49;
+  --sidebar-text: #7dd3fc;
+  --sidebar-active: #38bdf8;
+  --sidebar-border: rgba(125, 211, 252, 0.15);
+  --sidebar-hover: rgba(125, 211, 252, 0.08);
+  --sidebar-active-bg: rgba(56, 189, 248, 0.18);
+  --panel-bg: rgba(2, 132, 199, 0.08);
+  --panel-border: rgba(56, 189, 248, 0.25);
+}
+
+/* â”€â”€â”€ NgÅ© HÃ nh themes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* Kim â€” é‡‘  (Kim loáº¡i / Tráº¯ng báº¡c & vÃ ng) */
+[data-theme="kim"] {
+  --background: #fffbf0;
+  --foreground: #1c1206;
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-strong: #ffffff;
+  --surface-muted: #fef9e7;
+  --primary: #ca8a04;
+  --primary-dark: #a16207;
+  --secondary: #94a3b8;
+  --accent: #fcd34d;
+  --border-soft: rgba(26, 26, 46, 0.1);
+  --shadow-soft: 0 24px 60px rgba(202, 138, 4, 0.18);
+  --sidebar-bg: #1c1206;
+  --sidebar-text: #fde68a;
+  --sidebar-active: #fcd34d;
+  --sidebar-border: rgba(253, 230, 138, 0.15);
+  --sidebar-hover: rgba(253, 230, 138, 0.08);
+  --sidebar-active-bg: rgba(252, 211, 77, 0.18);
+  --panel-bg: rgba(202, 138, 4, 0.08);
+  --panel-border: rgba(202, 138, 4, 0.25);
+}
+
+/* Má»™c â€” æœ¨  (CÃ¢y cá»‘i / Xanh lÃ¡ & nÃ¢u) */
+[data-theme="moc"] {
+  --background: #f0fdf4;
+  --foreground: #052e16;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #ffffff;
+  --surface-muted: #dcfce7;
+  --primary: #16a34a;
+  --primary-dark: #15803d;
+  --secondary: #8b5e3c;
+  --accent: #4ade80;
+  --border-soft: rgba(26, 46, 18, 0.1);
+  --shadow-soft: 0 24px 60px rgba(22, 163, 74, 0.18);
+  --sidebar-bg: #052e16;
+  --sidebar-text: #86efac;
+  --sidebar-active: #4ade80;
+  --sidebar-border: rgba(134, 239, 172, 0.15);
+  --sidebar-hover: rgba(134, 239, 172, 0.08);
+  --sidebar-active-bg: rgba(74, 222, 128, 0.18);
+  --panel-bg: rgba(22, 163, 74, 0.08);
+  --panel-border: rgba(22, 163, 74, 0.25);
+}
+
+/* Thá»§y â€” æ°´  (NÆ°á»›c / Xanh dÆ°Æ¡ng & Ä‘en) */
+[data-theme="thuy"] {
+  --background: #f0f9ff;
+  --foreground: #0a1628;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #ffffff;
+  --surface-muted: #dbeafe;
+  --primary: #0284c7;
+  --primary-dark: #0369a1;
+  --secondary: #06b6d4;
+  --accent: #38bdf8;
+  --border-soft: rgba(10, 22, 40, 0.1);
+  --shadow-soft: 0 24px 60px rgba(2, 132, 199, 0.16);
+  --sidebar-bg: #082f49;
+  --sidebar-text: #7dd3fc;
+  --sidebar-active: #38bdf8;
+  --sidebar-border: rgba(125, 211, 252, 0.15);
+  --sidebar-hover: rgba(125, 211, 252, 0.08);
+  --sidebar-active-bg: rgba(56, 189, 248, 0.18);
+  --panel-bg: rgba(2, 132, 199, 0.08);
+  --panel-border: rgba(56, 189, 248, 0.25);
+}
+
+/* Há»a â€” ç«  (Lá»­a / Äá» & cam) */
+[data-theme="hoa"] {
+  --background: #fff1f2;
+  --foreground: #4c0519;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #ffffff;
+  --surface-muted: #ffe4e6;
+  --primary: #f43f5e;
+  --primary-dark: #e11d48;
+  --secondary: #fb923c;
+  --accent: #fb923c;
+  --border-soft: rgba(45, 10, 8, 0.1);
+  --shadow-soft: 0 24px 60px rgba(244, 63, 94, 0.18);
+  --sidebar-bg: #4c0519;
+  --sidebar-text: #fda4af;
+  --sidebar-active: #fb7185;
+  --sidebar-border: rgba(253, 164, 175, 0.15);
+  --sidebar-hover: rgba(253, 164, 175, 0.08);
+  --sidebar-active-bg: rgba(251, 113, 133, 0.18);
+  --panel-bg: rgba(244, 63, 94, 0.08);
+  --panel-border: rgba(244, 63, 94, 0.25);
+}
+
+/* Thá»• â€” åœŸ  (Äáº¥t / VÃ ng & nÃ¢u) */
+[data-theme="tho"] {
+  --background: #fff7ed;
+  --foreground: #431407;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #ffffff;
+  --surface-muted: #fed7aa;
+  --primary: #ea580c;
+  --primary-dark: #c2410c;
+  --secondary: #92400e;
+  --accent: #fb923c;
+  --border-soft: rgba(67, 20, 7, 0.10);
+  --shadow-soft: 0 24px 60px rgba(234, 88, 12, 0.18);
+  --sidebar-bg: #431407;
+  --sidebar-text: #fed7aa;
+  --sidebar-active: #fb923c;
+  --sidebar-border: rgba(254, 215, 170, 0.15);
+  --sidebar-hover: rgba(254, 215, 170, 0.08);
+  --sidebar-active-bg: rgba(251, 146, 60, 0.20);
+  --panel-bg: rgba(234, 88, 12, 0.08);
+  --panel-border: rgba(251, 146, 60, 0.28);
+}
+
+@theme {
+  --breakpoint-sm: 36rem;    /* 576px */
+  --breakpoint-md: 48rem;    /* 768px */
+  --breakpoint-lg: 62rem;    /* 992px */
+  --breakpoint-xl: 75rem;    /* 1200px */
+  --breakpoint-2xl: 87.5rem; /* 1400px */
 }
 
 @theme inline {
@@ -264,6 +396,9 @@ button {
 
 .flashcard-shell {
   width: 100%;
+  min-width: 200px;
+  max-width: 340px;
+  margin-inline: auto;
   overflow: hidden;
   border-radius: 30px;
   border: 3px solid rgba(252, 211, 77, 0.8);
@@ -505,6 +640,9 @@ button {
 
 .flashcard-face-front,
 .flashcard-face-rear {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
@@ -703,6 +841,23 @@ button {
   color: #94a3b8;
 }
 
+/* Simplified face: single child fills entire face, with breathing-room padding */
+.flashcard-face-fill {
+  padding: 0.75rem;
+  gap: 0;
+  grid-template-rows: 1fr;
+}
+
+/* Let the panel keep its own rounded corners inside the padded face */
+.flashcard-face-fill .flashcard-panel {
+  border-radius: 22px;
+}
+
+/* Center copy-panel content vertically */
+.flashcard-copy-panel-center {
+  align-content: center;
+}
+
 @media (max-width: 768px) {
   body::before {
     background-size: 46px 46px;
@@ -729,4 +884,500 @@ button {
   .auth-promo {
     border-radius: 24px;
   }
+}
+
+/* â”€â”€â”€ Theme-aware html backgrounds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+html[data-theme="kim"] {
+  background:
+    radial-gradient(circle at top left,  rgba(202, 138, 4, 0.24), transparent 38%),
+    radial-gradient(circle at top right, rgba(180, 180, 180, 0.16), transparent 32%),
+    linear-gradient(180deg, #fffbf0 0%, #fef9e7 50%, #fef3c7 100%);
+}
+
+html[data-theme="moc"] {
+  background:
+    radial-gradient(circle at top left,  rgba(74, 222, 128, 0.26), transparent 36%),
+    radial-gradient(circle at top right, rgba(139, 94, 60, 0.14), transparent 30%),
+    linear-gradient(180deg, #f0fdf4 0%, #dcfce7 50%, #ecfdf5 100%);
+}
+
+html[data-theme="thuy"] {
+  background:
+    radial-gradient(circle at top left,  rgba(56, 189, 248, 0.26), transparent 36%),
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.2), transparent 30%),
+    linear-gradient(180deg, #f0f9ff 0%, #dbeafe 50%, #e0f2fe 100%);
+}
+
+html[data-theme="hoa"] {
+  background:
+    radial-gradient(circle at top left,  rgba(244, 63, 94, 0.26), transparent 36%),
+    radial-gradient(circle at top right, rgba(251, 146, 60, 0.20), transparent 30%),
+    linear-gradient(180deg, #fff1f2 0%, #ffe4e6 50%, #ffecef 100%);
+}
+
+html[data-theme="tho"] {
+  background:
+    radial-gradient(circle at top left,  rgba(234, 88, 12, 0.26), transparent 36%),
+    radial-gradient(circle at top right, rgba(146, 64, 14, 0.16), transparent 30%),
+    linear-gradient(180deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%);
+}
+
+/* â”€â”€â”€ Sidebar themed utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--sidebar-hover);
+  color: #ffffff;
+}
+
+.sidebar-nav-item.is-active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active);
+  font-weight: 500;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    inset 0  1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.14);
+}
+
+/* â”€â”€â”€ Page entry animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.38s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.stagger-1 { animation-delay: 60ms;  }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+
+/* â”€â”€â”€ Primary panel (theme-aware) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.primary-panel {
+  background-color: var(--panel-bg);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 20px;
+  color: var(--foreground);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    0 2px  6px rgba(0, 0, 0, 0.04),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.60),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.03);
+}
+
+
+
+/* ─── Themed Data Table ─────────────────────────────────────────────────── */
+.themed-table thead {
+  background-color: var(--surface-strong);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.themed-table thead th {
+  color: color-mix(in srgb, var(--foreground) 52%, transparent);
+}
+
+.themed-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.themed-table tbody tr + tr {
+  border-top: 1px solid var(--border-soft);
+}
+
+.themed-table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--surface-strong));
+}
+
+/* ─── Dark mode ──────────────────────────────────────────────────────────── */
+
+/* Generic surface overrides (apply to ALL themes in dark mode) */
+[data-mode="dark"] {
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-strong: #1c2235;
+  --surface-muted: #232a40;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Per-theme dark backgrounds & foregrounds */
+[data-mode="dark"],
+[data-mode="dark"][data-theme="thuy"] {
+  --background: #060e1a;
+  --foreground: #bae6fd;
+  --surface-muted: #0c1828;
+  --panel-bg: rgba(2, 132, 199, 0.15);
+  --panel-border: rgba(56, 189, 248, 0.28);
+}
+
+[data-mode="dark"][data-theme="kim"] {
+  --background: #0c0b07;
+  --foreground: #fde68a;
+  --surface-muted: #1a1608;
+  --panel-bg: rgba(202, 138, 4, 0.15);
+  --panel-border: rgba(252, 211, 77, 0.28);
+}
+
+[data-mode="dark"][data-theme="moc"] {
+  --background: #040d06;
+  --foreground: #bbf7d0;
+  --surface-muted: #0a1a0d;
+  --panel-bg: rgba(22, 163, 74, 0.15);
+  --panel-border: rgba(74, 222, 128, 0.28);
+}
+
+[data-mode="dark"][data-theme="hoa"] {
+  --background: #120305;
+  --foreground: #fecdd3;
+  --surface-muted: #1e060c;
+  --panel-bg: rgba(244, 63, 94, 0.15);
+  --panel-border: rgba(251, 113, 133, 0.28);
+}
+
+[data-mode="dark"][data-theme="tho"] {
+  --background: #1a0800;
+  --foreground: #fed7aa;
+  --surface-muted: #2a1005;
+  --panel-bg: rgba(234, 88, 12, 0.15);
+  --panel-border: rgba(251, 146, 60, 0.30);
+}
+
+/* Dark mode html backgrounds */
+html[data-mode="dark"],
+html[data-mode="dark"][data-theme="thuy"] {
+  background:
+    radial-gradient(circle at top left, rgba(2, 132, 199, 0.20), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.10), transparent 40%),
+    #060e1a;
+}
+
+html[data-mode="dark"][data-theme="kim"] {
+  background:
+    radial-gradient(circle at top left, rgba(202, 138, 4, 0.18), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(253, 230, 138, 0.08), transparent 40%),
+    #0c0b07;
+}
+
+html[data-mode="dark"][data-theme="moc"] {
+  background:
+    radial-gradient(circle at top left, rgba(22, 163, 74, 0.18), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(74, 222, 128, 0.08), transparent 40%),
+    #040d06;
+}
+
+html[data-mode="dark"][data-theme="hoa"] {
+  background:
+    radial-gradient(circle at top left, rgba(244, 63, 94, 0.20), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.10), transparent 40%),
+    #120305;
+}
+
+html[data-mode="dark"][data-theme="tho"] {
+  background:
+    radial-gradient(circle at top left, rgba(234, 88, 12, 0.22), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.08), transparent 40%),
+    #1a0800;
+}
+
+/* Dark mode dot grid — dimmed */
+[data-mode="dark"] body::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+}
+
+/* Dark mode Tailwind utility overrides */
+[data-mode="dark"] .bg-white                { background-color: var(--surface-strong) !important; }
+[data-mode="dark"] .bg-gray-50              { background-color: var(--surface) !important; }
+[data-mode="dark"] .bg-gray-100             { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .bg-gray-50\/50          { background-color: rgba(255, 255, 255, 0.03) !important; }
+[data-mode="dark"] .border-gray-100,
+[data-mode="dark"] .border-gray-200         { border-color: var(--border-soft) !important; }
+[data-mode="dark"] .text-gray-900           { color: #f1f5f9 !important; }
+[data-mode="dark"] .text-gray-800           { color: #e2e8f0 !important; }
+[data-mode="dark"] .text-gray-700           { color: #cbd5e1 !important; }
+[data-mode="dark"] .text-gray-600           { color: #94a3b8 !important; }
+[data-mode="dark"] .text-gray-500           { color: #64748b !important; }
+[data-mode="dark"] .text-gray-400           { color: #475569 !important; }
+[data-mode="dark"] .shadow-sm               { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important; }
+[data-mode="dark"] .shadow-md               { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important; }
+[data-mode="dark"] .shadow-lg               { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important; }
+[data-mode="dark"] .divide-gray-100 > * + * { border-color: var(--border-soft) !important; }
+[data-mode="dark"] .ring-gray-200           { --tw-ring-color: var(--border-soft) !important; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   THEME-AWARE COLOR COHERENCE
+   Hardcoded Tailwind blue classes auto-follow the active Ngũ Hành theme.
+   Affects buttons, links, borders, info panels, hover states — globally.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Dashboard shell: background follows theme, transparent in dark ─── */
+.dashboard-shell {
+  background-color: var(--background);
+}
+[data-mode="dark"] .dashboard-shell {
+  background-color: transparent;
+}
+
+/* ─── Solid-fill primary buttons ─────────────────────────────────────── */
+[data-theme] .bg-blue-600,
+[data-theme] .bg-blue-500                       { background-color: var(--primary) !important; }
+[data-theme] .hover\:bg-blue-700:hover,
+[data-theme] .hover\:bg-blue-600:hover          { background-color: var(--primary-dark) !important; }
+
+/* ─── Text links and inline labels ───────────────────────────────────── */
+[data-theme] .text-blue-600                     { color: var(--primary) !important; }
+[data-theme] .hover\:text-blue-600:hover        { color: var(--primary) !important; }
+[data-theme] .group:hover .group-hover\:text-blue-700 { color: var(--primary) !important; }
+
+/* ─── Outlined / ghost buttons ────────────────────────────────────────── */
+[data-theme] .border-blue-600                   { border-color: var(--primary) !important; }
+[data-theme] .border-blue-300                   { border-color: var(--panel-border) !important; }
+[data-theme] .border-blue-200                   { border-color: var(--panel-border) !important; }
+[data-theme] .border-blue-100                   { border-color: var(--border-soft) !important; }
+[data-theme] .hover\:border-blue-200:hover      { border-color: var(--panel-border) !important; }
+
+/* ─── Subtle tint backgrounds (info boxes, hover states) ─────────────── */
+[data-theme] .bg-blue-50                        { background-color: var(--panel-bg) !important; }
+[data-theme] .hover\:bg-blue-50:hover           { background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important; }
+[data-theme] .hover\:bg-blue-50\/30:hover       { background-color: color-mix(in srgb, var(--primary) 5%, transparent) !important; }
+[data-theme] .hover\:bg-blue-100:hover          { background-color: var(--panel-bg) !important; }
+
+/* ─── Gradient stops (flashcard filter header etc.) ─────────────────── */
+[data-theme] .from-blue-50                      { --tw-gradient-from: var(--panel-bg) !important; }
+[data-theme] .to-cyan-50                        { --tw-gradient-to: var(--surface) !important; }
+[data-theme] .border-blue-100.rounded-2xl       { border-color: var(--panel-border) !important; }
+
+/* ─── Per-theme --surface-strong in dark mode ─────────────────────────── */
+[data-mode="dark"][data-theme="kim"]            { --surface-strong: #1a160b; }
+[data-mode="dark"][data-theme="moc"]            { --surface-strong: #0d1a0e; }
+[data-mode="dark"][data-theme="hoa"]            { --surface-strong: #1c0c0e; }
+[data-mode="dark"][data-theme="tho"]            { --surface-strong: #2c1005; }
+
+/* ─── Dark mode: blue text readable on dark surfaces ──────────────────── */
+[data-mode="dark"] .text-blue-600              { color: var(--accent) !important; }
+[data-mode="dark"] .text-blue-700              { color: var(--accent) !important; }
+[data-mode="dark"] .text-blue-800              { color: var(--foreground) !important; }
+[data-mode="dark"] .bg-blue-50                 { background-color: var(--panel-bg) !important; }
+[data-mode="dark"] .bg-blue-100                { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .border-blue-100            { border-color: var(--border-soft) !important; }
+[data-mode="dark"] .border-blue-200            { border-color: var(--border-soft) !important; }
+[data-mode="dark"] .from-blue-50               { --tw-gradient-from: var(--panel-bg) !important; }
+[data-mode="dark"] .to-cyan-50                 { --tw-gradient-to: var(--surface) !important; }
+
+/* ─── Dark mode: non-blue tint backgrounds ────────────────────────────── */
+[data-mode="dark"] .bg-slate-100               { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .text-slate-600             { color: #94a3b8 !important; }
+[data-mode="dark"] .text-slate-900             { color: var(--foreground) !important; }
+[data-mode="dark"] .bg-emerald-50              { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .text-emerald-700           { color: var(--accent) !important; }
+[data-mode="dark"] .bg-amber-50                { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .text-amber-700             { color: var(--accent) !important; }
+[data-mode="dark"] .bg-purple-100              { background-color: var(--surface-muted) !important; }
+[data-mode="dark"] .text-purple-700            { color: var(--accent) !important; }
+
+/* ─── Dark mode: form input text uses theme foreground ───────────────── */
+[data-mode="dark"] input,
+[data-mode="dark"] textarea,
+[data-mode="dark"] select                       {
+  color: var(--foreground);
+  background-color: var(--surface-strong);
+  border-color: var(--border-soft);
+}
+[data-mode="dark"] input::placeholder,
+[data-mode="dark"] textarea::placeholder        {
+  color: color-mix(in srgb, var(--foreground) 42%, transparent);
+}
+
+/* ─── Dark mode: card hover states ───────────────────────────────────── */
+[data-mode="dark"] .hover\:shadow-md:hover     { box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CLAYMORPHISM DESIGN SYSTEM
+   Soft 3D, chunky, playful UI — works across all 5 Ngũ Hành themes.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Clay Card ──────────────────────────────────────────────────────── */
+.clay-card {
+  background: var(--surface-strong);
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.10),
+    0 2px 6px  rgba(0, 0, 0, 0.06),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.80),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.04);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+.clay-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.13),
+    0  4px 10px rgba(0, 0, 0, 0.08),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.80),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.04);
+}
+.clay-card:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.10),
+    inset 0  3px 6px rgba(0, 0, 0, 0.08),
+    inset 0  1px 0   rgba(255, 255, 255, 0.50);
+}
+
+/* ── Clay Icon Container ────────────────────────────────────────────── */
+.clay-icon {
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.18),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.12);
+}
+
+/* ── Clay Button ────────────────────────────────────────────────────── */
+.clay-btn {
+  border-radius: 14px !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.16),
+    inset 0  1.5px 0   rgba(255, 255, 255, 0.40),
+    inset 0 -2.5px 0   rgba(0,   0,   0,   0.14) !important;
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out !important;
+  cursor: pointer;
+}
+.clay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.20),
+    inset 0  1.5px 0   rgba(255, 255, 255, 0.40),
+    inset 0 -2.5px 0   rgba(0,   0,   0,   0.14) !important;
+}
+.clay-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.12),
+    inset 0 3px 8px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* ── Clay Panel (larger section containers) ─────────────────────────── */
+.clay-panel {
+  background: var(--surface-strong);
+  border-radius: 24px;
+  border: 2.5px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.08),
+    0  3px  8px rgba(0, 0, 0, 0.05),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.03);
+}
+
+/* ── Global: all rounded-xl cards → clay shadow + radius ────────────── */
+[data-theme] .rounded-xl.shadow-sm {
+  border-radius: 20px !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.09),
+    0 2px  6px rgba(0, 0, 0, 0.05),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.03) !important;
+}
+[data-theme] .rounded-xl.hover\:shadow-md:hover,
+[data-theme] .rounded-xl.shadow-sm:hover {
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.12),
+    0  4px 10px rgba(0, 0, 0, 0.07),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.03) !important;
+}
+[data-theme] .bg-white.rounded-xl {
+  background-color: var(--surface-strong) !important;
+  border-radius: 20px !important;
+}
+
+/* ── Buttons rounded-lg → 14px for clay feel ────────────────────────── */
+[data-theme] .bg-blue-600.rounded-lg,
+[data-theme] .bg-blue-500.rounded-lg,
+[data-theme] .border-blue-600.rounded-lg { border-radius: 14px !important; }
+
+/* ── Dark mode clay adjustments ──────────────────────────────────────── */
+[data-mode="dark"] .clay-card,
+[data-mode="dark"] .clay-panel {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.40),
+    0 2px  6px rgba(0, 0, 0, 0.28),
+    inset 0  1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0,   0,   0,   0.25) !important;
+}
+[data-mode="dark"] .clay-card:hover {
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.50),
+    0  4px 10px rgba(0, 0, 0, 0.35),
+    inset 0  1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0,   0,   0,   0.25) !important;
+}
+[data-mode="dark"] .clay-btn {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.45),
+    inset 0  1px   0 rgba(255, 255, 255, 0.08),
+    inset 0 -2.5px 0 rgba(0,   0,   0,   0.35) !important;
+}
+[data-mode="dark"] .rounded-xl.shadow-sm {
+  border-radius: 20px !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.40),
+    0 2px  6px rgba(0, 0, 0, 0.28),
+    inset 0  1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 rgba(0,   0,   0,   0.22) !important;
+}
+[data-mode="dark"] .rounded-xl.hover\:shadow-md:hover,
+[data-mode="dark"] .rounded-xl.shadow-sm:hover {
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.50),
+    0  4px 10px rgba(0, 0, 0, 0.35),
+    inset 0  1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 rgba(0,   0,   0,   0.22) !important;
+}
+[data-mode="dark"] .primary-panel {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 2px  6px rgba(0, 0, 0, 0.25),
+    inset 0  1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 0 rgba(0,   0,   0,   0.20) !important;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .clay-card, .clay-btn { transition: none; }
+  .clay-card:hover, .clay-btn:hover,
+  .clay-card:active, .clay-btn:active { transform: none; }
 }

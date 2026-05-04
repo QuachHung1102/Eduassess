@@ -1,9 +1,10 @@
-import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { ROLE_LABELS } from "@/lib/auth/access";
 import { dashboardNavItems } from "@/lib/navigation/dashboard";
+import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/types";
+import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 
 export default async function DashboardLayout({
   children,
@@ -16,66 +17,27 @@ export default async function DashboardLayout({
   const role = session.user.role as Role;
   const items = dashboardNavItems[role] ?? [];
   const roleLabel = ROLE_LABELS[role];
+  const unreadCount = await getUnreadNotificationCount();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-800 text-slate-300 flex flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
-        {/* Logo */}
-        <div className="px-6 py-5 border-b border-slate-700">
-          <Link href="/" className="text-white font-bold text-lg">
-            EduAssess
-          </Link>
-          <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
-            {roleLabel}
-          </span>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm hover:bg-slate-700 hover:text-white transition-colors"
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        {/* User */}
-        <div className="px-4 py-4 border-t border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-              {session.user.name?.[0]?.toUpperCase() ?? "U"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">{session.user.name}</p>
-              <p className="text-slate-400 text-xs truncate">{session.user.email}</p>
-            </div>
-          </div>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/login" });
-            }}
-          >
-            <button
-              type="submit"
-              className="mt-3 w-full text-center text-xs text-slate-400 hover:text-white transition-colors"
-            >
-              Đăng xuất
-            </button>
-          </form>
-        </div>
-      </aside>
+    <div className="flex h-screen overflow-hidden dashboard-shell">
+      <DashboardSidebar
+        navItems={items}
+        userName={session.user.name ?? ""}
+        userEmail={session.user.email ?? ""}
+        roleLabel={roleLabel}
+        unreadCount={unreadCount}
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto flex flex-col">{children}</main>
+        {/* Spacer for mobile fixed header (h-14 = 56px) */}
+        <div className="h-14 shrink-0 lg:hidden" aria-hidden="true" />
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto flex flex-col">
+          {children}
+        </main>
       </div>
     </div>
   );
 }
+

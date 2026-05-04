@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTeacherExamAttempts } from "@/lib/teacher/queries";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faChartBar } from "@fortawesome/free-solid-svg-icons";
 
 export default async function ExamResultsPage({
   params,
@@ -64,7 +66,7 @@ export default async function ExamResultsPage({
           {attempts.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400 py-16">
               <div className="text-center">
-                <div className="text-3xl mb-2">📊</div>
+                <div className="text-3xl mb-2"><FaIcon icon={faChartBar} /></div>
                 <p className="text-sm">Chưa có học sinh nào làm bài.</p>
               </div>
             </div>

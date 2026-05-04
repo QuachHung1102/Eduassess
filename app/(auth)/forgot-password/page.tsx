@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import { forgotPasswordAction } from "@/lib/auth/actions/forgot-password";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 
 export default function ForgotPasswordPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "sent">("idle");
@@ -38,7 +40,7 @@ export default function ForgotPasswordPage() {
           {status === "sent" ? (
             <div className="space-y-4 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
-                ✉️
+                <FaIcon icon={faEnvelope} className="text-emerald-600" />
               </div>
               <h2 className="text-lg font-black text-slate-900">Kiểm tra email của bạn</h2>
               <p className="text-sm leading-7 text-slate-600">
@@ -90,6 +92,14 @@ export default function ForgotPasswordPage() {
               >
                 {status === "loading" ? "Đang gửi..." : "Gửi liên kết đặt lại"}
               </button>
+              <div className="text-center pt-1">
+                <Link
+                  href="/security-questions-reset"
+                  className="text-xs text-slate-500 hover:text-sky-700"
+                >
+                  Dùng câu hỏi bảo mật thay thế →
+                </Link>
+              </div>
             </form>
           )}
       </div>

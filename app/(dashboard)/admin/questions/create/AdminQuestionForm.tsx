@@ -9,11 +9,9 @@ type Subject = { id: string; name: string };
 type Grade = { id: string; level: string; gradeNumber: number };
 type Topic = { id: string; name: string };
 
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { LEVEL_LABEL } from "@/lib/constants/labels";
+import { SymbolToolbar } from "@/components/ui/SymbolToolbar";
+import { MathPreview } from "@/components/ui/MathPreview";
 
 export function AdminQuestionForm({
   subjects,
@@ -25,6 +23,7 @@ export function AdminQuestionForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [contentPreview, setContentPreview] = useState("");
 
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
   const [gradeId, setGradeId] = useState(grades[0]?.id ?? "");
@@ -133,6 +132,8 @@ export function AdminQuestionForm({
         </div>
       </div>
 
+      <SymbolToolbar />
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">Nội dung câu hỏi</label>
         <textarea
@@ -140,8 +141,10 @@ export function AdminQuestionForm({
           rows={4}
           required
           placeholder="Nhập câu hỏi tại đây..."
+          onChange={(e) => setContentPreview(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 placeholder:text-gray-400"
         />
+        <MathPreview value={contentPreview} />
       </div>
 
       <div>

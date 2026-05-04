@@ -22,3 +22,10 @@ enum QuestionStatus {
   PENDING   // AI gợi ý, chờ giáo viên review/approve
   APPROVED  // Đã được giáo viên duyệt
 }
+
+enum NotificationType {
+  EXAM_ASSIGNED      // Giáo viên tạo đề mới cho lớp học sinh
+  EXAM_GRADED        // Bài thi đã được chấm điểm
+  QUESTION_APPROVED  // Admin phê duyệt câu hỏi của giáo viên
+  SYSTEM             // Thông báo hệ thống từ admin
+}

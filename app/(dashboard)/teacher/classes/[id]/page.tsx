@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTeacherClassDetail } from "@/lib/teacher/queries";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 export default async function TeacherClassDetailPage({
   params,
@@ -33,7 +35,7 @@ export default async function TeacherClassDetailPage({
             href="/teacher/exams/create"
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            ➕ Tạo đề cho lớp này
+            <FaIcon icon={faPlus} className="mr-1.5" /> Tạo đề cho lớp này
           </Link>
         </div>
       </div>

@@ -1,0 +1,45 @@
+[
+  {
+    "name": "Xác suất & Thống kê",
+    "items": [
+      { "display": "P(A)", "insert": "P(A)", "hint": "Xác suất biến cố A — thay A" },
+      { "display": "P(A|B)", "insert": "P(A|B)", "hint": "Xác suất có điều kiện P(A|B)" },
+      { "display": "P(A\\cup B)", "insert": "P(A\\cup B)", "hint": "Xác suất hợp hai biến cố" },
+      { "display": "P(A\\cap B)", "insert": "P(A\\cap B)", "hint": "Xác suất giao hai biến cố" },
+      { "display": "\\bar{A}", "insert": "\\bar{A}", "hint": "Biến cố đối — thay A" },
+      { "display": "C_n^k", "insert": "C_{n}^{k}", "hint": "Tổ hợp (ký hiệu Việt Nam) — thay n, k" },
+      { "display": "A_n^k", "insert": "A_{n}^{k}", "hint": "Chỉnh hợp — thay n, k" },
+      { "display": "P_n", "insert": "P_{n}", "hint": "Hoán vị n phần tử" },
+      { "display": "\\bar{x}", "insert": "\\bar{x}", "hint": "Trung bình mẫu x̄" },
+      { "display": "\\mu", "insert": "\\mu", "hint": "Kỳ vọng / trung bình tổng thể μ" },
+      { "display": "\\sigma", "insert": "\\sigma", "hint": "Độ lệch chuẩn σ" },
+      { "display": "\\sigma^{2}", "insert": "\\sigma^{2}", "hint": "Phương sai σ²" },
+      { "display": "s^{2}", "insert": "s^{2}", "hint": "Phương sai mẫu s²" },
+      { "display": "\\tilde{x}", "insert": "\\tilde{x}", "hint": "Trung vị x̃" },
+      { "display": "M_o", "insert": "M_o", "hint": "Mốt (mode) — giá trị xuất hiện nhiều nhất" },
+      { "display": "E(X)", "insert": "E(X)", "hint": "Kỳ vọng biến ngẫu nhiên X" },
+      { "display": "D(X)", "insert": "D(X)", "hint": "Phương sai biến ngẫu nhiên X" },
+      { "display": "\\rho", "insert": "\\rho", "hint": "Hệ số tương quan Pearson ρ" }
+    ]
+  },
+  {
+    "name": "Số học & Hàm số",
+    "items": [
+      { "display": "\\max", "insert": "\\max", "hint": "Giá trị lớn nhất" },
+      { "display": "\\min", "insert": "\\min", "hint": "Giá trị nhỏ nhất" },
+      { "display": "\\sup", "insert": "\\sup", "hint": "Giới hạn trên (supremum)" },
+      { "display": "\\inf", "insert": "\\inf", "hint": "Giới hạn dưới (infimum)" },
+      { "display": "\\gcd(a,b)", "insert": "\\gcd(a,b)", "hint": "ƯCLN — thay a, b" },
+      { "display": "\\text{lcm}(a,b)", "insert": "\\text{lcm}(a,b)", "hint": "BCNN — thay a, b" },
+      { "display": "\\lfloor x \\rfloor", "insert": "\\lfloor x \\rfloor", "hint": "Phần nguyên ⌊x⌋" },
+      { "display": "|x|", "insert": "|x|", "hint": "Giá trị tuyệt đối — thay x" },
+      { "display": "f: A\\to B", "insert": "f: A\\to B", "hint": "Ánh xạ từ A đến B" },
+      { "display": "f\\circ g", "insert": "f\\circ g", "hint": "Hàm hợp f∘g" },
+      { "display": "f^{-1}", "insert": "f^{-1}", "hint": "Hàm ngược — thay f" },
+      { "display": "\\mathbb{R}^{+}", "insert": "\\mathbb{R}^{+}", "hint": "Tập số thực dương ℝ⁺" },
+      { "display": "\\mathbb{R}^{*}", "insert": "\\mathbb{R}^{*}", "hint": "Tập số thực khác 0 ℝ*" },
+      { "display": "k\\in\\mathbb{Z}", "insert": "k\\in\\mathbb{Z}", "hint": "k là số nguyên bất kỳ — dùng trong nghiệm lượng giác" },
+      { "display": "[x]", "insert": "[x]", "hint": "Ký hiệu phần nguyên (ký pháp Việt)" }
+    ]
+  }
+]

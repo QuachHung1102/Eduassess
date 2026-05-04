@@ -2,13 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTeacherExamDetail } from "@/lib/teacher/queries";
 import { DeleteExamButton } from "./DeleteExamButton";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faChartBar, faPen } from "@fortawesome/free-solid-svg-icons";
 
-const DIFFICULTY_LABEL: Record<string, string> = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" };
-const DIFFICULTY_COLOR: Record<string, string> = {
-  EASY: "bg-green-100 text-green-700",
-  MEDIUM: "bg-yellow-100 text-yellow-700",
-  HARD: "bg-red-100 text-red-700",
-};
+import { DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/lib/constants/labels";
 
 export default async function ExamDetailPage({
   params,
@@ -39,10 +36,16 @@ export default async function ExamDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href={`/teacher/exams/${id}/edit`}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <FaIcon icon={faPen} className="mr-1.5" /> Chỉnh sửa
+          </Link>
+          <Link
             href={`/teacher/exams/${id}/results`}
             className="border border-blue-300 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
           >
-            📊 Kết quả
+            <FaIcon icon={faChartBar} className="mr-1.5" /> Kết quả
           </Link>
           <DeleteExamButton examId={id} />
         </div>
@@ -55,6 +58,12 @@ export default async function ExamDetailPage({
           { label: "Lượt làm bài", value: exam._count.examAttempts },
           { label: "Dễ / TB / Khó", value: `${easyCount} / ${mediumCount} / ${hardCount}` },
           { label: "Xem đáp án", value: exam.showAnswer ? "Có" : "Không" },
+          {
+            label: "Hạn nộp",
+            value: exam.dueAt
+              ? new Date(exam.dueAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+              : "Không giới hạn",
+          },
         ].map((c) => (
           <div key={c.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="text-xs text-gray-500 mb-1">{c.label}</div>

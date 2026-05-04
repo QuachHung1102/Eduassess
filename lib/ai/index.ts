@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Singleton client (server-only — never imported in client components)
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+// Lazy client — khởi tạo khi gọi để đảm bảo env vars đã được load
+function getClient() {
+  return new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
+}
 
 const MODEL = "claude-opus-4-6";
 
@@ -39,7 +41,7 @@ export async function suggestQuestions(params: {
 
   const userMessage = `Trả về JSON array gồm ${count} câu hỏi trắc nghiệm. Môn: ${subject}. Chủ đề: "${topic}". Độ khó: ${difficultyLabel}. Cấp học: ${grade}. Mỗi phương án A/B/C/D đủ dài và gây nhầm lẫn hợp lý. Chỉ JSON, không text khác.`;
 
-  const msg = await anthropic.messages.create({
+  const msg = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4096,
     system: SUGGEST_SYSTEM,
@@ -102,7 +104,7 @@ ${breakdown}
 
 Hãy nhận xét bài làm cho học sinh này.`;
 
-  const msg = await anthropic.messages.create({
+  const msg = await getClient().messages.create({
     model: MODEL,
     max_tokens: 600,
     system: FEEDBACK_SYSTEM,

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { getTeacherClasses } from "@/lib/teacher/queries";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faSchool } from "@fortawesome/free-solid-svg-icons";
 
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { LEVEL_LABEL } from "@/lib/constants/labels";
 
 export default async function ClassesPage() {
   const teacherClasses = await getTeacherClasses();
@@ -41,7 +39,7 @@ export default async function ClassesPage() {
       {classes.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-gray-400">
           <div className="text-center">
-            <div className="text-3xl mb-2">🏫</div>
+            <div className="text-3xl mb-2"><FaIcon icon={faSchool} /></div>
             <p>Chưa có lớp nào được phân công. Liên hệ Admin để được cấp quyền.</p>
           </div>
         </div>
@@ -61,7 +59,7 @@ export default async function ClassesPage() {
                       {LEVEL_LABEL[c.level]} · Khối {c.gradeNumber}
                     </p>
                   </div>
-                  <span className="text-2xl">🏫</span>
+                  <span className="text-2xl"><FaIcon icon={faSchool} /></span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {c.subjects.map((sub) => (

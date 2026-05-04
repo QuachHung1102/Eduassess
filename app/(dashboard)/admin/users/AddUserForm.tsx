@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useRef } from "react";
 import { createUserAction } from "@/lib/admin/actions";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faUserGraduate, faChalkboardUser } from "@fortawesome/free-solid-svg-icons";
 
 export function AddUserForm() {
   const [open, setOpen] = useState(false);
@@ -60,7 +62,7 @@ export function AddUserForm() {
                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      {r === "STUDENT" ? "👨‍🎓 Học sinh" : "👨‍🏫 Giáo viên"}
+                      {r === "STUDENT" ? <><FaIcon icon={faUserGraduate} className="mr-1" />Học sinh</> : <><FaIcon icon={faChalkboardUser} className="mr-1" />Giáo viên</>}
                     </button>
                   ))}
                 </div>

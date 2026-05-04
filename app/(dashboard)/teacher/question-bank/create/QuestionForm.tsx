@@ -10,11 +10,9 @@ type Subject = { id: string; name: string };
 type Grade = { id: string; level: string; gradeNumber: number };
 type Topic = { id: string; name: string };
 
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { LEVEL_LABEL } from "@/lib/constants/labels";
+import { SymbolToolbar } from "@/components/ui/SymbolToolbar";
+import { MathPreview } from "@/components/ui/MathPreview";
 
 export function QuestionForm({
   subjects,
@@ -33,6 +31,8 @@ export function QuestionForm({
   const [difficulty, setDifficulty] = useState("MEDIUM");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
+
+  const [contentPreview, setContentPreview] = useState("");
 
   // Key trick: remount form fields when AI suggestion is applied
   const [formKey, setFormKey] = useState(0);
@@ -84,6 +84,7 @@ export function QuestionForm({
       correct: q.correct,
       explanation: q.explanation,
     });
+    setContentPreview(q.content);
     setFormKey((k) => k + 1); // remount inputs with new defaultValue
     // Scroll to top of form
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -174,6 +175,9 @@ export function QuestionForm({
         </div>
       </div>
 
+      {/* ── Bảng ký hiệu toán học ── */}
+      <SymbolToolbar />
+
       {/* ── AI Suggest Panel ── */}
       <AiSuggestPanel
         subjectId={subjectId}
@@ -192,8 +196,10 @@ export function QuestionForm({
           required
           defaultValue={defaults.content}
           placeholder="Nhập câu hỏi tại đây..."
+          onChange={(e) => setContentPreview(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 placeholder:text-gray-400"
         />
+        <MathPreview value={contentPreview} />
       </div>
 
       {/* Đáp án (keyed for AI fill) */}

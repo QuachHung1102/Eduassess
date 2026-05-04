@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Đại lượng & Vectơ",
+    "items": [
+      { "display": "\\vec{F}", "insert": "\\vec{F}", "hint": "Vectơ lực F" },
+      { "display": "\\vec{v}", "insert": "\\vec{v}", "hint": "Vectơ vận tốc v" },
+      { "display": "\\vec{a}", "insert": "\\vec{a}", "hint": "Vectơ gia tốc a" },
+      { "display": "\\vec{p}", "insert": "\\vec{p}", "hint": "Vectơ động lượng p" },
+      { "display": "\\Delta x", "insert": "\\Delta x", "hint": "Độ biến thiên — thay x bằng đại lượng" },
+      { "display": "\\Delta t", "insert": "\\Delta t", "hint": "Khoảng thời gian Δt" },
+      { "display": "\\bar{v}", "insert": "\\bar{v}", "hint": "Vận tốc trung bình v̄" },
+      { "display": "v_0", "insert": "v_{0}", "hint": "Vận tốc ban đầu v₀" },
+      { "display": "v_t", "insert": "v_{t}", "hint": "Vận tốc tại thời điểm t" },
+      { "display": "F = ma", "insert": "F = ma", "hint": "Định luật II Newton" },
+      { "display": "\\frac{1}{2}mv^2", "insert": "\\frac{1}{2}mv^{2}", "hint": "Động năng Eđ = ½mv²" },
+      { "display": "mgh", "insert": "mgh", "hint": "Thế năng hấp dẫn Et = mgh" },
+      { "display": "\\frac{kq_1q_2}{r^2}", "insert": "\\frac{kq_1q_2}{r^{2}}", "hint": "Lực Coulomb — thay k, q₁, q₂, r" }
+    ]
+  },
+  {
+    "name": "Sóng & Điện từ",
+    "items": [
+      { "display": "\\lambda", "insert": "\\lambda", "hint": "Bước sóng λ" },
+      { "display": "\\nu", "insert": "\\nu", "hint": "Tần số ν (nu)" },
+      { "display": "\\omega", "insert": "\\omega", "hint": "Tần số góc ω (rad/s)" },
+      { "display": "T", "insert": "T", "hint": "Chu kỳ T (s)" },
+      { "display": "f = \\frac{1}{T}", "insert": "f = \\frac{1}{T}", "hint": "Tần số f = 1/T" },
+      { "display": "\\varepsilon", "insert": "\\varepsilon", "hint": "Suất điện động ε (EMF)" },
+      { "display": "\\Phi", "insert": "\\Phi", "hint": "Từ thông Φ" },
+      { "display": "\\mu_0", "insert": "\\mu_{0}", "hint": "Hằng số từ μ₀" },
+      { "display": "\\epsilon_0", "insert": "\\epsilon_{0}", "hint": "Hằng số điện môi ε₀" },
+      { "display": "\\hbar", "insert": "\\hbar", "hint": "Hằng số Planck rút gọn ℏ = h/2π" }
+    ]
+  },
+  {
+    "name": "Đơn vị vật lý",
+    "items": [
+      { "display": "\\text{J}", "insert": "\\text{J}", "hint": "Đơn vị Joule (năng lượng)" },
+      { "display": "\\text{W}", "insert": "\\text{W}", "hint": "Đơn vị Watt (công suất)" },
+      { "display": "\\text{N}", "insert": "\\text{N}", "hint": "Đơn vị Newton (lực)" },
+      { "display": "\\text{m/s}", "insert": "\\text{m/s}", "hint": "Đơn vị vận tốc m/s" },
+      { "display": "\\text{m/s}^2", "insert": "\\text{m/s}^{2}", "hint": "Đơn vị gia tốc m/s²" },
+      { "display": "\\Omega", "insert": "\\Omega", "hint": "Đơn vị điện trở Ω (ohm)" },
+      { "display": "\\mu\\text{A}", "insert": "\\mu\\text{A}", "hint": "Đơn vị microAmpe μA" },
+      { "display": "\\text{Pa}", "insert": "\\text{Pa}", "hint": "Đơn vị Pascal (áp suất)" },
+      { "display": "\\text{Hz}", "insert": "\\text{Hz}", "hint": "Đơn vị Hertz (tần số)" },
+      { "display": "\\text{eV}", "insert": "\\text{eV}", "hint": "Đơn vị electronvolt eV" }
+    ]
+  }
+]

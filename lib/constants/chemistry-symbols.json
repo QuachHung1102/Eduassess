@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Phản ứng hóa học",
+    "items": [
+      { "display": "\\rightarrow", "insert": "\\rightarrow", "hint": "Mũi tên phản ứng một chiều →" },
+      { "display": "\\rightleftharpoons", "insert": "\\rightleftharpoons", "hint": "Phản ứng thuận nghịch ⇌" },
+      { "display": "\\overset{t^\\circ}{\\rightarrow}", "insert": "\\overset{t^\\circ}{\\rightarrow}", "hint": "Phản ứng có điều kiện nhiệt độ" },
+      { "display": "\\overset{xt}{\\rightarrow}", "insert": "\\overset{xt}{\\rightarrow}", "hint": "Phản ứng có xúc tác" },
+      { "display": "\\uparrow", "insert": "\\uparrow", "hint": "Chất khí bay lên ↑ (sản phẩm khí)" },
+      { "display": "\\downarrow", "insert": "\\downarrow", "hint": "Kết tủa ↓" },
+      { "display": "\\text{(r)}", "insert": "\\text{(r)}", "hint": "Pha rắn (r)" },
+      { "display": "\\text{(l)}", "insert": "\\text{(l)}", "hint": "Pha lỏng (l)" },
+      { "display": "\\text{(k)}", "insert": "\\text{(k)}", "hint": "Pha khí (k)" },
+      { "display": "\\text{(aq)}", "insert": "\\text{(aq)}", "hint": "Dung dịch nước (aq)" }
+    ]
+  },
+  {
+    "name": "Nhiệt động & Cân bằng",
+    "items": [
+      { "display": "\\Delta H", "insert": "\\Delta H", "hint": "Nhiệt phản ứng ΔH (enthalpy)" },
+      { "display": "\\Delta G", "insert": "\\Delta G", "hint": "Năng lượng Gibbs ΔG" },
+      { "display": "\\Delta S", "insert": "\\Delta S", "hint": "Entropy ΔS" },
+      { "display": "K_{eq}", "insert": "K_{eq}", "hint": "Hằng số cân bằng Keq" },
+      { "display": "K_a", "insert": "K_{a}", "hint": "Hằng số phân ly axit Ka" },
+      { "display": "K_b", "insert": "K_{b}", "hint": "Hằng số phân ly bazơ Kb" },
+      { "display": "K_w", "insert": "K_{w}", "hint": "Tích số ion nước Kw" },
+      { "display": "\\text{pH}", "insert": "\\text{pH}", "hint": "pH = -log[H⁺]" },
+      { "display": "\\text{pOH}", "insert": "\\text{pOH}", "hint": "pOH = -log[OH⁻]" },
+      { "display": "[\\text{H}^+]", "insert": "[\\text{H}^{+}]", "hint": "Nồng độ ion H⁺" },
+      { "display": "[\\text{OH}^-]", "insert": "[\\text{OH}^{-}]", "hint": "Nồng độ ion OH⁻" }
+    ]
+  },
+  {
+    "name": "Mol & Nồng độ",
+    "items": [
+      { "display": "n", "insert": "n", "hint": "Số mol n (mol)" },
+      { "display": "M", "insert": "M", "hint": "Khối lượng mol M (g/mol)" },
+      { "display": "C_M", "insert": "C_{M}", "hint": "Nồng độ mol CM (mol/L)" },
+      { "display": "C\\%", "insert": "C\\%", "hint": "Nồng độ phần trăm C%" },
+      { "display": "\\rho", "insert": "\\rho", "hint": "Khối lượng riêng ρ (g/mL)" },
+      { "display": "N_A", "insert": "N_{A}", "hint": "Số Avogadro NA ≈ 6,022×10²³" },
+      { "display": "\\overset{+n}{\\text{X}}", "insert": "\\overset{+n}{\\text{X}}", "hint": "Số oxi hóa +n — thay X và n" },
+      { "display": "\\text{X}^{n+}", "insert": "\\text{X}^{n+}", "hint": "Ion dương X^n+ — thay X, n" },
+      { "display": "\\text{X}^{n-}", "insert": "\\text{X}^{n-}", "hint": "Ion âm X^n- — thay X, n" }
+    ]
+  }
+]

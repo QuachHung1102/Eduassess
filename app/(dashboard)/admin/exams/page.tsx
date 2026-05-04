@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getAdminExams, getAdminSubjects } from "@/lib/admin/queries";
 import { AdminDeleteExamButton } from "./AdminDeleteExamButton";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faFilePen } from "@fortawesome/free-solid-svg-icons";
 
 const PAGE_SIZE = 20;
 
@@ -106,7 +108,7 @@ export default async function AdminExamsPage({
               {exams.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-gray-400">
-                    <div className="text-3xl mb-2">📝</div>
+                    <div className="text-3xl mb-2"><FaIcon icon={faFilePen} /></div>
                     <p>Chưa có đề kiểm tra nào.</p>
                   </td>
                 </tr>

@@ -1,0 +1,558 @@
+[
+  {
+    "name": "Phép tính",
+    "items": [
+      { "display": "\\pm", "insert": "\\pm", "hint": "Cộng trừ ±" },
+      { "display": "\\mp", "insert": "\\mp", "hint": "Trừ cộng ∓" },
+      { "display": "\\times", "insert": "\\times", "hint": "Nhân ×" },
+      { "display": "\\div", "insert": "\\div", "hint": "Chia ÷" },
+      { "display": "\\cdot", "insert": "\\cdot", "hint": "Nhân (chấm) ·" },
+      { "display": "\\ast", "insert": "\\ast", "hint": "Dấu sao ∗" },
+      { "display": "\\circ", "insert": "\\circ", "hint": "Hợp hàm ∘" },
+      { "display": "\\oplus", "insert": "\\oplus", "hint": "Cộng vòng tròn ⊕" },
+      {
+        "display": "\\otimes",
+        "insert": "\\otimes",
+        "hint": "Nhân vòng tròn ⊗"
+      },
+      {
+        "display": "\\frac{a}{b}",
+        "insert": "\\frac{a}{b}",
+        "hint": "Phân số — thay a, b bằng giá trị thực"
+      },
+      {
+        "display": "\\dfrac{a}{b}",
+        "insert": "\\dfrac{a}{b}",
+        "hint": "Phân số to — thay a, b bằng giá trị thực"
+      },
+      { "display": "\\sqrt{x}", "insert": "\\sqrt{x}", "hint": "Căn bậc 2 — thay x bằng biểu thức" },
+      {
+        "display": "\\sqrt[n]{x}",
+        "insert": "\\sqrt[n]{x}",
+        "hint": "Căn bậc n — thay n và x bằng giá trị thực"
+      },
+      {
+        "display": "x^{n}",
+        "insert": "x^{n}",
+        "hint": "Lũy thừa — thay x và n bằng giá trị thực"
+      },
+      { "display": "x_{n}", "insert": "x_{n}", "hint": "Chỉ số dưới — thay x và n" },
+      { "display": "x^{2}", "insert": "x^{2}", "hint": "Bình phương — thay x bằng biểu thức" },
+      { "display": "x^{3}", "insert": "x^{3}", "hint": "Lập phương — thay x bằng biểu thức" },
+      { "display": "x^{-1}", "insert": "x^{-1}", "hint": "Lũy thừa nghịch đảo" },
+      {
+        "display": "\\left|x\\right|",
+        "insert": "\\left|x\\right|",
+        "hint": "Giá trị tuyệt đối — thay x bằng biểu thức"
+      },
+      {
+        "display": "\\lfloor x \\rfloor",
+        "insert": "\\lfloor x \\rfloor",
+        "hint": "Hàm sàn ⌊x⌋ — thay x"
+      },
+      {
+        "display": "\\lceil x \\rceil",
+        "insert": "\\lceil x \\rceil",
+        "hint": "Hàm trần ⌈x⌉ — thay x"
+      },
+      {
+        "display": "\\binom{n}{k}",
+        "insert": "\\binom{n}{k}",
+        "hint": "Tổ hợp C(n,k)"
+      },
+      { "display": "n!", "insert": "n!", "hint": "Giai thừa n!" },
+      { "display": "\\%", "insert": "\\%", "hint": "Phần trăm %" },
+      {
+        "display": "\\pmod{m}",
+        "insert": "\\pmod{m}",
+        "hint": "Đồng dư — thay m bằng modulo"
+      }
+    ]
+  },
+  {
+    "name": "So sánh",
+    "items": [
+      { "display": "=", "insert": "=", "hint": "Bằng" },
+      { "display": "\\neq", "insert": "\\neq", "hint": "Khác ≠" },
+      { "display": "<", "insert": "<", "hint": "Nhỏ hơn" },
+      { "display": ">", "insert": ">", "hint": "Lớn hơn" },
+      { "display": "\\leq", "insert": "\\leq", "hint": "Nhỏ hơn hoặc bằng ≤" },
+      { "display": "\\geq", "insert": "\\geq", "hint": "Lớn hơn hoặc bằng ≥" },
+      { "display": "\\ll", "insert": "\\ll", "hint": "Rất nhỏ hơn ≪" },
+      { "display": "\\gg", "insert": "\\gg", "hint": "Rất lớn hơn ≫" },
+      { "display": "\\approx", "insert": "\\approx", "hint": "Xấp xỉ ≈" },
+      {
+        "display": "\\sim",
+        "insert": "\\sim",
+        "hint": "Đồng dạng / tương đương ~"
+      },
+      {
+        "display": "\\cong",
+        "insert": "\\cong",
+        "hint": "Bằng nhau (hình học) ≅"
+      },
+      {
+        "display": "\\equiv",
+        "insert": "\\equiv",
+        "hint": "Tương đương / đồng nhất ≡"
+      },
+      { "display": "\\propto", "insert": "\\propto", "hint": "Tỉ lệ thuận ∝" },
+      { "display": "\\infty", "insert": "\\infty", "hint": "Vô cực ∞" }
+    ]
+  },
+  {
+    "name": "Chữ Hy Lạp",
+    "items": [
+      { "display": "\\alpha", "insert": "\\alpha", "hint": "alpha α" },
+      { "display": "\\beta", "insert": "\\beta", "hint": "beta β" },
+      { "display": "\\gamma", "insert": "\\gamma", "hint": "gamma γ" },
+      { "display": "\\delta", "insert": "\\delta", "hint": "delta δ" },
+      { "display": "\\epsilon", "insert": "\\epsilon", "hint": "epsilon ε" },
+      {
+        "display": "\\varepsilon",
+        "insert": "\\varepsilon",
+        "hint": "varepsilon ε (biến thể)"
+      },
+      { "display": "\\zeta", "insert": "\\zeta", "hint": "zeta ζ" },
+      { "display": "\\eta", "insert": "\\eta", "hint": "eta η" },
+      { "display": "\\theta", "insert": "\\theta", "hint": "theta θ" },
+      {
+        "display": "\\vartheta",
+        "insert": "\\vartheta",
+        "hint": "vartheta ϑ (biến thể)"
+      },
+      { "display": "\\iota", "insert": "\\iota", "hint": "iota ι" },
+      { "display": "\\kappa", "insert": "\\kappa", "hint": "kappa κ" },
+      { "display": "\\lambda", "insert": "\\lambda", "hint": "lambda λ" },
+      { "display": "\\mu", "insert": "\\mu", "hint": "mu μ" },
+      { "display": "\\nu", "insert": "\\nu", "hint": "nu ν" },
+      { "display": "\\xi", "insert": "\\xi", "hint": "xi ξ" },
+      { "display": "\\pi", "insert": "\\pi", "hint": "pi π" },
+      {
+        "display": "\\varpi",
+        "insert": "\\varpi",
+        "hint": "varpi ϖ (biến thể)"
+      },
+      { "display": "\\rho", "insert": "\\rho", "hint": "rho ρ" },
+      { "display": "\\sigma", "insert": "\\sigma", "hint": "sigma σ" },
+      {
+        "display": "\\varsigma",
+        "insert": "\\varsigma",
+        "hint": "varsigma ς (biến thể)"
+      },
+      { "display": "\\tau", "insert": "\\tau", "hint": "tau τ" },
+      { "display": "\\upsilon", "insert": "\\upsilon", "hint": "upsilon υ" },
+      { "display": "\\phi", "insert": "\\phi", "hint": "phi φ" },
+      {
+        "display": "\\varphi",
+        "insert": "\\varphi",
+        "hint": "varphi φ (biến thể, phổ dùng hơn)"
+      },
+      { "display": "\\chi", "insert": "\\chi", "hint": "chi χ" },
+      { "display": "\\psi", "insert": "\\psi", "hint": "psi ψ" },
+      { "display": "\\omega", "insert": "\\omega", "hint": "omega ω" },
+      { "display": "\\Gamma", "insert": "\\Gamma", "hint": "Gamma Γ (hoa)" },
+      { "display": "\\Delta", "insert": "\\Delta", "hint": "Delta Δ (hoa)" },
+      { "display": "\\Theta", "insert": "\\Theta", "hint": "Theta Θ (hoa)" },
+      { "display": "\\Lambda", "insert": "\\Lambda", "hint": "Lambda Λ (hoa)" },
+      { "display": "\\Xi", "insert": "\\Xi", "hint": "Xi Ξ (hoa)" },
+      { "display": "\\Pi", "insert": "\\Pi", "hint": "Pi Π (hoa)" },
+      { "display": "\\Sigma", "insert": "\\Sigma", "hint": "Sigma Σ (hoa)" },
+      {
+        "display": "\\Upsilon",
+        "insert": "\\Upsilon",
+        "hint": "Upsilon Υ (hoa)"
+      },
+      { "display": "\\Phi", "insert": "\\Phi", "hint": "Phi Φ (hoa)" },
+      { "display": "\\Psi", "insert": "\\Psi", "hint": "Psi Ψ (hoa)" },
+      { "display": "\\Omega", "insert": "\\Omega", "hint": "Omega Ω (hoa)" }
+    ]
+  },
+  {
+    "name": "Tập hợp",
+    "items": [
+      { "display": "\\in", "insert": "\\in", "hint": "Thuộc ∈" },
+      { "display": "\\notin", "insert": "\\notin", "hint": "Không thuộc ∉" },
+      { "display": "\\ni", "insert": "\\ni", "hint": "Chứa phần tử ∋" },
+      {
+        "display": "\\subset",
+        "insert": "\\subset",
+        "hint": "Tập con (có thể bằng) ⊂"
+      },
+      {
+        "display": "\\subseteq",
+        "insert": "\\subseteq",
+        "hint": "Tập con hoặc bằng ⊆"
+      },
+      {
+        "display": "\\not\\subset",
+        "insert": "\\not\\subset",
+        "hint": "Không là tập con ⊄"
+      },
+      { "display": "\\supset", "insert": "\\supset", "hint": "Tập cha ⊃" },
+      {
+        "display": "\\supseteq",
+        "insert": "\\supseteq",
+        "hint": "Tập cha hoặc bằng ⊇"
+      },
+      { "display": "\\cup", "insert": "\\cup", "hint": "Hợp ∪" },
+      { "display": "\\cap", "insert": "\\cap", "hint": "Giao ∩" },
+      {
+        "display": "\\setminus",
+        "insert": "\\setminus",
+        "hint": "Hiệu tập hợp A\\B"
+      },
+      { "display": "\\emptyset", "insert": "\\emptyset", "hint": "Tập rỗng ∅" },
+      {
+        "display": "\\varnothing",
+        "insert": "\\varnothing",
+        "hint": "Tập rỗng ∅ (biến thể)"
+      },
+      {
+        "display": "\\mathbb{N}",
+        "insert": "\\mathbb{N}",
+        "hint": "Tập số tự nhiên ℕ"
+      },
+      {
+        "display": "\\mathbb{Z}",
+        "insert": "\\mathbb{Z}",
+        "hint": "Tập số nguyên ℤ"
+      },
+      {
+        "display": "\\mathbb{Q}",
+        "insert": "\\mathbb{Q}",
+        "hint": "Tập số hữu tỉ ℚ"
+      },
+      {
+        "display": "\\mathbb{R}",
+        "insert": "\\mathbb{R}",
+        "hint": "Tập số thực ℝ"
+      },
+      {
+        "display": "\\mathbb{C}",
+        "insert": "\\mathbb{C}",
+        "hint": "Tập số phức ℂ"
+      },
+      { "display": "[a,b]", "insert": "[a,b]", "hint": "Đoạn đóng — thay a, b" },
+      { "display": "(a,b)", "insert": "(a,b)", "hint": "Khoảng mở — thay a, b" },
+      { "display": "[a,b)", "insert": "[a,b)", "hint": "Nửa khoảng — thay a, b" },
+      { "display": "\\{a,b\\}", "insert": "\\{a,b\\}", "hint": "Tập hợp liệt kê — thay a, b bằng các phần tử" }
+    ]
+  },
+  {
+    "name": "Logic",
+    "items": [
+      { "display": "\\forall", "insert": "\\forall", "hint": "Với mọi ∀" },
+      { "display": "\\exists", "insert": "\\exists", "hint": "Tồn tại ∃" },
+      {
+        "display": "\\nexists",
+        "insert": "\\nexists",
+        "hint": "Không tồn tại ∄"
+      },
+      { "display": "\\neg", "insert": "\\neg", "hint": "Phủ định ¬" },
+      { "display": "\\land", "insert": "\\land", "hint": "Và (AND) ∧" },
+      { "display": "\\lor", "insert": "\\lor", "hint": "Hoặc (OR) ∨" },
+      {
+        "display": "\\Rightarrow",
+        "insert": "\\Rightarrow",
+        "hint": "Kéo theo (suy ra) ⇒"
+      },
+      {
+        "display": "\\Leftarrow",
+        "insert": "\\Leftarrow",
+        "hint": "Kéo theo (chiều ngược) ⇐"
+      },
+      {
+        "display": "\\Leftrightarrow",
+        "insert": "\\Leftrightarrow",
+        "hint": "Tương đương (khi và chỉ khi) ⟺"
+      },
+      {
+        "display": "\\rightarrow",
+        "insert": "\\rightarrow",
+        "hint": "Suy ra / ánh xạ →"
+      },
+      {
+        "display": "\\leftrightarrow",
+        "insert": "\\leftrightarrow",
+        "hint": "Tương đương ↔"
+      },
+      { "display": "\\therefore", "insert": "\\therefore", "hint": "Do đó ∴" },
+      { "display": "\\because", "insert": "\\because", "hint": "Bởi vì ∵" }
+    ]
+  },
+  {
+    "name": "Giải tích",
+    "items": [
+      {
+        "display": "\\lim_{x\\to a}",
+        "insert": "\\lim_{x\\to a}",
+        "hint": "Giới hạn — thay a bằng điểm tiếp cận"
+      },
+      {
+        "display": "\\lim_{x\\to\\infty}",
+        "insert": "\\lim_{x\\to\\infty}",
+        "hint": "Giới hạn tại vô cực"
+      },
+      {
+        "display": "\\sum_{i=1}^{n}",
+        "insert": "\\sum_{i=1}^{n}",
+        "hint": "Tổng Sigma — viết biểu thức cần cộng sau dấu"
+      },
+      {
+        "display": "\\prod_{i=1}^{n}",
+        "insert": "\\prod_{i=1}^{n}",
+        "hint": "Tích Pi — viết biểu thức cần nhân sau dấu"
+      },
+      { "display": "\\int", "insert": "\\int", "hint": "Tích phân bất định — viết f(x)\\,dx sau dấu" },
+      {
+        "display": "\\int_{a}^{b}",
+        "insert": "\\int_{a}^{b}",
+        "hint": "Tích phân xác định — thay a, b rồi viết f(x)\\,dx sau dấu"
+      },
+      { "display": "\\iint", "insert": "\\iint", "hint": "Tích phân đôi ∬" },
+      { "display": "\\iiint", "insert": "\\iiint", "hint": "Tích phân ba ∭" },
+      { "display": "\\oint", "insert": "\\oint", "hint": "Tích phân đường ∮" },
+      { "display": "f'(x)", "insert": "f'(x)", "hint": "Đạo hàm f'(x) — thay f bằng tên hàm" },
+      {
+        "display": "f''(x)",
+        "insert": "f''(x)",
+        "hint": "Đạo hàm cấp 2 — thay f bằng tên hàm"
+      },
+      {
+        "display": "\\frac{dy}{dx}",
+        "insert": "\\frac{dy}{dx}",
+        "hint": "Ký hiệu Leibniz dy/dx"
+      },
+      {
+        "display": "\\frac{d^2y}{dx^2}",
+        "insert": "\\frac{d^2y}{dx^2}",
+        "hint": "Đạo hàm cấp 2 Leibniz"
+      },
+      {
+        "display": "\\partial",
+        "insert": "\\partial",
+        "hint": "Ký hiệu đạo hàm riêng ∂"
+      },
+      {
+        "display": "\\frac{\\partial f}{\\partial x}",
+        "insert": "\\frac{\\partial f}{\\partial x}",
+        "hint": "Đạo hàm riêng theo x — thay f"
+      },
+      { "display": "\\nabla", "insert": "\\nabla", "hint": "Toán tử nabla ∇" },
+      {
+        "display": "\\Delta f",
+        "insert": "\\Delta f",
+        "hint": "Toán tử Laplace — thay f"
+      },
+      { "display": "e^{x}", "insert": "e^{x}", "hint": "Hàm mũ e^x — thay x bằng số mũ" },
+      { "display": "\\ln x", "insert": "\\ln x", "hint": "Logarit tự nhiên — thay x" },
+      {
+        "display": "\\log x",
+        "insert": "\\log x",
+        "hint": "Logarit thập phân — thay x"
+      },
+      {
+        "display": "\\log_{a} x",
+        "insert": "\\log_{a} x",
+        "hint": "Logarit cơ số a — thay a và x"
+      }
+    ]
+  },
+  {
+    "name": "Hình học",
+    "items": [
+      { "display": "\\angle", "insert": "\\angle", "hint": "Góc ∠" },
+      {
+        "display": "\\measuredangle",
+        "insert": "\\measuredangle",
+        "hint": "Góc đo ∡"
+      },
+      { "display": "\\triangle", "insert": "\\triangle", "hint": "Tam giác △" },
+      { "display": "\\square", "insert": "\\square", "hint": "Hình vuông □" },
+      { "display": "\\perp", "insert": "\\perp", "hint": "Vuông góc ⊥" },
+      {
+        "display": "\\parallel",
+        "insert": "\\parallel",
+        "hint": "Song song ∥"
+      },
+      {
+        "display": "\\not\\parallel",
+        "insert": "\\not\\parallel",
+        "hint": "Không song song ∦"
+      },
+      {
+        "display": "\\overline{AB}",
+        "insert": "\\overline{AB}",
+        "hint": "Đoạn thẳng — thay AB bằng tên đoạn"
+      },
+      {
+        "display": "\\overrightarrow{AB}",
+        "insert": "\\overrightarrow{AB}",
+        "hint": "Vectơ AB — thay AB bằng tên vectơ"
+      },
+      {
+        "display": "\\vec{v}",
+        "insert": "\\vec{v}",
+        "hint": "Vectơ (ký hiệu nhỏ) — thay v"
+      },
+      {
+        "display": "\\widehat{ABC}",
+        "insert": "\\widehat{ABC}",
+        "hint": "Góc ABC — thay ABC bằng tên góc"
+      },
+      {
+        "display": "\\overset{\\frown}{AB}",
+        "insert": "\\overset{\\frown}{AB}",
+        "hint": "Cung AB — thay AB"
+      },
+      {
+        "display": "^{\\circ}",
+        "insert": "^{\\circ}",
+        "hint": "Độ (°), vd: 90^{\\circ}"
+      },
+      { "display": "\\pi", "insert": "\\pi", "hint": "Pi π ≈ 3.14159..." },
+      { "display": "\\sim", "insert": "\\sim", "hint": "Đồng dạng ~" },
+      { "display": "\\cong", "insert": "\\cong", "hint": "Bằng nhau ≅" }
+    ]
+  },
+  {
+    "name": "Lượng giác",
+    "items": [
+      { "display": "\\sin x", "insert": "\\sin x", "hint": "sin — thay x bằng góc" },
+      { "display": "\\cos x", "insert": "\\cos x", "hint": "cos — thay x bằng góc" },
+      { "display": "\\tan x", "insert": "\\tan x", "hint": "tan — thay x bằng góc" },
+      { "display": "\\cot x", "insert": "\\cot x", "hint": "cot — thay x bằng góc" },
+      { "display": "\\sec x", "insert": "\\sec x", "hint": "sec — thay x bằng góc" },
+      { "display": "\\csc x", "insert": "\\csc x", "hint": "csc (cosec) — thay x bằng góc" },
+      { "display": "\\sin^{2}x", "insert": "\\sin^{2}x", "hint": "sin²x — thay x bằng góc" },
+      { "display": "\\cos^{2}x", "insert": "\\cos^{2}x", "hint": "cos²x — thay x bằng góc" },
+      {
+        "display": "\\arcsin x",
+        "insert": "\\arcsin x",
+        "hint": "arcsin (sin nghịch) — thay x"
+      },
+      {
+        "display": "\\arccos x",
+        "insert": "\\arccos x",
+        "hint": "arccos (cos nghịch) — thay x"
+      },
+      {
+        "display": "\\arctan x",
+        "insert": "\\arctan x",
+        "hint": "arctan (tan nghịch) — thay x"
+      },
+      {
+        "display": "\\sinh x",
+        "insert": "\\sinh x",
+        "hint": "Sinh hyperbolic — thay x"
+      },
+      {
+        "display": "\\cosh x",
+        "insert": "\\cosh x",
+        "hint": "Cosh hyperbolic — thay x"
+      },
+      {
+        "display": "\\tanh x",
+        "insert": "\\tanh x",
+        "hint": "Tanh hyperbolic — thay x"
+      }
+    ]
+  },
+  {
+    "name": "Ma trận",
+    "items": [
+      {
+        "display": "\\left(\\begin{smallmatrix}a&b\\\\c&d\\end{smallmatrix}\\right)",
+        "insert": "\\begin{pmatrix}a & b \\\\ c & d\\end{pmatrix}",
+        "hint": "Ma trận () 2x2 — thay a,b,c,d bằng các phần tử"
+      },
+      {
+        "display": "\\left[\\begin{smallmatrix}a&b\\\\c&d\\end{smallmatrix}\\right]",
+        "insert": "\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}",
+        "hint": "Ma trận [] 2x2 — thay a,b,c,d bằng các phần tử"
+      },
+      {
+        "display": "\\left|\\begin{smallmatrix}a&b\\\\c&d\\end{smallmatrix}\\right|",
+        "insert": "\\begin{vmatrix}a & b \\\\ c & d\\end{vmatrix}",
+        "hint": "Định thức |A| 2x2 — thay a,b,c,d"
+      },
+      { "display": "A^{T}", "insert": "A^{T}", "hint": "Chuyển vị — thay A bằng tên ma trận" },
+      {
+        "display": "A^{-1}",
+        "insert": "A^{-1}",
+        "hint": "Ma trận nghịch đảo — thay A bằng tên ma trận"
+      },
+      {
+        "display": "\\det(A)",
+        "insert": "\\det(A)",
+        "hint": "Định thức — thay A bằng tên ma trận"
+      },
+      { "display": "\\|v\\|", "insert": "\\|v\\|", "hint": "Chuẩn vectơ — thay v bằng tên vectơ" },
+      {
+        "display": "\\cdots",
+        "insert": "\\cdots",
+        "hint": "Dấu chấm lửng ···"
+      },
+      { "display": "\\vdots", "insert": "\\vdots", "hint": "Dấu chấm đứng ⋮" },
+      { "display": "\\ddots", "insert": "\\ddots", "hint": "Dấu chấm chéo ⋱" }
+    ]
+  },
+  {
+    "name": "Mũi tên",
+    "items": [
+      { "display": "\\to", "insert": "\\to", "hint": "Ánh xạ tới →" },
+      {
+        "display": "\\leftarrow",
+        "insert": "\\leftarrow",
+        "hint": "Mũi tên trái ←"
+      },
+      {
+        "display": "\\leftrightarrow",
+        "insert": "\\leftrightarrow",
+        "hint": "Mũi tên hai chiều ↔"
+      },
+      {
+        "display": "\\uparrow",
+        "insert": "\\uparrow",
+        "hint": "Mũi tên lên ↑"
+      },
+      {
+        "display": "\\downarrow",
+        "insert": "\\downarrow",
+        "hint": "Mũi tên xuống ↓"
+      },
+      {
+        "display": "\\nearrow",
+        "insert": "\\nearrow",
+        "hint": "Mũi tên chéo lên phải ↗"
+      },
+      {
+        "display": "\\searrow",
+        "insert": "\\searrow",
+        "hint": "Mũi tên chéo xuống phải ↘"
+      },
+      { "display": "\\mapsto", "insert": "\\mapsto", "hint": "Ánh thành ↦" },
+      {
+        "display": "\\hookrightarrow",
+        "insert": "\\hookrightarrow",
+        "hint": "Nhúng (injection) ↪"
+      },
+      {
+        "display": "\\twoheadrightarrow",
+        "insert": "\\twoheadrightarrow",
+        "hint": "Toàn ánh (surjection) ↠"
+      },
+      {
+        "display": "\\xrightarrow{f}",
+        "insert": "\\xrightarrow{f}",
+        "hint": "Mũi tên phải có nhãn — thay f bằng tên ánh xạ"
+      },
+      {
+        "display": "\\xleftarrow{f}",
+        "insert": "\\xleftarrow{f}",
+        "hint": "Mũi tên trái có nhãn — thay f bằng tên ánh xạ"
+      }
+    ]
+  }
+]

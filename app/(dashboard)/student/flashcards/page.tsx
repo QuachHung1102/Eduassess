@@ -1,30 +1,9 @@
 import Link from "next/link";
-import { CldImage } from "@/components/ui/CloudinaryImage";
 import { getStudentFlashcardFilters, getStudentFlashcardSets } from "@/lib/student/queries";
-
-const DIFFICULTY_LABEL: Record<string, string> = {
-  EASY: "Dễ",
-  MEDIUM: "Trung bình",
-  HARD: "Khó",
-};
-
-const DIFFICULTY_TILE_THEME: Record<string, string> = {
-  EASY: "flashcard-set-tile flashcard-set-tile-easy",
-  MEDIUM: "flashcard-set-tile flashcard-set-tile-medium",
-  HARD: "flashcard-set-tile flashcard-set-tile-hard",
-};
-
-const DIFFICULTY_BADGE_THEME: Record<string, string> = {
-  EASY: "bg-emerald-100 text-emerald-700",
-  MEDIUM: "bg-amber-100 text-amber-700",
-  HARD: "bg-fuchsia-100 text-fuchsia-700",
-};
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRIMARY: "Tiểu học",
-  MIDDLE: "THCS",
-  HIGH: "THPT",
-};
+import { FlashcardSetCard } from "@/components/flashcards/FlashcardSetCard";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faShuffle, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { DIFFICULTY_LABEL, LEVEL_LABEL } from "@/lib/constants/labels";
 
 function buildQueryString(params: Record<string, string | undefined>) {
   const search = new URLSearchParams();
@@ -75,7 +54,7 @@ export default async function StudentFlashcardsPage({
             href={randomHref}
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            🎲 Học ngẫu nhiên
+            <FaIcon icon={faShuffle} className="mr-1.5" /> Học ngẫu nhiên
           </Link>
         </div>
 
@@ -149,62 +128,36 @@ export default async function StudentFlashcardsPage({
         </form>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 items-stretch">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 items-stretch">
         {sets.length === 0 ? (
           <div className="col-span-full rounded-xl border border-gray-100 bg-white py-16 text-center text-gray-400 shadow-sm">
-            <div className="mb-2 text-3xl">🃏</div>
+            <div className="mb-2 text-3xl"><FaIcon icon={faLayerGroup} /></div>
             <p>Không có bộ flashcard nào khớp với bộ lọc hiện tại.</p>
           </div>
         ) : (
-          sets.map((set) => (
-            <Link
+          sets.map((set, index) => (
+            <FlashcardSetCard
               key={set.id}
-              href={`/student/flashcards/${set.id}`}
-              className={`group ${DIFFICULTY_TILE_THEME[set.difficulty]} p-5 h-full flex flex-col transition-all hover:-translate-y-1 hover:shadow-xl`}
-            >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="shrink-0 text-xl">🃏</span>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${DIFFICULTY_BADGE_THEME[set.difficulty]}`}>
-                    {DIFFICULTY_LABEL[set.difficulty]}
-                  </span>
-                </div>
-                <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-xs text-slate-700 shadow-sm">
-                  {set._count.cards} thẻ
+              priority={index === 0}
+              title={set.title}
+              previewImageUrl={set.cards[0]?.imageUrl}
+              cardCount={set._count.cards}
+              sessionCount={set._count.sessions}
+              subject={set.subject.name}
+              grade={set.grade}
+              topicName={set.topicName}
+              difficulty={set.difficulty}
+              badge={
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 truncate max-w-36">
+                  {set.createdBy.name}
                 </span>
-              </div>
-              <h2 className="truncate font-semibold text-gray-900 transition-colors group-hover:text-blue-600">
-                {set.title}
-              </h2>
-              <div className="mt-3 overflow-hidden rounded-2xl border border-white/70 bg-white/80 aspect-4/3 shadow-sm shrink-0">
-                {set.cards[0] ? (
-                  <CldImage
-                    src={set.cards[0].imageUrl}
-                    alt={set.title}
-                    width={800}
-                    height={600}
-                    crop="fill"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm font-medium text-slate-400">
-                    Chưa có ảnh preview
-                  </div>
-                )}
-              </div>
-              <div className="mt-2 flex-1 space-y-1 text-xs text-gray-500">
-                <p className="truncate">📚 {set.subject.name}</p>
-                <p className="truncate">{LEVEL_LABEL[set.grade.level]} · Lớp {set.grade.gradeNumber}</p>
-                <p className="truncate">🏷️ {set.topicName}</p>
-                <p className="truncate">👤 {set.createdBy.name}</p>
-              </div>
-              <div className="mt-4 flex items-center justify-between text-xs">
-                <span className="text-gray-400">
-                  {set._count.sessions > 0 ? `${set._count.sessions} lượt ôn` : "Chưa có lượt ôn"}
-                </span>
-                <span className="font-medium text-blue-600 group-hover:underline whitespace-nowrap">Mở chế độ học →</span>
-              </div>
-            </Link>
+              }
+              actions={
+                <Link href={`/student/flashcards/${set.id}`} className="text-sm font-medium text-blue-600 hover:underline whitespace-nowrap">
+                  Mở chế độ học →
+                </Link>
+              }
+            />
           ))
         )}
       </div>

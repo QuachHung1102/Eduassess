@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getAdminClasses, getAdminHighSchoolGrades } from "@/lib/admin/queries";
 import { AddClassForm } from "./AddClassForm";
 import { DeleteClassButton } from "./DeleteClassButton";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faSchool } from "@fortawesome/free-solid-svg-icons";
 
 export default async function AdminClassesPage() {
   const [classes, grades] = await Promise.all([getAdminClasses(), getAdminHighSchoolGrades()]);
@@ -84,7 +86,7 @@ export default async function AdminClassesPage() {
 
         {classes.length === 0 && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-16 text-center text-gray-400">
-            <div className="text-3xl mb-2">🏫</div>
+            <div className="text-3xl mb-2"><FaIcon icon={faSchool} /></div>
             <p>Chưa có lớp học nào. Hãy thêm lớp đầu tiên!</p>
           </div>
         )}

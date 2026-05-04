@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminExamDetail } from "@/lib/admin/queries";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 
-const DIFFICULTY_LABEL: Record<string, string> = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" };
-const DIFFICULTY_COLOR: Record<string, string> = {
-  EASY: "bg-green-100 text-green-700",
-  MEDIUM: "bg-yellow-100 text-yellow-700",
-  HARD: "bg-red-100 text-red-700",
-};
+import { DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/lib/constants/labels";
 
 export default async function AdminExamDetailPage({
   params,
@@ -45,6 +42,13 @@ export default async function AdminExamDetailPage({
             </Link>
           </p>
         </div>
+        <Link
+          href={`/admin/exams/${exam.id}/edit`}
+          className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          <FaIcon icon={faPenToSquare} className="text-gray-500" />
+          Chỉnh sửa
+        </Link>
       </div>
 
       {/* Info cards */}

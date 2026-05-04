@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getTeacherExams } from "@/lib/teacher/queries";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faPlus, faFilePen } from "@fortawesome/free-solid-svg-icons";
 
 export default async function ExamsPage() {
   const exams = await getTeacherExams();
@@ -18,7 +20,7 @@ export default async function ExamsPage() {
           href="/teacher/exams/create"
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
-          ➕ Tạo đề mới
+          <FaIcon icon={faPlus} className="mr-1.5" /> Tạo đề mới
         </Link>
       </div>
 
@@ -41,7 +43,7 @@ export default async function ExamsPage() {
             {exams.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-16 text-gray-400">
-                  <div className="text-3xl mb-2">📝</div>
+                  <div className="text-3xl mb-2"><FaIcon icon={faFilePen} /></div>
                   <p>Chưa có đề kiểm tra nào. Hãy tạo đề đầu tiên!</p>
                 </td>
               </tr>

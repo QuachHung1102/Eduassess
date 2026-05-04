@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Di truyền học",
+    "items": [
+      { "display": "\\text{ADN}", "insert": "\\text{ADN}", "hint": "ADN (DNA)" },
+      { "display": "\\text{ARN}", "insert": "\\text{ARN}", "hint": "ARN (RNA)" },
+      { "display": "\\text{A-T}", "insert": "\\text{A-T}", "hint": "Cặp bazơ A liên kết T (ADN)" },
+      { "display": "\\text{G-C}", "insert": "\\text{G-C}", "hint": "Cặp bazơ G liên kết C" },
+      { "display": "\\text{A-U}", "insert": "\\text{A-U}", "hint": "Cặp bazơ A liên kết U (ARN)" },
+      { "display": "2n", "insert": "2n", "hint": "Bộ nhiễm sắc thể lưỡng bội 2n" },
+      { "display": "n", "insert": "n", "hint": "Bộ nhiễm sắc thể đơn bội n" },
+      { "display": "\\text{AA}", "insert": "\\text{AA}", "hint": "Kiểu gen đồng hợp trội AA" },
+      { "display": "\\text{Aa}", "insert": "\\text{Aa}", "hint": "Kiểu gen dị hợp Aa" },
+      { "display": "\\text{aa}", "insert": "\\text{aa}", "hint": "Kiểu gen đồng hợp lặn aa" }
+    ]
+  },
+  {
+    "name": "Phép lai & Thế hệ",
+    "items": [
+      { "display": "\\times", "insert": "\\times", "hint": "Phép lai × (nhân)" },
+      { "display": "P:", "insert": "P:", "hint": "Thế hệ bố mẹ P (Parent)" },
+      { "display": "F_1", "insert": "F_{1}", "hint": "Thế hệ con F₁ (Filial 1)" },
+      { "display": "F_2", "insert": "F_{2}", "hint": "Thế hệ con F₂ (Filial 2)" },
+      { "display": "\\text{GP}:", "insert": "\\text{GP}:", "hint": "Giao tử của bố mẹ GP" },
+      { "display": "\\frac{3}{4}", "insert": "\\frac{3}{4}", "hint": "Tỉ lệ 3/4 — phân li Mendel" },
+      { "display": "\\frac{1}{4}", "insert": "\\frac{1}{4}", "hint": "Tỉ lệ 1/4 — phân li Mendel" }
+    ]
+  },
+  {
+    "name": "Sinh hóa & Tế bào",
+    "items": [
+      { "display": "\\text{ATP}", "insert": "\\text{ATP}", "hint": "Adenosine triphosphate ATP" },
+      { "display": "\\text{ADP}", "insert": "\\text{ADP}", "hint": "Adenosine diphosphate ADP" },
+      { "display": "\\text{CO}_2", "insert": "\\text{CO}_{2}", "hint": "Khí carbon dioxide CO₂" },
+      { "display": "\\text{O}_2", "insert": "\\text{O}_{2}", "hint": "Khí oxy O₂" },
+      { "display": "\\text{H}_2\\text{O}", "insert": "\\text{H}_{2}\\text{O}", "hint": "Nước H₂O" },
+      { "display": "\\text{C}_6\\text{H}_{12}\\text{O}_6", "insert": "\\text{C}_{6}\\text{H}_{12}\\text{O}_{6}", "hint": "Glucose C₆H₁₂O₆" },
+      { "display": "\\mu\\text{m}", "insert": "\\mu\\text{m}", "hint": "Micrômét μm — đo kích thước tế bào" },
+      { "display": "\\text{nm}", "insert": "\\text{nm}", "hint": "Nanomét nm — đo phân tử" }
+    ]
+  }
+]

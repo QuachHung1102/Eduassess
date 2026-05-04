@@ -92,7 +92,12 @@ export async function getExamFeedbackAction(attemptId: string): Promise<{
     return { error: "Không tìm thấy bài làm" };
   if (!attempt.submittedAt) return { error: "Bài chưa được nộp" };
 
-  // Tổng hợp theo chủ đề
+  // ── Cache hit ────────────────────────────────────────────────
+  if (attempt.aiFeedback) {
+    return { feedback: attempt.aiFeedback };
+  }
+
+  // ── Cache miss: tổng hợp theo chủ đề ────────────────────────
   const answerMap = new Map(
     attempt.answers.map((a) => [a.questionId, a.isCorrect]),
   );
@@ -114,8 +119,9 @@ export async function getExamFeedbackAction(attemptId: string): Promise<{
   const total = attempt.exam.examQuestions.length;
   const correct = attempt.answers.filter((a) => a.isCorrect).length;
 
+  let feedback: string;
   try {
-    const feedback = await generateExamFeedback({
+    feedback = await generateExamFeedback({
       studentName: attempt.student.name ?? "Học sinh",
       examTitle: attempt.exam.title,
       subject: attempt.exam.subject.name,
@@ -124,8 +130,21 @@ export async function getExamFeedbackAction(attemptId: string): Promise<{
       total,
       topicBreakdown,
     });
-    return { feedback };
-  } catch {
+  } catch (err) {
+    console.error("[getExamFeedbackAction]", err);
     return { error: "AI không thể xử lý yêu cầu này. Vui lòng thử lại." };
   }
+
+  // Lưu vào DB để hiện lại khi xem lại bài (không generate lại)
+  try {
+    await prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: { aiFeedback: feedback },
+    });
+  } catch (err) {
+    console.error("[getExamFeedbackAction] DB save error:", err);
+    // Không block — vẫn trả feedback
+  }
+
+  return { feedback };
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTeacherAttemptDetail } from "@/lib/teacher/queries";
 import { MathText } from "@/components/MathText";
 
-const DIFFICULTY_LABEL: Record<string, string> = { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" };
+import { DIFFICULTY_LABEL } from "@/lib/constants/labels";
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
 type Option = { text: string; isCorrect: boolean };

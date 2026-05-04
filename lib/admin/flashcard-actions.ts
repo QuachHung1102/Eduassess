@@ -1,23 +1,21 @@
 "use server";
 
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
+import cloudinary from "@/lib/cloudinary";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Difficulty } from "@prisma/client";
+import { requireAdmin } from "@/lib/auth/require";
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return null;
-  }
-  return session.user;
+function extractCloudinaryPublicId(url: string): string | null {
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^./]+)?$/);
+  return match ? match[1] : null;
 }
 
 // ── Tạo bộ flashcard ─────────────────────────────────────────
 export async function adminCreateFlashcardSetAction(formData: FormData) {
-  const user = await requireAdmin();
-  if (!user) return { error: "Không có quyền" };
+  const { user, error } = await requireAdmin();
+  if (error || !user) return { error: error ?? "Unauthorized" };
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
@@ -51,8 +49,8 @@ export async function adminCreateFlashcardSetAction(formData: FormData) {
 
 // ── Xóa bộ flashcard ─────────────────────────────────────────
 export async function adminDeleteFlashcardSetAction(setId: string) {
-  const user = await requireAdmin();
-  if (!user) return { error: "Không có quyền" };
+  const { error } = await requireAdmin();
+  if (error) return { error };
 
   const set = await prisma.flashcardSet.findUnique({ where: { id: setId } });
   if (!set) return { error: "Không tìm thấy bộ flashcard" };
@@ -68,8 +66,8 @@ export async function adminAddCardToFlashcardSetAction(
   imageUrl: string,
   caption: string | null
 ) {
-  const user = await requireAdmin();
-  if (!user) return { error: "Không có quyền" };
+  const { error } = await requireAdmin();
+  if (error) return { error };
 
   const set = await prisma.flashcardSet.findUnique({
     where: { id: setId },
@@ -92,10 +90,24 @@ export async function adminAddCardToFlashcardSetAction(
 
 // ── Xóa card ─────────────────────────────────────────────────
 export async function adminRemoveCardFromFlashcardSetAction(cardId: string, setId: string) {
-  const user = await requireAdmin();
-  if (!user) return { error: "Không có quyền" };
+  const { error } = await requireAdmin();
+  if (error) return { error };
+
+  const card = await prisma.flashcardCard.findUnique({ where: { id: cardId } });
 
   await prisma.flashcardCard.delete({ where: { id: cardId } });
+
+  // Delete image from Cloudinary
+  if (card?.imageUrl) {
+    const publicId = extractCloudinaryPublicId(card.imageUrl);
+    if (publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch {
+        // Non-fatal: DB record already deleted
+      }
+    }
+  }
 
   const remaining = await prisma.flashcardCard.findMany({
     where: { setId },
@@ -119,14 +131,22 @@ export async function adminUpdateCardInFlashcardSetAction(
   setId: string,
   data: { caption?: string | null; imageUrl?: string }
 ) {
-  const user = await requireAdmin();
-  if (!user) return { error: "Không có quyền" };
+  const { error: authError } = await requireAdmin();
+  if (authError) return { error: authError };
 
   const updateData: { caption?: string | null; imageUrl?: string } = {};
   if ("caption" in data) updateData.caption = data.caption || null;
   if (data.imageUrl) {
     if (!data.imageUrl.startsWith("https://")) {
       return { error: "URL ảnh không hợp lệ" };
+    }
+    // Delete old image from Cloudinary if replacing
+    const oldCard = await prisma.flashcardCard.findUnique({ where: { id: cardId } });
+    if (oldCard?.imageUrl && oldCard.imageUrl !== data.imageUrl) {
+      const publicId = extractCloudinaryPublicId(oldCard.imageUrl);
+      if (publicId) {
+        try { await cloudinary.uploader.destroy(publicId); } catch { /* non-fatal */ }
+      }
     }
     updateData.imageUrl = data.imageUrl;
   }

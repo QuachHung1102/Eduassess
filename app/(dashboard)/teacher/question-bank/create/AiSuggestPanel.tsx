@@ -4,6 +4,8 @@ import { useState } from "react";
 import { suggestQuestionsAction } from "@/lib/ai/actions";
 import type { SuggestedQuestion } from "@/lib/ai";
 import { MathText } from "@/components/MathText";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faRobot } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   subjectId: string;
@@ -38,7 +40,7 @@ export function AiSuggestPanel({ subjectId, gradeId, topicName, difficulty, onAp
     <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-purple-900 flex items-center gap-2">
-          🤖 AI gợi ý câu hỏi
+          <FaIcon icon={faRobot} className="text-purple-700" /> AI gợi ý câu hỏi
         </h3>
         {!isLoading && (
           <button

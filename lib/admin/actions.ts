@@ -60,10 +60,26 @@ export async function adminUpdateQuestionStatusAction(
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
-  await prisma.question.update({
+  const question = await prisma.question.update({
     where: { id: questionId },
     data: { status },
+    select: { content: true, createdById: true },
   });
+
+  // Notify teacher when question is approved
+  if (status === "APPROVED" && question.createdById) {
+    const preview = question.content.slice(0, 60) + (question.content.length > 60 ? "..." : "");
+    await prisma.notification.create({
+      data: {
+        userId: question.createdById,
+        title: "Câu hỏi đã được duyệt",
+        message: `Câu hỏi của bạn đã được admin phê duyệt: "${preview}"`,
+        type: "QUESTION_APPROVED",
+        href: "/teacher/question-bank",
+      },
+    });
+  }
+
   revalidatePath("/admin/questions");
   return { success: true };
 }
@@ -140,6 +156,92 @@ export async function adminCreateQuestionAction(formData: FormData) {
   });
 
   revalidatePath("/admin/questions");
+}
+
+// ── Update a question (admin only) ───────────────────────────
+export async function adminUpdateQuestionAction(
+  questionId: string,
+  formData: FormData,
+) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const content = (formData.get("content") as string)?.trim();
+  const explanation = (formData.get("explanation") as string | null)?.trim() || null;
+  const subjectId = formData.get("subjectId") as string;
+  const gradeId = formData.get("gradeId") as string;
+  const topicName = (formData.get("topicName") as string)?.trim();
+  const difficulty = formData.get("difficulty") as Difficulty;
+  const correctAnswer = formData.get("correct-answer") as string;
+
+  const optionTexts = ["A", "B", "C", "D"].map((l) =>
+    (formData.get(`option-${l}`) as string)?.trim(),
+  );
+
+  if (!content || !subjectId || !gradeId || !difficulty || !correctAnswer || !topicName) {
+    return { error: "Vui lòng điền đầy đủ thông tin" };
+  }
+  if (optionTexts.some((t) => !t)) {
+    return { error: "Vui lòng nhập đủ 4 đáp án" };
+  }
+  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
+    return { error: "Độ khó không hợp lệ" };
+  }
+  if (!["A", "B", "C", "D"].includes(correctAnswer)) {
+    return { error: "Chưa chọn đáp án đúng" };
+  }
+
+  const existingTopic = await prisma.topic.findFirst({
+    where: { name: topicName, subjectId, gradeId },
+  });
+  const topicId = existingTopic
+    ? existingTopic.id
+    : (await prisma.topic.create({ data: { name: topicName, subjectId, gradeId } })).id;
+
+  const options = ["A", "B", "C", "D"].map((l, i) => ({
+    label: l,
+    text: optionTexts[i],
+    isCorrect: l === correctAnswer,
+  }));
+
+  await prisma.question.update({
+    where: { id: questionId },
+    data: { content, explanation, options, difficulty, topicId, subjectId },
+  });
+
+  revalidatePath("/admin/questions");
+  revalidatePath(`/admin/questions/${questionId}/edit`);
+  return { success: true };
+}
+
+// ── Update exam metadata (admin only) ────────────────────────
+export async function adminUpdateExamAction(examId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const title = (formData.get("title") as string)?.trim();
+  const duration = parseInt(formData.get("duration") as string, 10);
+  const showAnswer = formData.get("showAnswer") === "true";
+  const allowRetake = formData.get("allowRetake") === "true";
+  const dueAtRaw = formData.get("dueAt") as string | null;
+  const dueAt = dueAtRaw ? new Date(dueAtRaw) : null;
+
+  if (!title || !duration || duration <= 0) {
+    return { error: "Vui lòng điền đầy đủ thông tin hợp lệ" };
+  }
+
+  await prisma.exam.update({
+    where: { id: examId },
+    data: { title, duration, showAnswer, allowRetake, dueAt },
+  });
+
+  revalidatePath("/admin/exams");
+  revalidatePath(`/admin/exams/${examId}`);
+  return { success: true };
 }
 
 // ── helper ───────────────────────────────────────────────────

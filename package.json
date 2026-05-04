@@ -13,6 +13,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-regular-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.0",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@types/bcryptjs": "^2.4.6",
@@ -21,6 +25,7 @@
     "cloudinary": "^2.9.0",
     "dotenv": "^17.3.1",
     "katex": "^0.16.44",
+    "mathlive": "^0.109.1",
     "next": "16.2.1",
     "next-auth": "^5.0.0-beta.30",
     "next-cloudinary": "^6.17.5",

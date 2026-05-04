@@ -2,9 +2,16 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
+import cloudinary from "@/lib/cloudinary";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Difficulty } from "@prisma/client";
+
+function extractCloudinaryPublicId(url: string): string | null {
+  // e.g. https://res.cloudinary.com/<cloud>/image/upload/v123456/flashcards/abc.jpg
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^./]+)?$/);
+  return match ? match[1] : null;
+}
 
 // ── Tạo bộ flashcard mới ──────────────────────────────────────
 export async function createFlashcardSetAction(formData: FormData) {
@@ -95,7 +102,21 @@ export async function removeCardFromFlashcardSetAction(cardId: string, setId: st
   });
   if (!set) return { error: "Không có quyền" };
 
+  const card = await prisma.flashcardCard.findUnique({ where: { id: cardId } });
+
   await prisma.flashcardCard.delete({ where: { id: cardId } });
+
+  // Delete image from Cloudinary
+  if (card?.imageUrl) {
+    const publicId = extractCloudinaryPublicId(card.imageUrl);
+    if (publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch {
+        // Non-fatal: DB record already deleted
+      }
+    }
+  }
 
   // Re-order remaining cards
   const remaining = await prisma.flashcardCard.findMany({
@@ -133,6 +154,14 @@ export async function updateCardInFlashcardSetAction(
   if (data.imageUrl) {
     if (!data.imageUrl.startsWith("https://")) {
       return { error: "URL ảnh không hợp lệ" };
+    }
+    // Delete old image from Cloudinary if replacing
+    const oldCard = await prisma.flashcardCard.findUnique({ where: { id: cardId } });
+    if (oldCard?.imageUrl && oldCard.imageUrl !== data.imageUrl) {
+      const publicId = extractCloudinaryPublicId(oldCard.imageUrl);
+      if (publicId) {
+        try { await cloudinary.uploader.destroy(publicId); } catch { /* non-fatal */ }
+      }
     }
     updateData.imageUrl = data.imageUrl;
   }

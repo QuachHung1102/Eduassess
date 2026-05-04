@@ -1,0 +1,23 @@
+// ─── Security Questions (Câu hỏi bảo mật) ────────────────────
+//
+// Mỗi người dùng có thể thiết lập 3 câu hỏi + đáp án để khôi phục mật khẩu.
+// Đáp án được hash bằng bcrypt (không lưu plain text).
+
+model SecurityQuestion {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  question1 String
+  answer1   String // bcrypt hashed
+  question2 String
+  answer2   String // bcrypt hashed
+  question3 String
+  answer3   String // bcrypt hashed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("security_questions")
+}

@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { getGrades, getTeacherSubjects } from "@/lib/teacher/queries";
+import { getTeacherSubjects, getGrades } from "@/lib/teacher/queries";
 import { CreateFlashcardSetForm } from "./CreateFlashcardSetForm";
 
 export default async function CreateFlashcardSetPage() {
   const [subjects, grades] = await Promise.all([getTeacherSubjects(), getGrades()]);
 
   return (
-    <div className="max-w-xl">
-      <div className="mb-6">
+    <div className="flex flex-col h-full gap-4">
+      <div className="shrink-0">
         <Link href="/teacher/flashcards" className="text-sm text-blue-600 hover:underline">
           ← Quay lại danh sách flashcard
         </Link>
@@ -16,8 +16,10 @@ export default async function CreateFlashcardSetPage() {
           Chọn môn, khối, chủ đề và độ khó. Sau đó tải ảnh vào bộ flashcard.
         </p>
       </div>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <CreateFlashcardSetForm subjects={subjects} grades={grades} />
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <CreateFlashcardSetForm subjects={subjects} grades={grades} />
+        </div>
       </div>
     </div>
   );

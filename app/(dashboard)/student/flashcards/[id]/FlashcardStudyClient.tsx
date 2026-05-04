@@ -1,13 +1,15 @@
 "use client";
 
-import { CldImage } from "next-cloudinary";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { InteractiveFlashcard } from "@/components/flashcards/InteractiveFlashcard";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faTrophy } from "@fortawesome/free-solid-svg-icons";
+import { FlashcardCard } from "@/components/flashcards/FlashcardCard";
 import {
   completeFlashcardSessionAction,
   startFlashcardSessionAction,
 } from "@/lib/student/actions";
+import { DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/lib/constants/labels";
 
 type Card = {
   id: string;
@@ -22,18 +24,6 @@ type Props = {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   cards: Card[];
   totalSessions: number;
-};
-
-const DIFFICULTY_LABEL: Record<Props["difficulty"], string> = {
-  EASY: "Dễ",
-  MEDIUM: "Trung bình",
-  HARD: "Khó",
-};
-
-const DIFFICULTY_COLOR: Record<Props["difficulty"], string> = {
-  EASY: "bg-green-100 text-green-700",
-  MEDIUM: "bg-yellow-100 text-yellow-700",
-  HARD: "bg-red-100 text-red-700",
 };
 
 const DIFFICULTY_SKIN: Record<Props["difficulty"], string> = {
@@ -111,7 +101,7 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
   if (completed) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-16 text-center">
-        <div className="text-5xl">🎉</div>
+        <div className="text-5xl"><FaIcon icon={faTrophy} className="text-yellow-500" /></div>
         <h2 className="text-2xl font-bold text-gray-900">Hoàn thành!</h2>
         <p className="text-gray-500">Bạn đã ôn xong {total} thẻ trong bộ “{title}”.</p>
         <div className="flex gap-3">
@@ -136,42 +126,16 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
     return (
       <div className="grid gap-8 py-6 lg:grid-cols-[minmax(0,300px),minmax(0,1fr)] lg:items-center">
         <div className="flex justify-center lg:justify-start">
-          <InteractiveFlashcard
+          <FlashcardCard
+            imageUrl={showcaseCard?.imageUrl ?? null}
+            alt={title}
+            overlayChip="Nhấn để bắt đầu"
             onClick={handleStart}
             disabled={isPending}
-            className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-80 text-left disabled:cursor-progress disabled:opacity-90`}
             aria-label={`Bắt đầu học bộ flashcard ${title}`}
-          >
-            <div className="flashcard-face">
-              <div className="flashcard-head">
-                <div>
-                  <p className="flashcard-kicker">Showcase Deck</p>
-                  <p className="flashcard-title">{title}</p>
-                </div>
-                <span className="flashcard-chip flashcard-chip-front">{DIFFICULTY_LABEL[difficulty]}</span>
-              </div>
-
-              <div className="flashcard-nameplate">Bấm vào card để bắt đầu</div>
-
-              <div className="flashcard-panel flashcard-media">
-                {showcaseCard ? (
-                  <CldImage
-                    src={showcaseCard.imageUrl}
-                    alt={title}
-                    width={756}
-                    height={1056}
-                    crop="fill"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center bg-slate-200 text-sm font-semibold text-slate-500">
-                    Flashcard Preview
-                  </div>
-                )}
-                <div className="flashcard-overlay-chip">Starter Preview</div>
-              </div>
-            </div>
-          </InteractiveFlashcard>
+            className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-50 sm:max-w-60 md:max-w-70 lg:max-w-80 text-left disabled:cursor-progress disabled:opacity-90`}
+            priority
+          />
         </div>
 
         <div className="rounded-4xl border border-slate-200/80 bg-white/88 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur">
@@ -222,7 +186,7 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-85 sm:max-w-95 md:max-w-105 lg:max-w-120 xl:max-w-130 flex-col gap-6">
       <div className="flex items-center gap-3">
         <span className="shrink-0 text-sm text-gray-500">
           {currentIndex + 1} / {total}
@@ -239,60 +203,17 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
       </div>
 
       <div className="flex justify-center">
-        <InteractiveFlashcard
-          onClick={() => setFlipped((value) => !value)}
+        <FlashcardCard
+          imageUrl={current.imageUrl}
+          alt={title}
+          caption={current.caption}
+          overlayChip={DIFFICULTY_LABEL[difficulty]}
+          captionHint="Nhấn vào thẻ để quay lại mặt trước"
           flipped={flipped}
-          className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-85 text-left transition-transform duration-200 hover:-translate-y-1`}
-        >
-          <div className="flashcard-flip-stage">
-            <div className="flashcard-flip-inner">
-              <div className="flashcard-face flashcard-face-front">
-                <div className="flashcard-head">
-                  <div>
-                    <p className="flashcard-kicker">Flash Card</p>
-                    <p className="flashcard-title">{title}</p>
-                  </div>
-                  <span className="flashcard-chip flashcard-chip-front">Front</span>
-                </div>
-
-                <div className="flashcard-nameplate">{title}</div>
-
-                <div className="flashcard-panel flashcard-media">
-                  <CldImage
-                    src={current.imageUrl}
-                    alt={title}
-                    width={756}
-                    height={1056}
-                    crop="fill"
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="flashcard-overlay-chip">{DIFFICULTY_LABEL[difficulty]}</div>
-                </div>
-              </div>
-
-              <div className="flashcard-face flashcard-face-back flashcard-face-rear">
-                <div className="flashcard-head">
-                  <div>
-                    <p className="flashcard-kicker">Flash Card</p>
-                    <p className="flashcard-title">{title}</p>
-                  </div>
-                  <span className="flashcard-chip flashcard-chip-back">Back</span>
-                </div>
-
-                <div className="flashcard-nameplate">{title}</div>
-
-                <div className="flashcard-panel flashcard-copy-panel">
-                  <p className="flashcard-copy-label">Caption mặt sau</p>
-                  <div className="flashcard-copy">
-                    {current.caption?.trim() ? current.caption : "Thẻ này chưa có caption."}
-                  </div>
-
-                  <p className="flashcard-copy-hint">Nhấn vào thẻ để quay lại mặt trước</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </InteractiveFlashcard>
+          onClick={() => setFlipped((value) => !value)}
+          className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-55 sm:max-w-65 md:max-w-75 lg:max-w-85 xl:max-w-90 text-left transition-transform duration-200 hover:-translate-y-1`}
+          loading="eager"
+        />
       </div>
 
       <div className="flex items-center justify-between">

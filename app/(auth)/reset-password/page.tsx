@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import { resetPasswordAction } from "@/lib/auth/actions/reset-password";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faTriangleExclamation, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -33,7 +35,7 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-4 text-center">
-        <div className="text-4xl">⚠️</div>
+        <div className="text-4xl"><FaIcon icon={faTriangleExclamation} className="text-yellow-500" /></div>
         <p className="text-sm text-slate-600">Liên kết không hợp lệ.</p>
         <Link href="/forgot-password" className="text-sm font-semibold text-sky-700 hover:text-sky-800">
           Yêu cầu liên kết mới
@@ -46,7 +48,7 @@ function ResetPasswordForm() {
     return (
       <div className="space-y-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
-          ✅
+          <FaIcon icon={faCircleCheck} className="text-emerald-600" />
         </div>
         <h2 className="text-lg font-black text-slate-900">Đặt lại mật khẩu thành công!</h2>
         <p className="text-sm text-slate-600">Đang chuyển hướng về trang đăng nhập...</p>

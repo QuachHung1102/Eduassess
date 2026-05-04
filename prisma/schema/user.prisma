@@ -21,6 +21,8 @@ model User {
   examAttempts       ExamAttempt[]
   flashcardSets      FlashcardSet[]
   flashcardSessions  FlashcardSession[]
+  notifications      Notification[]
+  securityQuestion   SecurityQuestion?
 
   @@map("users")
 }

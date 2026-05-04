@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { createClassAction } from "@/lib/admin/actions";
+import { FaIcon } from "@/components/ui/FaIcon";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type Grade = { id: string; gradeNumber: number };
 
@@ -29,7 +31,7 @@ export function AddClassForm({ grades }: { grades: Grade[] }) {
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
       >
-        ➕ Thêm lớp
+        <FaIcon icon={faPlus} className="mr-1.5" /> Thêm lớp
       </button>
 
       {open && (

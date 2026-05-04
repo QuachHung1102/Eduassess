@@ -183,6 +183,18 @@ export function ExamForm({
             <option value="true">Có — học sinh có thể làm lại nhiều lần</option>
           </select>
         </div>
+
+        {/* Deadline */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Thời hạn nộp bài <span className="text-gray-400 font-normal">(để trống = không giới hạn)</span>
+          </label>
+          <input
+            name="dueAt"
+            type="datetime-local"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">
