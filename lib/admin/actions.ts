@@ -17,8 +17,7 @@ export async function toggleSubjectQuestionsAction(
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (prisma.subject as any).update({
+  await prisma.subject.update({
     where: { id: subjectId },
     data: { canAddQuestions: enabled },
   });
@@ -247,32 +246,23 @@ export async function adminUpdateExamAction(examId: string, formData: FormData) 
 // ── helper ───────────────────────────────────────────────────
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN")
+  const role = session?.user?.role;
+  if (!session?.user?.id || (role !== "ADMIN" && role !== "OWNER"))
     throw new Error("Không có quyền");
   return session;
 }
 
 // ── Class CRUD ───────────────────────────────────────────────
-export async function createClassAction(name: string, gradeId: string) {
+export async function createClassAction(name: string, gradeId?: string) {
+  void gradeId;
   await requireAdmin();
-  if (!name.trim() || !gradeId) return { error: "Thiếu tên lớp hoặc khối" };
-  const existing = await prisma.class.findFirst({
-    where: { name: name.trim(), gradeId },
-  });
-  if (existing) return { error: "Lớp này đã tồn tại" };
-  await prisma.class.create({ data: { name: name.trim(), gradeId } });
-  revalidatePath("/admin/classes");
-  return { success: true };
+  if (!name.trim()) return { error: "Thiếu tên lớp" };
+  return { error: "Tạo lớp đào tạo qua trang quản lý lớp học mới." };
 }
 
 export async function deleteClassAction(classId: string) {
   await requireAdmin();
-  // Cascade: xóa luôn teacherClasses và studentClasses trước
-  await prisma.$transaction([
-    prisma.teacherClass.deleteMany({ where: { classId } }),
-    prisma.studentClass.deleteMany({ where: { classId } }),
-    prisma.class.delete({ where: { id: classId } }),
-  ]);
+  await prisma.class.delete({ where: { id: classId } });
   revalidatePath("/admin/classes");
   return { success: true };
 }
@@ -283,10 +273,10 @@ export async function assignStudentToClassAction(
   classId: string,
 ) {
   await requireAdmin();
-  await prisma.studentClass.upsert({
-    where: { studentId_classId: { studentId, classId } },
+  await prisma.classEnrollment.upsert({
+    where: { classId_studentId: { classId, studentId } },
     update: {},
-    create: { studentId, classId },
+    create: { classId, studentId },
   });
   revalidatePath("/admin/classes");
   return { success: true };
@@ -297,8 +287,8 @@ export async function removeStudentFromClassAction(
   classId: string,
 ) {
   await requireAdmin();
-  await prisma.studentClass.delete({
-    where: { studentId_classId: { studentId, classId } },
+  await prisma.classEnrollment.delete({
+    where: { classId_studentId: { classId, studentId } },
   });
   revalidatePath(`/admin/classes/${classId}`);
   return { success: true };
@@ -313,13 +303,13 @@ export async function transferStudentAction(
   if (fromClassId === toClassId)
     return { error: "Lớp đích phải khác lớp hiện tại" };
   await prisma.$transaction([
-    prisma.studentClass.delete({
-      where: { studentId_classId: { studentId, classId: fromClassId } },
+    prisma.classEnrollment.delete({
+      where: { classId_studentId: { classId: fromClassId, studentId } },
     }),
-    prisma.studentClass.upsert({
-      where: { studentId_classId: { studentId, classId: toClassId } },
+    prisma.classEnrollment.upsert({
+      where: { classId_studentId: { classId: toClassId, studentId } },
       update: {},
-      create: { studentId, classId: toClassId },
+      create: { classId: toClassId, studentId },
     }),
   ]);
   revalidatePath(`/admin/classes/${fromClassId}`);
@@ -331,13 +321,14 @@ export async function transferStudentAction(
 export async function assignTeacherAction(
   teacherId: string,
   classId: string,
-  subjectId: string,
+  subjectId?: string,
 ) {
+  void subjectId;
   await requireAdmin();
-  await prisma.teacherClass.upsert({
-    where: { teacherId_classId_subjectId: { teacherId, classId, subjectId } },
+  await prisma.classTeacher.upsert({
+    where: { classId_teacherId: { classId, teacherId } },
     update: {},
-    create: { teacherId, classId, subjectId },
+    create: { classId, teacherId },
   });
   revalidatePath(`/admin/classes/${classId}`);
   revalidatePath("/admin/permissions");
@@ -347,11 +338,12 @@ export async function assignTeacherAction(
 export async function removeTeacherAction(
   teacherId: string,
   classId: string,
-  subjectId: string,
+  subjectId?: string,
 ) {
+  void subjectId;
   await requireAdmin();
-  await prisma.teacherClass.delete({
-    where: { teacherId_classId_subjectId: { teacherId, classId, subjectId } },
+  await prisma.classTeacher.delete({
+    where: { classId_teacherId: { classId, teacherId } },
   });
   revalidatePath(`/admin/classes/${classId}`);
   revalidatePath("/admin/permissions");
@@ -359,10 +351,17 @@ export async function removeTeacherAction(
 }
 
 // ── User CRUD ────────────────────────────────────────────────
+const ALLOWED_NEW_ROLES = ["TEACHER", "STUDENT", "STAFF", "PARENT", "ADMIN"] as const;
+const ALLOWED_POSITIONS = ["NVSALE", "NVLT", "CBNK", "CBDH", "CBDT", "CBDTS"] as const;
+type AllowedRole = (typeof ALLOWED_NEW_ROLES)[number];
+type AllowedPosition = (typeof ALLOWED_POSITIONS)[number];
+
 export async function createUserAction(formData: FormData) {
   await requireAdmin();
 
   const role = formData.get("role") as string;
+  const staffPositionRaw = (formData.get("staffPosition") as string | null) || null;
+  const supervisorIdRaw = (formData.get("supervisorId") as string | null)?.trim() || null;
   const name = (formData.get("name") as string)?.trim();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = (formData.get("password") as string)?.trim();
@@ -373,10 +372,29 @@ export async function createUserAction(formData: FormData) {
 
   if (!name || !email || !password || !role)
     return { error: "Vui lòng điền đầy đủ thông tin bắt buộc" };
-  if (!["TEACHER", "STUDENT"].includes(role))
+  if (!(ALLOWED_NEW_ROLES as readonly string[]).includes(role))
     return { error: "Vai trò không hợp lệ" };
-  if (password.length < 6)
-    return { error: "Mật khẩu phải có ít nhất 6 ký tự" };
+  if (password.length < 8)
+    return { error: "Mật khẩu phải có ít nhất 8 ký tự" };
+
+  let staffPosition: AllowedPosition | null = null;
+  if (role === "STAFF") {
+    if (!staffPositionRaw || !(ALLOWED_POSITIONS as readonly string[]).includes(staffPositionRaw))
+      return { error: "Vui lòng chọn chức danh nhân viên" };
+    staffPosition = staffPositionRaw as AllowedPosition;
+  }
+
+  // Supervisor chỉ áp dụng khi role=STAFF + position=CBDT
+  let supervisorId: string | null = null;
+  if (role === "STAFF" && staffPosition === "CBDT" && supervisorIdRaw) {
+    const sup = await prisma.user.findUnique({
+      where: { id: supervisorIdRaw },
+      select: { role: true, staffPosition: true },
+    });
+    if (!sup || sup.role !== "STAFF" || sup.staffPosition !== "CBDTS")
+      return { error: "Người phụ trách phải là CBDTS" };
+    supervisorId = supervisorIdRaw;
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { error: "Email này đã được sử dụng" };
@@ -387,7 +405,9 @@ export async function createUserAction(formData: FormData) {
       name,
       email,
       password: hashed,
-      role: role as "TEACHER" | "STUDENT",
+      role: role as AllowedRole,
+      staffPosition,
+      supervisorId,
       sex: sex || null,
       phoneNumber,
       address,
@@ -416,8 +436,7 @@ export async function updateUserAction(userId: string, formData: FormData) {
   });
   if (conflict) return { error: "Email này đã được dùng bởi tài khoản khác" };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (prisma.user as any).update({
+  await prisma.user.update({
     where: { id: userId },
     data: {
       name,
@@ -438,8 +457,8 @@ export async function resetPasswordAction(userId: string, formData: FormData) {
   await requireAdmin();
 
   const newPassword = (formData.get("newPassword") as string)?.trim();
-  if (!newPassword || newPassword.length < 6)
-    return { error: "Mật khẩu phải có ít nhất 6 ký tự" };
+  if (!newPassword || newPassword.length < 8)
+    return { error: "Mật khẩu phải có ít nhất 8 ký tự" };
 
   const hashed = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
@@ -455,7 +474,8 @@ export async function deleteUserAction(userId: string) {
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
   if (!user) return { error: "Không tìm thấy tài khoản" };
-  if (user.role === "ADMIN") return { error: "Không thể xóa tài khoản Admin" };
+  if (user.role === "ADMIN" || user.role === "OWNER")
+    return { error: "Không thể xóa tài khoản Admin / Owner" };
 
   await prisma.user.delete({ where: { id: userId } });
   revalidatePath("/admin/users");

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { ProfileForm, ChangePasswordForm, SecurityQuestionsForm } from "./SettingsForms";
 import { ThemeSettingsSection } from "@/components/theme/ThemeSettingsSection";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Cài đặt tài khoản" };
 
 export default async function SettingsPage() {
@@ -19,8 +20,9 @@ export default async function SettingsPage() {
       phoneNumber: true,
       address: true,
       dateOfBirth: true,
-      securityQuestion: {
-        select: { question1: true, question2: true, question3: true },
+      securityAnswers: {
+        select: { questionNo: true, questionText: true },
+        orderBy: { questionNo: "asc" },
       },
     },
   });
@@ -30,8 +32,8 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Cài đặt tài khoản</h1>
-        <p className="text-gray-500 text-sm mt-1">Quản lý thông tin cá nhân và bảo mật</p>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>Cài đặt tài khoản</h1>
+        <p className="text-sm mt-1" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>Quản lý thông tin cá nhân và bảo mật</p>
       </div>
 
       <ThemeSettingsSection />
@@ -49,7 +51,7 @@ export default async function SettingsPage() {
 
       <ChangePasswordForm />
 
-      <SecurityQuestionsForm existing={user.securityQuestion} />
+      <SecurityQuestionsForm existing={user.securityAnswers} />
     </div>
   );
 }

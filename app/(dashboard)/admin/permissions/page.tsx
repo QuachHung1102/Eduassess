@@ -11,7 +11,7 @@ export default async function AdminPermissionsPage() {
   const classItems = classes.map((c) => ({
     id: c.id,
     name: c.name,
-    grade: { gradeNumber: c.grade.gradeNumber },
+    grade: { gradeNumber: 0 },
   }));
 
   const subjectItems = subjects.map((s) => ({ id: s.id, name: s.name }));

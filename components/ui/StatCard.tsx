@@ -8,14 +8,13 @@ type Props = {
   label: string;
   href: string;
   color?: string;
-  stagger?: 1 | 2 | 3 | 4;
 };
 
-export function StatCard({ icon, value, label, href, stagger }: Props) {
+export function StatCard({ icon, value, label, href }: Props) {
   return (
     <Link
       href={href}
-      className={`clay-card group p-5 animate-fade-in-up${stagger ? ` stagger-${stagger}` : ""}`}
+      className="clay-card hover-card-soft focus-ring-soft press-feedback-soft group p-5"
     >
       <div
         className="w-10 h-10 clay-icon flex items-center justify-center mb-3 mx-auto text-white text-base"
@@ -23,10 +22,10 @@ export function StatCard({ icon, value, label, href, stagger }: Props) {
       >
         <FaIcon icon={icon} />
       </div>
-      <div className="text-2xl font-bold text-center text-gray-900 group-hover:scale-105 transition-transform">
+      <div className="text-2xl font-bold text-center group-hover:scale-[1.02] transition-transform" style={{ color: "var(--foreground)" }}>
         {typeof value === "number" ? value.toLocaleString("vi-VN") : value}
       </div>
-      <div className="text-xs text-gray-500 mt-1 text-center">{label}</div>
+      <div className="text-xs mt-1 text-center" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>{label}</div>
     </Link>
   );
 }

@@ -79,8 +79,8 @@ export async function createExamAction(formData: FormData) {
   });
 
   // Tạo thông báo cho tất cả học sinh trong lớp
-  const students = await prisma.studentClass.findMany({
-    where: { classId },
+  const students = await prisma.classEnrollment.findMany({
+    where: { classId, status: "ACTIVE" },
     select: { studentId: true },
   });
   if (students.length > 0) {

@@ -3,10 +3,10 @@
 model FlashcardSet {
   id          String     @id @default(cuid())
   title       String
-  description String?    // Mô tả bộ flashcard
+  description String? // Mô tả bộ flashcard
   subjectId   String
-  gradeId     String     // Lớp học
-  topicName   String     // Chủ đề tự do (VD: "Phương trình bậc 2")
+  gradeId     String // Lớp học
+  topicName   String // Chủ đề tự do (VD: "Phương trình bậc 2")
   difficulty  Difficulty // Độ khó ở cấp bộ
   createdById String
   createdAt   DateTime   @default(now())
@@ -19,6 +19,9 @@ model FlashcardSet {
   cards    FlashcardCard[]
   sessions FlashcardSession[]
 
+  @@index([subjectId])
+  @@index([gradeId])
+  @@index([difficulty])
   @@map("flashcard_sets")
 }
 
@@ -26,8 +29,8 @@ model FlashcardSet {
 model FlashcardCard {
   id        String   @id @default(cuid())
   setId     String
-  imageUrl  String   // Cloudinary URL
-  caption   String?  // Chú thích / mặt sau (tùy chọn)
+  imageUrl  String // Cloudinary URL
+  caption   String? // Chú thích / mặt sau (tùy chọn)
   order     Int
   createdAt DateTime @default(now())
 
@@ -47,5 +50,7 @@ model FlashcardSession {
   set     FlashcardSet @relation(fields: [setId], references: [id])
   student User         @relation(fields: [studentId], references: [id])
 
+  @@index([setId])
+  @@index([studentId])
   @@map("flashcard_sessions")
 }

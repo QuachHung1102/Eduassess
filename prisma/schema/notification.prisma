@@ -1,13 +1,13 @@
 // ─── Notification (Thông báo) ─────────────────────────────────
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType
-  readAt    DateTime?        // NULL = chưa đọc
-  href      String?          // Deep-link tới trang liên quan
+  id      String           @id @default(cuid())
+  userId  String
+  title   String
+  message String
+  type    NotificationType
+  readAt  DateTime? // NULL = chưa đọc
+  href    String? // Deep-link tới trang liên quan
 
   createdAt DateTime @default(now())
 

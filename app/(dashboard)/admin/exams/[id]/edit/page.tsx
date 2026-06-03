@@ -21,7 +21,7 @@ export default async function AdminEditExamPage({
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Chỉnh sửa đề kiểm tra</h1>
         <p className="text-gray-500 text-sm mt-0.5">
-          {exam.subject.name} · Lớp {exam.class.grade.gradeNumber} – {exam.class.name}
+          {exam.subject.name} · {exam.class.name}
         </p>
       </div>
 

@@ -1,28 +1,84 @@
 // ─── User ────────────────────────────────────────────────────
 
 model User {
-  id          String    @id @default(cuid())
-  name        String
-  email       String    @unique
-  password    String
-  role        Role      @default(STUDENT)
-  address     String?
-  dateOfBirth DateTime?
-  sex         String?
-  phoneNumber String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(STUDENT)
+  staffPosition StaffPosition? // Chỉ áp dụng khi role = STAFF
+  supervisorId  String? // CBDT trỏ về CBDTS phụ trách (mở rộng cho staff khác trong tương lai)
+  address       String?
+  dateOfBirth   DateTime?
+  sex           String?
+  phoneNumber   String?
+  avatarUrl     String?   // Cloudinary URL
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  // Relations
-  teacherClasses     TeacherClass[]
-  studentClasses     StudentClass[]
-  questionsCreated   Question[]
-  examsCreated       Exam[]
-  examAttempts       ExamAttempt[]
-  flashcardSets      FlashcardSet[]
-  flashcardSessions  FlashcardSession[]
-  notifications      Notification[]
-  securityQuestion   SecurityQuestion?
+  // Self-relation: CBDTS quản nhiều CBDT
+  supervisor   User?  @relation("StaffSupervisor", fields: [supervisorId], references: [id])
+  subordinates User[] @relation("StaffSupervisor")
 
+  // Parent ↔ Student
+  parentLinks  ParentStudent[] @relation("ParentSide") // khi user là PARENT
+  studentLinks ParentStudent[] @relation("StudentSide") // khi user là STUDENT
+
+  // Audit
+  auditLogs AuditLog[]
+
+  // Room Booking relations
+  bookingsRequested RoomBooking[] @relation("BookingRequester")
+  bookingsFor       RoomBooking[] @relation("BookingFor")
+  bookingsReviewed  RoomBooking[] @relation("BookingReviewer")
+
+  // Class relations (Phase 3)
+  classesAdvised       Class[]               @relation("ClassAdvisor")
+  classesCreated       Class[]               @relation("ClassCreator")
+  classTeachers        ClassTeacher[]        @relation("ClassTeachers")
+  classEnrollments     ClassEnrollment[]     @relation("ClassEnrollments")
+  sessionsTaught       ClassSession[]        @relation("SessionTeacher")
+  attendanceRecords    Attendance[]          @relation("StudentAttendance")
+  studentAvailability  StudentAvailability[] @relation("StudentAvailability")
+  teacherAvailability  TeacherAvailability[] @relation("TeacherAvailability")
+  studentLevels        StudentSubjectLevel[] @relation("StudentLevels")
+  evaluatedLevels      StudentSubjectLevel[] @relation("EvaluatorLevels")
+  studentAdvisees      StudentAdvisor[]      @relation("StudentAdvisees")
+  advisorStudents      StudentAdvisor[]      @relation("AdvisorStudents")
+  advisorAssigned      StudentAdvisor[]      @relation("AdvisorAssigner")
+
+  // Existing relations
+  questionsCreated  Question[]
+  examsCreated      Exam[]
+  examAttempts      ExamAttempt[]
+  flashcardSets     FlashcardSet[]
+  flashcardSessions FlashcardSession[]
+  notifications     Notification[]
+  securityAnswers   SecurityAnswer[]
+  coursesCreated    Course[]           @relation("CoursesCreated")
+  enrollments       Enrollment[]       @relation("CourseEnrollments")
+  lessonProgress    LessonProgress[]   @relation("LessonProgress")
+  courseReviews     CourseReview[]     @relation("CourseReviews")
+  courseQAs         CourseQA[]         @relation("CourseQAAuthored")
+
+  @@index([role])
+  @@index([staffPosition])
   @@map("users")
+}
+
+// Liên kết phụ huynh ↔ học sinh (cả hai đều là User)
+model ParentStudent {
+  id        String         @id @default(cuid())
+  parentId  String
+  studentId String
+  relation  ParentRelation @default(GUARDIAN)
+  isPrimary Boolean        @default(false) // Phụ huynh chính (nhận noti, ký giấy tờ)
+  createdAt DateTime       @default(now())
+
+  parent  User @relation("ParentSide", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("StudentSide", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([studentId])
+  @@map("parent_students")
 }

@@ -29,22 +29,24 @@ export function AddClassForm({ grades }: { grades: Grade[] }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
+        style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
       >
         <FaIcon icon={faPlus} className="mr-1.5" /> Thêm lớp
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Thêm lớp học</h2>
+          <div className="rounded-xl shadow-xl p-6 w-full max-w-sm" style={{ background: "var(--surface)" }}>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--foreground)" }}>Thêm lớp học</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Khối</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: "color-mix(in srgb, var(--foreground) 78%, transparent)" }}>Khối</label>
                 <select
                   value={gradeId}
                   onChange={(e) => setGradeId(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+                  style={{ border: "1px solid var(--border-soft)", background: "var(--surface)", color: "var(--foreground)", outlineColor: "var(--primary)" }}
                 >
                   {grades.map((g) => (
                     <option key={g.id} value={g.id}>Lớp {g.gradeNumber}</option>
@@ -52,12 +54,13 @@ export function AddClassForm({ grades }: { grades: Grade[] }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tên lớp</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: "color-mix(in srgb, var(--foreground) 78%, transparent)" }}>Tên lớp</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: 10A13"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+                  style={{ border: "1px solid var(--border-soft)", background: "var(--surface)", color: "var(--foreground)", outlineColor: "var(--primary)" }}
                   required
                 />
               </div>
@@ -66,14 +69,16 @@ export function AddClassForm({ grades }: { grades: Grade[] }) {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors text-white disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
                 >
                   {isPending ? "Đang thêm..." : "Thêm lớp"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                  className="flex-1 py-2 rounded-lg text-sm transition-colors"
+                  style={{ border: "1px solid var(--border-soft)", color: "color-mix(in srgb, var(--foreground) 70%, transparent)" }}
                 >
                   Hủy
                 </button>

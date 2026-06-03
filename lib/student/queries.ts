@@ -10,8 +10,8 @@ export async function getStudentStats() {
   const studentId = session.user.id;
 
   // Tìm classIds của học sinh
-  const studentClasses = await prisma.studentClass.findMany({
-    where: { studentId },
+  const studentClasses = await prisma.classEnrollment.findMany({
+    where: { studentId, status: "ACTIVE" },
     select: { classId: true },
   });
   const classIds = studentClasses.map((sc) => sc.classId);
@@ -48,8 +48,8 @@ export async function getStudentExams() {
 
   const studentId = session.user.id;
 
-  const studentClasses = await prisma.studentClass.findMany({
-    where: { studentId },
+  const studentClasses = await prisma.classEnrollment.findMany({
+    where: { studentId, status: "ACTIVE" },
     select: { classId: true },
   });
   const classIds = studentClasses.map((sc) => sc.classId);
@@ -109,8 +109,8 @@ export async function getStudentExamDetail(examId: string) {
   });
   if (!exam) return null;
 
-  const inClass = await prisma.studentClass.findFirst({
-    where: { studentId, classId: exam.classId },
+  const inClass = await prisma.classEnrollment.findFirst({
+    where: { studentId, classId: exam.classId, status: "ACTIVE" },
   });
   if (!inClass) return null;
 
@@ -365,4 +365,15 @@ export async function getRandomStudentFlashcardSet(filters?: {
 
   const randomIndex = Math.floor(Math.random() * sets.length);
   return getStudentFlashcardSetDetail(sets[randomIndex].id);
+}
+
+// ── Lịch rảnh của học sinh đang đăng nhập ────────────────────
+export async function getMyStudentAvailability() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return prisma.studentAvailability.findMany({
+    where: { studentId: session.user.id },
+    orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }],
+  });
 }

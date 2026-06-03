@@ -22,7 +22,7 @@ export default async function AdminClassDetailPage({
 
   if (!cls) notFound();
 
-  const studentIds = new Set(cls.studentClasses.map((sc) => sc.student.id));
+  const studentIds = new Set(cls.enrollments.map((e) => e.student.id));
   const otherClasses = allClasses.filter((c) => c.id !== id);
 
   return (
@@ -36,7 +36,7 @@ export default async function AdminClassDetailPage({
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Lớp {cls.name}</h1>
             <p className="text-gray-500 text-sm mt-0.5">
-              Khối {cls.grade.gradeNumber} · {cls.studentClasses.length} học sinh · {cls.teacherClasses.length} phân công
+              {cls.subject.name} · {cls.enrollments.length} học sinh · {cls.teachers.length} phân công
             </p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default async function AdminClassDetailPage({
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
               <h2 className="font-semibold text-gray-800">
-                Danh sách học sinh ({cls.studentClasses.length})
+                Danh sách học sinh ({cls.enrollments.length})
               </h2>
               <AssignStudentForm classId={id} existingStudentIds={[...studentIds]} />
             </div>
@@ -63,37 +63,37 @@ export default async function AdminClassDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {cls.studentClasses.length === 0 ? (
+                  {cls.enrollments.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="text-center py-10 text-gray-400 text-sm">
                         Chưa có học sinh nào trong lớp
                       </td>
                     </tr>
                   ) : (
-                    cls.studentClasses.map((sc, idx) => (
-                      <tr key={sc.student.id} className="hover:bg-gray-50 transition-colors">
+                    cls.enrollments.map((e, idx) => (
+                      <tr key={e.student.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
                         <td className="px-4 py-2.5 font-medium text-gray-900">
-                          {sc.student.name}
-                          {sc.student.sex && (
+                          {e.student.name}
+                          {e.student.sex && (
                             <span className="ml-1 text-xs text-gray-400">
-                              ({sc.student.sex === "MALE" ? "Nam" : "Nữ"})
+                              ({e.student.sex === "MALE" ? "Nam" : "Nữ"})
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-gray-500 text-xs">{sc.student.email}</td>
+                        <td className="px-4 py-2.5 text-gray-500 text-xs">{e.student.email}</td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center justify-end gap-1">
                             <TransferStudentButton
-                              studentId={sc.student.id}
-                              studentName={sc.student.name}
+                              studentId={e.student.id}
+                              studentName={e.student.name}
                               currentClassId={id}
                               otherClasses={otherClasses.map((c) => ({ id: c.id, name: c.name }))}
                             />
                             <RemoveStudentButton
-                              studentId={sc.student.id}
+                              studentId={e.student.id}
                               classId={id}
-                              studentName={sc.student.name}
+                              studentName={e.student.name}
                             />
                           </div>
                         </td>
@@ -111,7 +111,7 @@ export default async function AdminClassDetailPage({
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <h2 className="font-semibold text-gray-800">
-                Giáo viên phân công ({cls.teacherClasses.length})
+                Giáo viên phân công ({cls.teachers.length})
               </h2>
               <AssignTeacherForm
                 classId={id}
@@ -120,22 +120,21 @@ export default async function AdminClassDetailPage({
               />
             </div>
             <div className="divide-y divide-gray-50">
-              {cls.teacherClasses.length === 0 ? (
+              {cls.teachers.length === 0 ? (
                 <div className="text-center py-10 text-gray-400 text-sm">
                   Chưa có giáo viên nào được phân công
                 </div>
               ) : (
-                cls.teacherClasses.map((tc) => (
-                  <div key={`${tc.teacher.id}-${tc.subject.id}`} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                cls.teachers.map((tc) => (
+                  <div key={tc.teacher.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{tc.teacher.name}</p>
-                      <p className="text-xs text-blue-600 mt-0.5">{tc.subject.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{tc.teacher.email}</p>
                     </div>
                     <RemoveTeacherButton
                       teacherId={tc.teacher.id}
                       classId={id}
-                      subjectId={tc.subject.id}
-                      label={`${tc.teacher.name} – ${tc.subject.name}`}
+                      label={tc.teacher.name}
                     />
                   </div>
                 ))

@@ -3,25 +3,27 @@ import { getTeacherClasses } from "@/lib/teacher/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faSchool } from "@fortawesome/free-solid-svg-icons";
 
-import { LEVEL_LABEL } from "@/lib/constants/labels";
+const TARGET_LEVEL_LABEL: Record<string, string> = {
+  WEAK: "Yếu",
+  AVERAGE: "Trung bình",
+  GOOD: "Khá / Giỏi",
+};
 
 export default async function ClassesPage() {
   const teacherClasses = await getTeacherClasses();
 
-  // Gom nhóm theo class (một lớp có thể có nhiều môn)
-  const classMap = new Map<string, { classId: string; className: string; gradeNumber: number; level: string; subjects: string[] }>();
+  // Gom nhóm theo class
+  const classMap = new Map<string, { classId: string; className: string; targetLevel: string; subjectName: string }>();
   for (const tc of teacherClasses) {
     const key = tc.classId;
     if (!classMap.has(key)) {
       classMap.set(key, {
         classId: tc.classId,
         className: tc.class.name,
-        gradeNumber: tc.class.grade.gradeNumber,
-        level: tc.class.grade.level,
-        subjects: [],
+        targetLevel: tc.class.targetLevel,
+        subjectName: tc.class.subject.name,
       });
     }
-    classMap.get(key)!.subjects.push(tc.subject.name);
   }
   const classes = [...classMap.values()];
 
@@ -54,22 +56,12 @@ export default async function ClassesPage() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Lớp {c.className}</h2>
+                    <h2 className="text-lg font-bold text-gray-900">{c.className}</h2>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {LEVEL_LABEL[c.level]} · Khối {c.gradeNumber}
+                      {c.subjectName} · {TARGET_LEVEL_LABEL[c.targetLevel] ?? c.targetLevel}
                     </p>
                   </div>
                   <span className="text-2xl"><FaIcon icon={faSchool} /></span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {c.subjects.map((sub) => (
-                    <span
-                      key={sub}
-                      className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium"
-                    >
-                      {sub}
-                    </span>
-                  ))}
                 </div>
               </Link>
             ))}

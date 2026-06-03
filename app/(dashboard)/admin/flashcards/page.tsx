@@ -41,7 +41,6 @@ export default async function AdminFlashcardsPage() {
               subject={set.subject.name}
               grade={set.grade}
               topicName={set.topicName}
-              difficulty={set.difficulty}
               badge={
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 truncate max-w-36">
                   {set.createdBy.name}

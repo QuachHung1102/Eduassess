@@ -58,8 +58,13 @@ function SafeMath({ math }: { math: string }) {
   );
 }
 
-export function SymbolToolbar() {
+export function SymbolToolbar({ inline = false, modalMode = false, onClose }: {
+  inline?: boolean;
+  modalMode?: boolean;
+  onClose?: () => void;
+}) {
   const [isOpen,       setIsOpen]       = useState(false);
+  const showContent = modalMode || isOpen;
   const [subject,      setSubject]      = useState<SubjectId>("all");
   const [activeTab,    setActiveTab]    = useState(0);
   const [search,       setSearch]       = useState("");
@@ -157,30 +162,54 @@ export function SymbolToolbar() {
   }
 
   return (
-    <div className="border border-blue-200 rounded-xl bg-blue-50/40 overflow-hidden">
-      {/* Header toggle */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50/80 transition-colors"
-      >
-        <span className="flex items-center gap-2">
-          <span className="font-bold text-base leading-none">&#x3A3;</span>
-          <span>Công cụ ký hiệu</span>
-        </span>
-        <span className="text-xs text-blue-400 font-normal">
-          {isOpen ? "▲ Thu gọn" : "▼ Mở bảng ký hiệu"}
-        </span>
-      </button>
+    <div className={inline || modalMode ? "" : "rounded-xl overflow-hidden"} style={inline || modalMode ? {} : { border: "1px solid var(--border-soft)", backgroundColor: "color-mix(in srgb, var(--primary) 6%, var(--surface-strong))" }}>
+      {/* Header toggle — hidden in modal mode */}
+      {!modalMode && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setIsOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors"
+          style={{ color: "var(--primary)" }}
+        >
+          <span className="flex items-center gap-2">
+            <span className="font-bold text-base leading-none">&#x3A3;</span>
+            <span>Công cụ ký hiệu</span>
+          </span>
+          <span className="text-xs font-normal" style={{ color: "color-mix(in srgb, var(--primary) 70%, transparent)" }}>
+            {isOpen ? "▲ Thu gọn" : "▼ Mở bảng ký hiệu"}
+          </span>
+        </button>
+      )}
 
-      {isOpen && (
-        <div className="border-t border-blue-200 px-4 py-3 space-y-3 bg-white/60">
-          <p className="text-xs text-gray-500">
+      {/* Modal header with close button */}
+      {modalMode && (
+        <div className="flex items-center justify-between mb-3">
+          <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--primary)" }}>
+            <span className="font-bold text-base leading-none">&#x3A3;</span>
+            <span>Công cụ ký hiệu</span>
+          </span>
+          {onClose && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      {showContent && (
+        <div className={modalMode ? "space-y-3" : "px-4 py-3 space-y-3"} style={modalMode ? {} : { borderTop: "1px solid var(--border-soft)" }}>
+          <p className="text-xs" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
             Click vào ô nhập liệu, đặt con trỏ tại vị trí cần chèn, rồi bấm ký hiệu.
-            Thay các chữ mẫu (<code className="bg-gray-100 px-1 rounded">x</code>,{" "}
-            <code className="bg-gray-100 px-1 rounded">a</code>,{" "}
-            <code className="bg-gray-100 px-1 rounded">b</code>...) bằng giá trị thực.
+            Thay các chữ mẫu (<code className="px-1 rounded" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}>x</code>,{" "}
+            <code className="px-1 rounded" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}>a</code>,{" "}
+            <code className="px-1 rounded" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)" }}>b</code>...) bằng giá trị thực.
           </p>
 
           {/* Subject selector */}
@@ -191,11 +220,10 @@ export function SymbolToolbar() {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSubjectChange(s.id)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                  subject === s.id
-                    ? "bg-blue-700 text-white shadow-sm"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-700"
-                }`}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+                style={subject === s.id
+                  ? { backgroundColor: "var(--primary)", color: "#fff" }
+                  : { backgroundColor: "var(--surface-strong)", border: "1px solid var(--border-soft)", color: "color-mix(in srgb, var(--foreground) 65%, transparent)" }}
               >
                 {s.label}
               </button>
@@ -213,14 +241,16 @@ export function SymbolToolbar() {
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm ký hiệu (vd: phân số, sin, lực...)"
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-700 placeholder:text-gray-400"
+              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors"
+              style={{ border: "1px solid var(--border-soft)", backgroundColor: "var(--surface-strong)", color: "var(--foreground)" }}
             />
             {search && (
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs leading-none"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs leading-none"
+                style={{ color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
               >
                 ✕
               </button>
@@ -236,11 +266,10 @@ export function SymbolToolbar() {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setActiveTab(i)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    safeTab === i
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600"
-                  }`}
+                  className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                  style={safeTab === i
+                    ? { backgroundColor: "var(--primary)", color: "#fff" }
+                    : { backgroundColor: "var(--surface-strong)", border: "1px solid var(--border-soft)", color: "color-mix(in srgb, var(--foreground) 65%, transparent)" }}
                 >
                   {cat.name}
                 </button>
@@ -251,7 +280,8 @@ export function SymbolToolbar() {
                   title="Xuống dòng (newline)"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={handleInsertNewline}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:bg-blue-50 transition-colors text-xs text-gray-600 font-medium"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors text-xs font-medium"
+                  style={{ backgroundColor: "var(--surface-strong)", border: "1px solid var(--border-soft)", color: "color-mix(in srgb, var(--foreground) 65%, transparent)" }}
                 >
                   <span className="leading-none">↵</span>
                   <span>Xuống dòng</span>
@@ -271,13 +301,14 @@ export function SymbolToolbar() {
                     title={sym.hint}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleInsert(sym)}
-                    className="flex items-center justify-center min-w-10 px-2 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors overflow-hidden"
+                    className="flex items-center justify-center min-w-10 px-2 py-1.5 rounded-lg transition-colors overflow-hidden"
+                    style={{ backgroundColor: "var(--surface-strong)", border: "1px solid var(--border-soft)", color: "var(--foreground)" }}
                   >
                     <SafeMath math={sym.display} />
                   </button>
                 ))
               ) : (
-                <p className="text-xs text-gray-400 py-6 w-full text-center">
+                <p className="text-xs py-6 w-full text-center" style={{ color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>
                   Không tìm thấy ký hiệu phù hợp.
                 </p>
               )
@@ -289,7 +320,8 @@ export function SymbolToolbar() {
                   title={sym.hint}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleInsert(sym)}
-                  className="flex items-center justify-center min-w-10 px-2 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors overflow-hidden"
+className="flex items-center justify-center min-w-10 px-2 py-1.5 rounded-lg transition-colors overflow-hidden"
+                    style={{ backgroundColor: "var(--surface-strong)", border: "1px solid var(--border-soft)", color: "var(--foreground)" }}
                 >
                   <SafeMath math={sym.display} />
                 </button>
@@ -299,12 +331,12 @@ export function SymbolToolbar() {
 
           {/* Last inserted preview */}
           {lastInserted && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 border-t border-blue-100 pt-2 overflow-x-auto">
-              <span className="text-gray-400 shrink-0">Vừa chèn:</span>
-              <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-700 shrink-0">
+            <div className="flex items-center gap-2 text-xs pt-2 overflow-x-auto" style={{ borderTop: "1px solid var(--border-soft)", color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
+              <span className="shrink-0" style={{ color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>Vừa chèn:</span>
+              <code className="px-1.5 py-0.5 rounded font-mono shrink-0" style={{ backgroundColor: "color-mix(in srgb, var(--foreground) 8%, transparent)", color: "var(--foreground)" }}>
                 ${lastInserted}$
               </code>
-              <span className="text-gray-300 shrink-0">→</span>
+              <span className="shrink-0" style={{ color: "color-mix(in srgb, var(--foreground) 25%, transparent)" }}>→</span>
               <SafeMath math={lastInserted} />
             </div>
           )}

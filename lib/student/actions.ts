@@ -1,8 +1,12 @@
 "use server";
 
+import type { TimeSlot as PrismaTimeSlot } from "@prisma/client";
+import { normalizeAvailabilitySlots } from "@/lib/availability/time-slots";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import type { AvailabilityMode, DayOfWeek, TimeSlot } from "@/lib/types";
 
 // ── Bắt đầu làm bài (tạo ExamAttempt) ───────────────────────
 export async function startExamAction(examId: string): Promise<void> {
@@ -18,7 +22,7 @@ export async function startExamAction(examId: string): Promise<void> {
   });
   if (!exam) redirect("/student/exams");
 
-  const inClass = await prisma.studentClass.findFirst({
+  const inClass = await prisma.classEnrollment.findFirst({
     where: { studentId, classId: exam.classId },
   });
   if (!inClass) redirect("/student/exams");
@@ -87,28 +91,40 @@ export async function submitExamAction(
   const total = attempt.exam.examQuestions.length;
   let correctCount = 0;
 
-  // Tạo ExamAnswer records
-  await prisma.examAnswer.createMany({
-    data: answers.map((a) => {
-      const correctIdx = correctMap.get(a.questionId) ?? -1;
-      const isCorrect = a.selectedOption !== null && a.selectedOption === correctIdx;
-      if (isCorrect) correctCount++;
-      return {
-        attemptId,
-        questionId: a.questionId,
-        selectedOption: a.selectedOption,
-        isCorrect,
-      };
-    }),
-    skipDuplicates: true,
+  // Tính trước dữ liệu đáp án và điểm (không gọi DB)
+  const answerData = answers.map((a) => {
+    const correctIdx = correctMap.get(a.questionId) ?? -1;
+    const isCorrect = a.selectedOption !== null && a.selectedOption === correctIdx;
+    if (isCorrect) correctCount++;
+    return {
+      attemptId,
+      questionId: a.questionId,
+      selectedOption: a.selectedOption,
+      isCorrect,
+    };
   });
 
-  // Tính điểm và cập nhật attempt
   const score = total > 0 ? (correctCount / total) * 100 : 0;
 
-  await prisma.examAttempt.update({
-    where: { id: attemptId },
-    data: { submittedAt: new Date(), score },
+  // Lưu đáp án + cập nhật attempt trong một transaction
+  // → nếu một trong hai thất bại thì cả hai bị rollback, tránh mất dữ liệu
+  await prisma.$transaction([
+    prisma.examAnswer.createMany({ data: answerData, skipDuplicates: true }),
+    prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: { submittedAt: new Date(), score },
+    }),
+  ]);
+
+  // Thông báo kết quả cho học sinh
+  await prisma.notification.create({
+    data: {
+      userId: studentId,
+      title: "Bài kiểm tra đã được chấm điểm",
+      message: `Bài thi "${attempt.exam.title}" của bạn đã được chấm. Điểm số: ${score.toFixed(1)}/100.`,
+      type: "EXAM_GRADED",
+      href: `/student/exams/${attempt.examId}/results/${attemptId}`,
+    },
   });
 
   redirect(`/student/exams/${attempt.examId}/results/${attemptId}`);
@@ -146,4 +162,35 @@ export async function completeFlashcardSessionAction(
     where: { id: sessionId, studentId: session.user.id },
     data: { completedAt: new Date() },
   });
+}
+
+// ── Lịch rảnh của học sinh đang đăng nhập ────────────────────
+export async function saveMyAvailabilityAction(
+  slots: { dayOfWeek: DayOfWeek; slot: TimeSlot; availabilityMode: AvailabilityMode }[],
+) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  const studentId = session.user.id;
+  const normalizedSlots = normalizeAvailabilitySlots(slots);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.studentAvailability.deleteMany({ where: { studentId } });
+
+    if (normalizedSlots.length === 0) {
+      return;
+    }
+
+    await tx.studentAvailability.createMany({
+      data: normalizedSlots.map((slot) => ({
+        studentId,
+        dayOfWeek: slot.dayOfWeek,
+        slot: slot.slot as PrismaTimeSlot,
+        availabilityMode: slot.availabilityMode,
+      })),
+      skipDuplicates: true,
+    });
+  });
+
+  revalidatePath("/student/schedule");
+  return { success: true };
 }

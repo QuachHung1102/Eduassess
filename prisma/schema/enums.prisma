@@ -1,15 +1,27 @@
 // ─── Enums ───────────────────────────────────────────────────
 
 enum Role {
-  ADMIN
-  TEACHER
-  STUDENT
+  OWNER // Nhân viên công nghệ (NVCN) — developer/system owner
+  ADMIN // Quản trị hệ thống
+  STAFF // Nhân viên (kết hợp với StaffPosition để xác định chức danh)
+  TEACHER // Giáo viên (GV)
+  STUDENT // Học sinh
+  PARENT // Phụ huynh
+}
+
+enum StaffPosition {
+  NVSALE // Chuyên viên tư vấn
+  NVLT // Nhân viên lễ tân
+  CBNK // Cán bộ ngoại khóa
+  CBDH // Cán bộ du học
+  CBDT // Cán bộ đào tạo
+  CBDTS // Cán bộ đào tạo super (quản CBDT)
 }
 
 enum SchoolLevel {
-  PRIMARY   // Tiểu học (1–5)
-  MIDDLE    // THCS (6–9)
-  HIGH      // THPT (10–12)
+  PRIMARY // Tiểu học (1–5)
+  MIDDLE // THCS (6–9)
+  HIGH // THPT (10–12)
 }
 
 enum Difficulty {
@@ -19,13 +31,118 @@ enum Difficulty {
 }
 
 enum QuestionStatus {
-  PENDING   // AI gợi ý, chờ giáo viên review/approve
-  APPROVED  // Đã được giáo viên duyệt
+  PENDING // AI gợi ý, chờ giáo viên review/approve
+  APPROVED // Đã được giáo viên duyệt
 }
 
 enum NotificationType {
-  EXAM_ASSIGNED      // Giáo viên tạo đề mới cho lớp học sinh
-  EXAM_GRADED        // Bài thi đã được chấm điểm
-  QUESTION_APPROVED  // Admin phê duyệt câu hỏi của giáo viên
-  SYSTEM             // Thông báo hệ thống từ admin
+  EXAM_ASSIGNED // Giáo viên tạo đề mới cho lớp học sinh
+  EXAM_GRADED // Bài thi đã được chấm điểm
+  QUESTION_APPROVED // Admin phê duyệt câu hỏi của giáo viên
+  COURSE_APPROVED // Admin phê duyệt khóa học
+  SYSTEM // Thông báo hệ thống từ admin
+  BOOKING_APPROVED // Yêu cầu đặt phòng được duyệt
+  BOOKING_REJECTED // Yêu cầu đặt phòng bị từ chối
+  CLASS_ASSIGNED // Học sinh được thêm vào lớp
+  SCHEDULE_CHANGED // Lịch lớp/buổi học thay đổi
+  STUDENT_ASSIGNED // CBDT được phân học sinh mới
+}
+
+enum CourseStatus {
+  DRAFT // Giáo viên đang soạn thảo
+  PENDING // Chờ admin duyệt
+  PUBLISHED // Đã xuất bản
+  ARCHIVED // Đã ẩn
+}
+
+enum ParentRelation {
+  FATHER
+  MOTHER
+  GUARDIAN // Người giám hộ
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING    // Chờ duyệt
+  APPROVED   // Đã duyệt
+  REJECTED   // Đã từ chối
+  CANCELLED  // Người dùng tự hủy
+}
+
+// ─── Class & Lịch học (Phase 3) ──────────────────────────────
+
+enum ClassMode {
+  ONLINE
+  OFFLINE
+  HYBRID
+}
+
+enum ClassStatus {
+  DRAFT       // Đang soạn
+  RECRUITING  // Đang tuyển sinh
+  ONGOING     // Đang học
+  FINISHED    // Đã kết thúc
+  CANCELLED   // Đã hủy
+}
+
+enum EnrollmentStatus {
+  ACTIVE   // Đang học
+  DROPPED  // Đã nghỉ
+}
+
+enum SessionStatus {
+  SCHEDULED  // Đã lên lịch
+  COMPLETED  // Đã hoàn thành
+  CANCELLED  // Đã hủy
+  POSTPONED  // Tạm hoãn
+}
+
+enum AttendanceStatus {
+  PRESENT  // Có mặt
+  ABSENT   // Vắng
+  LATE     // Đến muộn
+  EXCUSED  // Vắng có phép
+}
+
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum TimeSlot {
+  MORNING         // Legacy: Sáng (7h–12h)
+  AFTERNOON       // Legacy: Chiều (12h–18h)
+  EVENING         // Legacy: Tối (18h–22h)
+  MORNING_07_08
+  MORNING_08_09
+  MORNING_09_10
+  MORNING_10_11
+  MORNING_11_12
+  AFTERNOON_12_13
+  AFTERNOON_13_14
+  AFTERNOON_14_15
+  AFTERNOON_15_16
+  AFTERNOON_16_17
+  AFTERNOON_17_18
+  EVENING_18_19
+  EVENING_19_20
+  EVENING_20_21
+  EVENING_21_22
+}
+
+enum StudentLevel {
+  WEAK     // Yếu
+  AVERAGE  // Trung bình
+  GOOD     // Khá / Giỏi
+}
+
+enum AvailabilityMode {
+  BUSY         // Bận — không học được
+  BOTH         // Rảnh — cả offline lẫn online
+  ONLINE_ONLY  // Chỉ học online
 }

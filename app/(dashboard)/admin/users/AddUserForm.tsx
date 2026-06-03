@@ -2,12 +2,39 @@
 
 import { useState, useTransition, useRef } from "react";
 import { createUserAction } from "@/lib/admin/actions";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { FaIcon } from "@/components/ui/FaIcon";
-import { faUserGraduate, faChalkboardUser } from "@fortawesome/free-solid-svg-icons";
+import {
+  faUserGraduate,
+  faChalkboardUser,
+  faUserTie,
+  faPeopleRoof,
+  faUserShield,
+} from "@fortawesome/free-solid-svg-icons";
 
-export function AddUserForm() {
+type Role = "STUDENT" | "TEACHER" | "STAFF" | "PARENT" | "ADMIN";
+type StaffPosition = "NVSALE" | "NVLT" | "CBNK" | "CBDH" | "CBDT" | "CBDTS";
+
+type CBDTSOption = { id: string; name: string; email: string };
+
+const ROLE_TABS: Array<{ key: Role; icon: typeof faUserGraduate }> = [
+  { key: "STUDENT", icon: faUserGraduate },
+  { key: "TEACHER", icon: faChalkboardUser },
+  { key: "STAFF",   icon: faUserTie },
+  { key: "PARENT",  icon: faPeopleRoof },
+  { key: "ADMIN",   icon: faUserShield },
+];
+
+const POSITIONS: StaffPosition[] = ["NVSALE", "NVLT", "CBNK", "CBDH", "CBDT", "CBDTS"];
+
+export function AddUserForm({ cbdtsCandidates }: { cbdtsCandidates: CBDTSOption[] }) {
+  const { tr } = useLanguage();
+  const t = tr.rolePermissions; // tái dùng roleNames / positionNames
+
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState<"TEACHER" | "STUDENT">("STUDENT");
+  const [role, setRole] = useState<Role>("STUDENT");
+  const [position, setPosition] = useState<StaffPosition>("NVLT");
+  const [supervisorId, setSupervisorId] = useState<string>("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -19,7 +46,6 @@ export function AddUserForm() {
     startTransition(async () => {
       const result = await createUserAction(fd);
       if (result?.error) setError(result.error);
-      // Nếu thành công sẽ redirect tự động (server action gọi redirect)
     });
   }
 
@@ -38,7 +64,7 @@ export function AddUserForm() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -50,24 +76,67 @@ export function AddUserForm() {
               {/* Role tabs */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Vai trò <span className="text-red-500">*</span></label>
-                <div className="flex gap-2">
-                  {(["STUDENT", "TEACHER"] as const).map((r) => (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {ROLE_TABS.map(({ key, icon }) => (
                     <button
-                      key={r}
+                      key={key}
                       type="button"
-                      onClick={() => setRole(r)}
-                      className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
-                        role === r
+                      onClick={() => setRole(key)}
+                      className={`py-2 text-sm rounded-lg border transition-colors flex items-center justify-center gap-1.5 ${
+                        role === key
                           ? "bg-blue-600 text-white border-blue-600"
                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
                       }`}
                     >
-                      {r === "STUDENT" ? <><FaIcon icon={faUserGraduate} className="mr-1" />Học sinh</> : <><FaIcon icon={faChalkboardUser} className="mr-1" />Giáo viên</>}
+                      <FaIcon icon={icon} />
+                      {t.roleNames[key as keyof typeof t.roleNames] ?? key}
                     </button>
                   ))}
                 </div>
                 <input type="hidden" name="role" value={role} />
               </div>
+
+              {/* Staff position */}
+              {role === "STAFF" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Chức danh <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {POSITIONS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPosition(p)}
+                        className={`py-2 text-sm rounded-lg border transition-colors ${
+                          position === p
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {t.positionNames[p]}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="hidden" name="staffPosition" value={position} />
+                </div>
+              )}
+
+              {/* Supervisor picker — chỉ CBDT */}
+              {role === "STAFF" && position === "CBDT" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CBDTS phụ trách</label>
+                  <select
+                    name="supervisorId"
+                    value={supervisorId}
+                    onChange={(e) => setSupervisorId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">— Không có —</option>
+                    {cbdtsCandidates.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Name */}
               <div>
@@ -161,7 +230,7 @@ export function AddUserForm() {
                   onClick={() => setOpen(false)}
                   className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Hủy
+                  {tr.common.cancel}
                 </button>
                 <button
                   type="submit"

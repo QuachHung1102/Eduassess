@@ -29,7 +29,7 @@ export default async function AdminUserDetailPage({
 
   // Deduplicate subjects for teacher
   const subjects = isTeacher
-    ? [...new Map(user.teacherClasses.map((tc) => [tc.subjectId, tc.subject.name])).values()]
+    ? [...new Set(user.classTeachers.map((ct) => ct.class.subject.name))]
     : [];
 
   return (
@@ -125,18 +125,17 @@ export default async function AdminUserDetailPage({
                 <h2 className="font-semibold text-gray-800">Lớp học</h2>
               </div>
               <div className="p-5">
-                {user.studentClasses.length === 0 ? (
+                {user.classEnrollments.length === 0 ? (
                   <p className="text-sm text-gray-400">Chưa xếp lớp</p>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {user.studentClasses.map((sc) => (
+                    {user.classEnrollments.map((sc) => (
                       <Link
                         key={sc.class.id}
                         href={`/admin/classes/${sc.class.id}`}
                         className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
                       >
                         <span className="font-medium text-blue-800 text-sm">{sc.class.name}</span>
-                        <span className="text-xs text-blue-500">Khối {sc.class.grade.gradeNumber}</span>
                       </Link>
                     ))}
                   </div>
@@ -164,24 +163,24 @@ export default async function AdminUserDetailPage({
                     </div>
                   </div>
                 )}
-                {user.teacherClasses.length > 0 && (
+                {user.classTeachers.length > 0 && (
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Lớp phân công</p>
                     <div className="flex flex-col gap-1">
-                      {user.teacherClasses.map((tc) => (
+                      {user.classTeachers.map((ct) => (
                         <Link
-                          key={`${tc.class.id}-${tc.subjectId}`}
-                          href={`/admin/classes/${tc.class.id}`}
+                          key={ct.class.id}
+                          href={`/admin/classes/${ct.class.id}`}
                           className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                         >
-                          <span className="font-medium text-gray-800">{tc.class.name}</span>
-                          <span className="text-xs text-gray-400">{tc.subject.name}</span>
+                          <span className="font-medium text-gray-800">{ct.class.name}</span>
+                          <span className="text-xs text-gray-400">{ct.class.subject.name}</span>
                         </Link>
                       ))}
                     </div>
                   </div>
                 )}
-                {user.teacherClasses.length === 0 && (
+                {user.classTeachers.length === 0 && (
                   <p className="text-sm text-gray-400">Chưa có phân công nào</p>
                 )}
               </div>

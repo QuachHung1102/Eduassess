@@ -30,7 +30,7 @@ export default async function AdminExamDetailPage({
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">{exam.title}</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {exam.subject.name} · Lớp {exam.class.grade.gradeNumber} – {exam.class.name} · {exam.duration} phút
+            {exam.subject.name} · Lớp {exam.class.name} · {exam.duration} phút
           </p>
           <p className="text-gray-400 text-xs mt-0.5">
             Tạo bởi{" "}

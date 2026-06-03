@@ -1,0 +1,72 @@
+// ─── Room & Booking ────────────────────────────────────────
+
+/**
+ * Phòng học / phòng họp tại trung tâm.
+ * Quản trị bởi OWNER / ADMIN (room.create / room.update / room.delete).
+ */
+model Room {
+  id          String  @id @default(cuid())
+  name        String  @unique // Vd: "P.101 – Phòng lớn", "Phòng họp A"
+  capacity    Int // Số người tối đa
+  description String?
+  isActive    Boolean @default(true) // Có thể đặt hay không
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings RoomBooking[]
+  sessions ClassSession[]
+
+  @@index([isActive])
+  @@map("rooms")
+}
+
+/**
+ * Lý do đặt phòng — lưu trong DB để admin có thể thêm / sửa / xoá.
+ * priority: số càng cao → độ ưu tiên càng cao khi xét conflict (tương lai).
+ */
+model BookingReason {
+  id       String @id @default(cuid())
+  label    String @unique // Vd: "Dạy học sinh", "Họp nội bộ"
+  priority Int    @default(10) // Số cao hơn = ưu tiên cao hơn
+
+  bookings RoomBooking[]
+
+  @@map("booking_reasons")
+}
+
+/**
+ * Yêu cầu đặt phòng.
+ * - requesterId: người gửi yêu cầu
+ * - bookedForId: người sẽ dùng phòng (khi NVLT đặt hộ người khác)
+ * - Conflict rule: startAt < existing.endAt AND endAt > existing.startAt (APPROVED only)
+ */
+model RoomBooking {
+  id           String        @id @default(cuid())
+  roomId       String
+  requesterId  String // Người tạo yêu cầu
+  bookedForId  String // Người thực sự sử dụng phòng (có thể khác requester)
+  reasonId     String
+  startAt      DateTime
+  endAt        DateTime
+  note         String? // Ghi chú tuỳ chọn
+  status       BookingStatus @default(PENDING)
+  reviewerId   String? // Người duyệt (NVLT / ADMIN)
+  reviewedAt   DateTime?
+  rejectReason String? // Lý do từ chối nếu REJECTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room       Room         @relation(fields: [roomId], references: [id])
+  requester  User         @relation("BookingRequester", fields: [requesterId], references: [id])
+  bookedFor  User         @relation("BookingFor", fields: [bookedForId], references: [id])
+  reason     BookingReason @relation(fields: [reasonId], references: [id])
+  reviewer   User?        @relation("BookingReviewer", fields: [reviewerId], references: [id])
+
+  @@index([roomId, status])
+  @@index([requesterId])
+  @@index([bookedForId])
+  @@index([startAt, endAt])
+  @@map("room_bookings")
+}

@@ -1,40 +1,202 @@
-// ─── Class & Phân quyền ───────────────────────────────────────
+// ─── Class & Lịch học ─────────────────────────────────────────
 
+/**
+ * Lớp học tại trung tâm.
+ * - advisorId  : CBDT phụ trách lớp (tuyển sinh, theo dõi HS, đánh giá).
+ * - createdById: người tạo (thường CBDT hoặc CBDTS).
+ * - mode       : hình thức học ONLINE / OFFLINE / HYBRID.
+ * - targetLevel: năng lực mục tiêu HS trong lớp.
+ * - sessionCount: tổng số buổi học dự kiến (0 = chưa xác định).
+ */
 model Class {
-  id      String @id @default(cuid())
-  name    String // VD: "10A1", "11B2"
-  gradeId String
+  id           String       @id @default(cuid())
+  name         String       // VD: "Toán 10 – Nhóm A"
+  subjectId    String
+  advisorId    String       // CBDT phụ trách
+  createdById  String
+  mode         ClassMode    @default(OFFLINE)
+  targetLevel  StudentLevel @default(AVERAGE)
+  sessionCount Int          @default(0)
+  status       ClassStatus  @default(DRAFT)
+  note         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  grade          Grade          @relation(fields: [gradeId], references: [id])
-  teacherClasses TeacherClass[]
-  studentClasses StudentClass[]
-  exams          Exam[]
+  subject     Subject           @relation(fields: [subjectId], references: [id])
+  advisor     User              @relation("ClassAdvisor", fields: [advisorId], references: [id])
+  createdBy   User              @relation("ClassCreator", fields: [createdById], references: [id])
+  teachers    ClassTeacher[]
+  enrollments ClassEnrollment[]
+  sessions    ClassSession[]
+  exams       Exam[]
 
+  @@index([subjectId])
+  @@index([advisorId])
+  @@index([status])
   @@map("classes")
 }
 
-// Admin gán: giáo viên X dạy môn Y ở lớp Z
-model TeacherClass {
-  teacherId String
-  classId   String
-  subjectId String
+/**
+ * Giáo viên phụ trách lớp (1 lớp có thể có nhiều GV).
+ */
+model ClassTeacher {
+  classId    String
+  teacherId  String
+  assignedAt DateTime @default(now())
 
-  teacher User    @relation(fields: [teacherId], references: [id])
-  class   Class   @relation(fields: [classId], references: [id])
-  subject Subject @relation(fields: [subjectId], references: [id])
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User  @relation("ClassTeachers", fields: [teacherId], references: [id])
 
-  @@id([teacherId, classId, subjectId])
-  @@map("teacher_classes")
+  @@id([classId, teacherId])
+  @@map("class_teachers")
 }
 
-// Học sinh thuộc lớp nào
-model StudentClass {
-  studentId String
+/**
+ * Học sinh được thêm vào lớp.
+ */
+model ClassEnrollment {
+  id        String           @id @default(cuid())
   classId   String
+  studentId String
+  status    EnrollmentStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  droppedAt DateTime?
 
-  student User  @relation(fields: [studentId], references: [id])
-  class   Class @relation(fields: [classId], references: [id])
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation("ClassEnrollments", fields: [studentId], references: [id])
 
-  @@id([studentId, classId])
-  @@map("student_classes")
+  @@unique([classId, studentId])
+  @@index([studentId])
+  @@map("class_enrollments")
+}
+
+/**
+ * Buổi học cụ thể của lớp.
+ * - teacherId  : GV dạy buổi này (có thể khác GV chính của lớp).
+ * - roomId     : NULL nếu ONLINE.
+ * - date       : ngày học (Date only, no time).
+ * - startTime/endTime: dạng "HH:mm" (VD "08:00", "10:00").
+ */
+model ClassSession {
+  id            String        @id @default(cuid())
+  classId       String
+  sessionNumber Int           // Thứ tự buổi trong lớp (1, 2, 3…)
+  date          DateTime      @db.Date
+  startTime     String        // "HH:mm"
+  endTime       String        // "HH:mm"
+  mode          ClassMode
+  roomId        String?       // NULL nếu ONLINE
+  teacherId     String
+  status        SessionStatus @default(SCHEDULED)
+  note          String?
+  createdAt     DateTime      @default(now())
+
+  class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  room        Room?        @relation(fields: [roomId], references: [id])
+  teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id])
+  attendances Attendance[]
+
+  @@index([classId, date])
+  @@index([teacherId])
+  @@index([roomId])
+  @@unique([classId, sessionNumber])
+  @@map("class_sessions")
+}
+
+/**
+ * Điểm danh học sinh theo buổi.
+ */
+model Attendance {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus @default(ABSENT)
+  note      String?
+  takenAt   DateTime         @default(now())
+
+  session ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student User         @relation("StudentAttendance", fields: [studentId], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@map("attendance")
+}
+
+/**
+ * Lịch rảnh của học sinh — matrix 7 ngày × 3 slot.
+ * BUSY        → không học được buổi đó.
+ * BOTH        → offline hoặc online đều OK.
+ * ONLINE_ONLY → chỉ học online.
+ */
+model StudentAvailability {
+  id               String           @id @default(cuid())
+  studentId        String
+  dayOfWeek        DayOfWeek
+  slot             TimeSlot
+  availabilityMode AvailabilityMode @default(BUSY)
+
+  student User @relation("StudentAvailability", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, dayOfWeek, slot])
+  @@index([studentId])
+  @@map("student_availability")
+}
+
+/**
+ * Lịch rảnh của giáo viên — matrix 7 ngày × 3 slot.
+ */
+model TeacherAvailability {
+  id               String           @id @default(cuid())
+  teacherId        String
+  dayOfWeek        DayOfWeek
+  slot             TimeSlot
+  availabilityMode AvailabilityMode @default(BUSY)
+
+  teacher User @relation("TeacherAvailability", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, dayOfWeek, slot])
+  @@index([teacherId])
+  @@map("teacher_availability")
+}
+
+/**
+ * Đánh giá năng lực học sinh theo môn học.
+ * Lưu lịch sử — ORDER BY evaluatedAt DESC LIMIT 1 để lấy hiện tại.
+ */
+model StudentSubjectLevel {
+  id            String       @id @default(cuid())
+  studentId     String
+  subjectId     String
+  level         StudentLevel
+  evaluatedById String       // CBDT thực hiện đánh giá
+  evaluatedAt   DateTime     @default(now())
+  note          String?
+
+  student     User    @relation("StudentLevels", fields: [studentId], references: [id], onDelete: Cascade)
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  evaluatedBy User    @relation("EvaluatorLevels", fields: [evaluatedById], references: [id])
+
+  @@index([studentId, subjectId])
+  @@index([subjectId, level])
+  @@map("student_subject_levels")
+}
+
+/**
+ * Phân học sinh cho CBDT — được thực hiện bởi CBDTS.
+ * Quan hệ này xác định CBDT nào có quyền đánh giá và tạo lớp cho HS đó.
+ */
+model StudentAdvisor {
+  id           String   @id @default(cuid())
+  studentId    String
+  advisorId    String   // CBDT
+  assignedAt   DateTime @default(now())
+  assignedById String   // CBDTS
+
+  student    User @relation("StudentAdvisees", fields: [studentId], references: [id], onDelete: Cascade)
+  advisor    User @relation("AdvisorStudents", fields: [advisorId], references: [id])
+  assignedBy User @relation("AdvisorAssigner", fields: [assignedById], references: [id])
+
+  @@unique([studentId, advisorId])
+  @@index([advisorId])
+  @@map("student_advisors")
 }

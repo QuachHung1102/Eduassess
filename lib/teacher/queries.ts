@@ -11,13 +11,18 @@ export async function getSubjects() {
 export async function getTeacherSubjects() {
   const session = await auth();
   if (!session?.user?.id) return [];
-  const rows = (await prisma.teacherClass.findMany({
+  const rows = await prisma.classTeacher.findMany({
     where: { teacherId: session.user.id },
-    include: { subject: true },
-    distinct: ["subjectId"],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  })) as unknown as any[];
-  const subjects = rows.map((r) => r.subject as { id: string; name: string; canAddQuestions: boolean });
+    include: { class: { include: { subject: true } } },
+  });
+  const seen = new Set<string>();
+  const subjects: { id: string; name: string; canAddQuestions: boolean }[] = [];
+  for (const r of rows) {
+    if (!seen.has(r.class.subjectId)) {
+      seen.add(r.class.subjectId);
+      subjects.push(r.class.subject as { id: string; name: string; canAddQuestions: boolean });
+    }
+  }
   return subjects.filter((s) => s.canAddQuestions);
 }
 
@@ -53,6 +58,7 @@ export async function getTeacherQuestions(filters?: {
   const where = {
     createdById: session.user.id,
     ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+    ...(filters?.gradeId ? { topic: { gradeId: filters.gradeId } } : {}),
     ...(filters?.difficulty && filters.difficulty !== "ALL"
       ? { difficulty: filters.difficulty as "EASY" | "MEDIUM" | "HARD" }
       : {}),
@@ -86,11 +92,10 @@ export async function getTeacherClasses() {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  return prisma.teacherClass.findMany({
+  return prisma.classTeacher.findMany({
     where: { teacherId: session.user.id },
     include: {
-      class: { include: { grade: true } },
-      subject: true,
+      class: { include: { subject: true } },
     },
     orderBy: { class: { name: "asc" } },
   });
@@ -121,7 +126,7 @@ export async function getTeacherExamDetail(examId: string) {
     where: { id: examId, createdById: session.user.id },
     include: {
       subject: true,
-      class: { include: { grade: true } },
+      class: true,
       examQuestions: {
         orderBy: { order: "asc" },
         include: {
@@ -144,17 +149,17 @@ export async function getTeacherStats() {
   const [questionCount, examCount, , pendingCount] = await Promise.all([
     prisma.question.count({ where: { createdById: session.user.id } }),
     prisma.exam.count({ where: { createdById: session.user.id } }),
-    prisma.teacherClass.count({ where: { teacherId: session.user.id } }),
+    prisma.classTeacher.count({ where: { teacherId: session.user.id } }),
     prisma.question.count({ where: { createdById: session.user.id, status: "PENDING" } }),
   ]);
 
   // Đếm học sinh trong các lớp giáo viên phụ trách
-  const teacherClassIds = await prisma.teacherClass
+  const teacherClassIds = await prisma.classTeacher
     .findMany({ where: { teacherId: session.user.id }, select: { classId: true } })
     .then((rows) => [...new Set(rows.map((r) => r.classId))]);
 
-  const studentCount = await prisma.studentClass.count({
-    where: { classId: { in: teacherClassIds } },
+  const studentCount = await prisma.classEnrollment.count({
+    where: { classId: { in: teacherClassIds }, status: "ACTIVE" },
   });
 
   return { questionCount, examCount, studentCount, pendingCount };
@@ -166,7 +171,7 @@ export async function getTeacherClassDetail(classId: string) {
   if (!session?.user?.id) return null;
 
   // Kiểm tra giáo viên có phụ trách lớp này không
-  const assignment = await prisma.teacherClass.findFirst({
+  const assignment = await prisma.classTeacher.findFirst({
     where: { teacherId: session.user.id, classId },
   });
   if (!assignment) return null;
@@ -174,8 +179,8 @@ export async function getTeacherClassDetail(classId: string) {
   return prisma.class.findUnique({
     where: { id: classId },
     include: {
-      grade: true,
-      studentClasses: {
+      subject: true,
+      enrollments: {
         include: {
           student: { select: { id: true, name: true, email: true, sex: true } },
         },
@@ -188,9 +193,8 @@ export async function getTeacherClassDetail(classId: string) {
         },
         orderBy: { createdAt: "desc" },
       },
-      teacherClasses: {
+      teachers: {
         where: { teacherId: session.user.id },
-        include: { subject: { select: { name: true } } },
       },
     },
   });
@@ -390,4 +394,63 @@ export async function getTeacherFlashcardRandomSet(filters?: {
 
   const randomIndex = Math.floor(Math.random() * sets.length);
   return getTeacherFlashcardSetDetail(sets[randomIndex].id);
+}
+
+// ── Buổi học của lớp mà giáo viên phụ trách ──────────────────
+export async function getTeacherClassSessions(classId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  // Giáo viên chỉ xem được lớp mình phụ trách
+  const assignment = await prisma.classTeacher.findFirst({
+    where: { teacherId: session.user.id, classId },
+  });
+  if (!assignment) return null;
+
+  return prisma.classSession.findMany({
+    where: { classId },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    include: {
+      room: { select: { id: true, name: true } },
+      teacher: { select: { id: true, name: true } },
+      _count: { select: { attendances: true } },
+    },
+  });
+}
+
+// ── Chi tiết buổi học + danh sách điểm danh ──────────────────
+export async function getTeacherSessionDetail(classId: string, sessionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  // Giáo viên chỉ xem được lớp mình phụ trách
+  const assignment = await prisma.classTeacher.findFirst({
+    where: { teacherId: session.user.id, classId },
+  });
+  if (!assignment) return null;
+
+  const [classSession, enrollments] = await Promise.all([
+    prisma.classSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        class: { select: { id: true, name: true } },
+        room: { select: { id: true, name: true } },
+        teacher: { select: { id: true, name: true } },
+        attendances: {
+          include: {
+            student: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    }),
+    prisma.classEnrollment.findMany({
+      where: { classId, status: "ACTIVE" },
+      include: { student: { select: { id: true, name: true, email: true } } },
+      orderBy: { student: { name: "asc" } },
+    }),
+  ]);
+
+  if (!classSession || classSession.classId !== classId) return null;
+
+  return { session: classSession, enrollments };
 }

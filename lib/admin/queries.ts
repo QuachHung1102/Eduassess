@@ -26,8 +26,12 @@ export async function getAdminSubjects() {
 // ── All questions (paginated) ────────────────────────────────
 export async function getAdminQuestions(filters?: {
   subjectId?: string;
+  gradeId?: string;
   difficulty?: string;
   status?: string;
+  creator?: string;
+  isUnivExam?: "YES" | "NO";
+  hasExplanation?: "YES" | "NO";
   search?: string;
   page?: number;
   pageSize?: number;
@@ -38,8 +42,22 @@ export async function getAdminQuestions(filters?: {
 
   const where = {
     ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
+    ...(filters?.gradeId ? { topic: { gradeId: filters.gradeId } } : {}),
     ...(filters?.difficulty ? { difficulty: filters.difficulty as "EASY" | "MEDIUM" | "HARD" } : {}),
     ...(filters?.status ? { status: filters.status as "PENDING" | "APPROVED" } : {}),
+    ...(filters?.creator
+      ? { createdBy: { name: { contains: filters.creator, mode: "insensitive" as const } } }
+      : {}),
+    ...(filters?.isUnivExam === "YES"
+      ? { isUnivExam: true }
+      : filters?.isUnivExam === "NO"
+        ? { isUnivExam: false }
+        : {}),
+    ...(filters?.hasExplanation === "YES"
+      ? { explanation: { not: null } }
+      : filters?.hasExplanation === "NO"
+        ? { OR: [{ explanation: null }, { explanation: "" }] }
+        : {}),
     ...(filters?.search
       ? { content: { contains: filters.search, mode: "insensitive" as const } }
       : {}),
@@ -85,8 +103,17 @@ export async function getAdminTopics(subjectId: string, gradeId: string) {
 }
 
 // ── All users (paginated) ────────────────────────────────────
+type AdminUserRole = "TEACHER" | "STUDENT" | "STAFF" | "PARENT" | "ADMIN";
+type AdminStaffPosition = "NVSALE" | "NVLT" | "CBNK" | "CBDH" | "CBDT" | "CBDTS";
+type AdminSexFilter = "MALE" | "FEMALE";
+type HasPhoneFilter = "YES" | "NO";
+const ADMIN_LIST_ROLES: AdminUserRole[] = ["ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
+
 export async function getAdminUsers(filters?: {
-  role?: "TEACHER" | "STUDENT";
+  role?: AdminUserRole;
+  staffPosition?: AdminStaffPosition;
+  sex?: AdminSexFilter;
+  hasPhone?: HasPhoneFilter;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -95,9 +122,16 @@ export async function getAdminUsers(filters?: {
   const pageSize = filters?.pageSize ?? 20;
   const skip = (page - 1) * pageSize;
 
-  const where = {
-    role: { in: ["TEACHER", "STUDENT"] as ("TEACHER" | "STUDENT")[] },
-    ...(filters?.role ? { role: filters.role } : {}),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
+    role: filters?.role ? filters.role : { in: ADMIN_LIST_ROLES },
+    ...(filters?.staffPosition ? { staffPosition: filters.staffPosition } : {}),
+    ...(filters?.sex ? { sex: filters.sex } : {}),
+    ...(filters?.hasPhone === "YES"
+      ? { phoneNumber: { not: null } }
+      : filters?.hasPhone === "NO"
+        ? { OR: [{ phoneNumber: null }, { phoneNumber: "" }] }
+        : {}),
     ...(filters?.search
       ? {
           OR: [
@@ -119,16 +153,17 @@ export async function getAdminUsers(filters?: {
         name: true,
         email: true,
         role: true,
+        staffPosition: true,
         sex: true,
         phoneNumber: true,
         createdAt: true,
-        studentClasses: {
+        classEnrollments: {
           select: { class: { select: { name: true } } },
           take: 1,
         },
-        teacherClasses: {
-          select: { subject: { select: { name: true } } },
-          distinct: ["subjectId"],
+        classTeachers: {
+          select: { class: { select: { subject: { select: { name: true } } } } },
+          take: 5,
         },
       },
     }),
@@ -136,6 +171,15 @@ export async function getAdminUsers(filters?: {
   ]);
 
   return { users, total };
+}
+
+// Danh sách CBDTS — dùng cho dropdown supervisor khi tạo / sửa CBDT
+export async function getCBDTSCandidates() {
+  return prisma.user.findMany({
+    where: { role: "STAFF", staffPosition: "CBDTS" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true },
+  });
 }
 
 // ── All teachers (for dropdowns) ────────────────────────────
@@ -152,18 +196,19 @@ export async function getAdminTeachers(): Promise<{
       id: true,
       name: true,
       email: true,
-      teacherClasses: {
-        select: { subjectId: true, subject: { select: { id: true, name: true } } },
+      classTeachers: {
+        select: { class: { select: { subjectId: true, subject: { select: { id: true, name: true } } } } },
       },
     },
   });
   return teachers.map((t) => {
     const seen = new Set<string>();
     const subjects: { id: string; name: string }[] = [];
-    for (const tc of t.teacherClasses) {
-      if (!seen.has(tc.subjectId)) {
-        seen.add(tc.subjectId);
-        subjects.push(tc.subject);
+    for (const ct of t.classTeachers) {
+      const subjectId = ct.class.subjectId;
+      if (!seen.has(subjectId)) {
+        seen.add(subjectId);
+        subjects.push(ct.class.subject);
       }
     }
     return { id: t.id, name: t.name, email: t.email, subjects };
@@ -188,7 +233,7 @@ export async function getAdminStudents(search?: string) {
     take: 50,
     select: {
       id: true, name: true, email: true,
-      studentClasses: { select: { class: { select: { id: true, name: true } } } },
+      classEnrollments: { select: { class: { select: { id: true, name: true } } } },
     },
   });
 }
@@ -196,11 +241,12 @@ export async function getAdminStudents(search?: string) {
 // ── All classes (grouped by grade) ──────────────────────────
 export async function getAdminClasses() {
   return prisma.class.findMany({
-    orderBy: [{ grade: { gradeNumber: "asc" } }, { name: "asc" }],
+    orderBy: [{ subject: { name: "asc" } }, { name: "asc" }],
     include: {
-      grade: { select: { gradeNumber: true, level: true } },
+      subject: { select: { name: true } },
+      advisor: { select: { name: true } },
       _count: {
-        select: { studentClasses: true, teacherClasses: true },
+        select: { enrollments: true, teachers: true },
       },
     },
   });
@@ -211,8 +257,9 @@ export async function getAdminClassDetail(classId: string) {
   return prisma.class.findUnique({
     where: { id: classId },
     include: {
-      grade: true,
-      studentClasses: {
+      subject: true,
+      advisor: { select: { id: true, name: true, email: true } },
+      enrollments: {
         include: {
           student: {
             select: { id: true, name: true, email: true, sex: true, phoneNumber: true },
@@ -220,12 +267,11 @@ export async function getAdminClassDetail(classId: string) {
         },
         orderBy: { student: { name: "asc" } },
       },
-      teacherClasses: {
+      teachers: {
         include: {
           teacher: { select: { id: true, name: true, email: true } },
-          subject: { select: { id: true, name: true } },
         },
-        orderBy: { subject: { name: "asc" } },
+        orderBy: { teacher: { name: "asc" } },
       },
     },
   });
@@ -312,9 +358,8 @@ export async function getAdminTeacherPermissions(): Promise<{
   name: string;
   email: string;
   subjects: { id: string; name: string }[];
-  teacherClasses: {
-    class: { id: string; name: string };
-    subject: { id: string; name: string };
+  classTeachers: {
+    class: { id: string; name: string; subject: { id: string; name: string } };
   }[];
 }[]> {
   const teachers = await prisma.user.findMany({
@@ -324,33 +369,30 @@ export async function getAdminTeacherPermissions(): Promise<{
       id: true,
       name: true,
       email: true,
-      teacherClasses: {
+      classTeachers: {
         select: {
-          subjectId: true,
-          class: { select: { id: true, name: true } },
-          subject: { select: { id: true, name: true } },
+          class: { select: { id: true, name: true, subjectId: true, subject: { select: { id: true, name: true } } } },
         },
-        orderBy: [{ subject: { name: "asc" } }, { class: { name: "asc" } }],
+        orderBy: { class: { name: "asc" } },
       },
     },
   });
   return teachers.map((t) => {
     const seen = new Set<string>();
     const subjects: { id: string; name: string }[] = [];
-    for (const tc of t.teacherClasses) {
-      if (!seen.has(tc.subjectId)) {
-        seen.add(tc.subjectId);
-        subjects.push(tc.subject);
+    for (const ct of t.classTeachers) {
+      if (!seen.has(ct.class.subjectId)) {
+        seen.add(ct.class.subjectId);
+        subjects.push(ct.class.subject);
       }
     }
-    return { id: t.id, name: t.name, email: t.email, subjects, teacherClasses: t.teacherClasses };
+    return { id: t.id, name: t.name, email: t.email, subjects, classTeachers: t.classTeachers };
   });
 }
 
 // ── User detail (for edit page) ───────────────────────────────
 export async function getAdminUserDetail(userId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (prisma.user as any).findUnique({
+  return prisma.user.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -362,16 +404,14 @@ export async function getAdminUserDetail(userId: string) {
       address: true,
       dateOfBirth: true,
       createdAt: true,
-      studentClasses: {
-        select: { class: { select: { id: true, name: true, grade: { select: { gradeNumber: true } } } } },
+      classEnrollments: {
+        select: { class: { select: { id: true, name: true } } },
       },
-      teacherClasses: {
+      classTeachers: {
         select: {
-          subjectId: true,
-          subject: { select: { name: true } },
-          class: { select: { id: true, name: true } },
+          class: { select: { id: true, name: true, subject: { select: { name: true } } } },
         },
-        orderBy: [{ subject: { name: "asc" } }],
+        orderBy: { class: { name: "asc" } },
       },
     },
   }) as Promise<{
@@ -384,8 +424,8 @@ export async function getAdminUserDetail(userId: string) {
     address: string | null;
     dateOfBirth: Date | null;
     createdAt: Date;
-    studentClasses: { class: { id: string; name: string; grade: { gradeNumber: number } } }[];
-    teacherClasses: { subjectId: string; subject: { name: string }; class: { id: string; name: string } }[];
+    classEnrollments: { class: { id: string; name: string } }[];
+    classTeachers: { class: { id: string; name: string; subject: { name: string } } }[];
   } | null>;
 }
 
@@ -437,7 +477,7 @@ export async function getAdminExams(filters?: {
       take: pageSize,
       include: {
         subject: { select: { name: true } },
-        class: { select: { name: true, grade: { select: { gradeNumber: true } } } },
+        class: { select: { name: true } },
         createdBy: { select: { name: true } },
         _count: { select: { examQuestions: true, examAttempts: true } },
       },
@@ -454,7 +494,7 @@ export async function getAdminExamDetail(examId: string) {
     where: { id: examId },
     include: {
       subject: true,
-      class: { include: { grade: true } },
+      class: true,
       createdBy: { select: { id: true, name: true, email: true } },
       examQuestions: {
         orderBy: { order: "asc" },

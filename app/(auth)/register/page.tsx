@@ -38,14 +38,15 @@ export default function RegisterPage() {
         </>
       }
     >
-      <div className="rounded-[1.75rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:p-5">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="rounded-[1.5rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:rounded-[1.75rem] sm:p-5">
+          <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
               </div>
             )}
-            <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
               <label htmlFor="name" className="mb-2 block text-sm font-semibold text-slate-700">
                 Họ và tên
               </label>
@@ -56,11 +57,11 @@ export default function RegisterPage() {
                 autoComplete="name"
                 required
                 placeholder="Nguyễn Văn A"
-                className="field-input"
+                className="field-input min-h-11"
               />
-            </div>
+              </div>
 
-            <div>
+              <div>
               <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
                 Email
               </label>
@@ -71,8 +72,9 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 placeholder="ten@truong.edu.vn"
-                className="field-input"
+                className="field-input min-h-11"
               />
+              </div>
             </div>
 
             <div>
@@ -83,7 +85,7 @@ export default function RegisterPage() {
                 id="role"
                 name="role"
                 defaultValue="STUDENT"
-                className="field-input"
+                className="field-input min-h-11"
               >
                 <option value="TEACHER">Giáo viên</option>
                 <option value="STUDENT">Học sinh</option>
@@ -101,7 +103,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
                 placeholder="Tối thiểu 8 ký tự"
-                className="field-input"
+                className="field-input min-h-11"
               />
             </div>
 
@@ -116,14 +118,15 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
                 placeholder="Nhập lại mật khẩu"
-                className="field-input"
+                className="field-input min-h-11"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="primary-button w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
+              aria-busy={loading}
+              className="primary-button focus-ring-strong press-feedback-inset state-disabled loading-inline w-full justify-center"
             >
               {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </button>

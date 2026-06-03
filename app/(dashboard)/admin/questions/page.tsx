@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAdminQuestions, getAdminSubjects } from "@/lib/admin/queries";
+import { getAdminQuestions, getAdminSubjects, getAdminGrades } from "@/lib/admin/queries";
 import { AdminDeleteQuestionButton } from "./AdminDeleteQuestionButton";
 import { AdminQuestionStatusButton } from "./AdminQuestionStatusButton";
 import { FaIcon } from "@/components/ui/FaIcon";
@@ -15,23 +15,34 @@ export default async function AdminQuestionsPage({
 }: {
   searchParams: Promise<{
     subjectId?: string;
+    gradeId?: string;
     difficulty?: string;
     status?: string;
+    search?: string;
+    creator?: string;
+    isUnivExam?: string;
+    hasExplanation?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10));
 
-  const [{ questions, total }, subjects] = await Promise.all([
+  const [{ questions, total }, subjects, grades] = await Promise.all([
     getAdminQuestions({
       subjectId: params.subjectId,
+      gradeId: params.gradeId,
       difficulty: params.difficulty,
       status: params.status,
+      creator: params.creator,
+      isUnivExam: params.isUnivExam as "YES" | "NO" | undefined,
+      hasExplanation: params.hasExplanation as "YES" | "NO" | undefined,
+      search: params.search,
       page: currentPage,
       pageSize: PAGE_SIZE,
     }),
     getAdminSubjects(),
+    getAdminGrades(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -39,8 +50,13 @@ export default async function AdminQuestionsPage({
   const buildUrl = (page: number) => {
     const q = new URLSearchParams();
     if (params.subjectId) q.set("subjectId", params.subjectId);
+    if (params.gradeId) q.set("gradeId", params.gradeId);
     if (params.difficulty) q.set("difficulty", params.difficulty);
     if (params.status) q.set("status", params.status);
+    if (params.search) q.set("search", params.search);
+    if (params.creator) q.set("creator", params.creator);
+    if (params.isUnivExam) q.set("isUnivExam", params.isUnivExam);
+    if (params.hasExplanation) q.set("hasExplanation", params.hasExplanation);
     if (page > 1) q.set("page", String(page));
     const qs = q.toString();
     return qs ? `/admin/questions?${qs}` : "/admin/questions";
@@ -66,12 +82,84 @@ export default async function AdminQuestionsPage({
       <QuestionFilters
         baseUrl="/admin/questions"
         subjects={subjects}
+        grades={grades}
         defaults={{
           subjectId: params.subjectId,
+          gradeId: params.gradeId,
           difficulty: params.difficulty,
           status: params.status,
+          search: params.search,
         }}
       />
+
+      <form method="GET" className="shrink-0 bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="min-w-56">
+            <label className="block text-xs text-gray-500 mb-1">Người tạo</label>
+            <input
+              name="creator"
+              defaultValue={params.creator ?? ""}
+              placeholder="Tên giáo viên / admin"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ôn thi ĐH</label>
+            <select
+              name="isUnivExam"
+              defaultValue={params.isUnivExam ?? ""}
+              className="h-10 border border-gray-200 rounded-lg px-3 text-sm bg-white text-gray-900"
+            >
+              <option value="">Tất cả</option>
+              <option value="YES">Có</option>
+              <option value="NO">Không</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Giải thích</label>
+            <select
+              name="hasExplanation"
+              defaultValue={params.hasExplanation ?? ""}
+              className="h-10 border border-gray-200 rounded-lg px-3 text-sm bg-white text-gray-900"
+            >
+              <option value="">Tất cả</option>
+              <option value="YES">Có giải thích</option>
+              <option value="NO">Chưa có</option>
+            </select>
+          </div>
+
+          {params.subjectId && <input type="hidden" name="subjectId" value={params.subjectId} />}
+          {params.gradeId && <input type="hidden" name="gradeId" value={params.gradeId} />}
+          {params.difficulty && <input type="hidden" name="difficulty" value={params.difficulty} />}
+          {params.status && <input type="hidden" name="status" value={params.status} />}
+          {params.search && <input type="hidden" name="search" value={params.search} />}
+
+          <button
+            type="submit"
+            className="h-10 bg-gray-900 text-white px-4 rounded-lg text-sm font-medium hover:bg-black transition-colors"
+          >
+            Áp dụng nâng cao
+          </button>
+
+          {(params.creator || params.isUnivExam || params.hasExplanation) && (
+            <Link
+              href={(() => {
+                const q = new URLSearchParams();
+                if (params.subjectId) q.set("subjectId", params.subjectId);
+                if (params.gradeId) q.set("gradeId", params.gradeId);
+                if (params.difficulty) q.set("difficulty", params.difficulty);
+                if (params.status) q.set("status", params.status);
+                if (params.search) q.set("search", params.search);
+                const qs = q.toString();
+                return qs ? `/admin/questions?${qs}` : "/admin/questions";
+              })()}
+              className="h-10 inline-flex items-center border border-gray-300 text-gray-600 px-3 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+            >
+              Xóa nâng cao
+            </Link>
+          )}
+        </div>
+      </form>
 
       {/* Table */}
       <QuestionTable

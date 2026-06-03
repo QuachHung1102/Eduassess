@@ -31,23 +31,23 @@ export function FlashcardSetMeta({
 }: Props) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-sm text-gray-500">
-        <FaIcon icon={faBookOpen} className="mr-1 text-gray-400" />
+      <p className="text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+        <span className="mr-1" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}><FaIcon icon={faBookOpen} /></span>
         {subject} · {LEVEL_LABEL[grade.level]} · Lớp {grade.gradeNumber}
       </p>
-      <p className="text-sm text-gray-500">
-        <FaIcon icon={faTag} className="mr-1 text-gray-400" />
+      <p className="text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+        <span className="mr-1" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}><FaIcon icon={faTag} /></span>
         {topicName} · {DIFFICULTY_LABEL[difficulty]} · {cardCount} thẻ
       </p>
       {createdByRole != null ? (
-        <p className="text-sm text-gray-500">
-          <FaIcon icon={faUser} className="mr-1 text-gray-400" />
+        <p className="text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+          <span className="mr-1" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}><FaIcon icon={faUser} /></span>
           {createdByName} · {ROLE_LABEL[createdByRole] ?? createdByRole}
         </p>
       ) : (
-        <p className="text-sm text-gray-400">Người tạo: {createdByName}</p>
+        <p className="text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>Người tạo: {createdByName}</p>
       )}
-      {description ? <p className="text-sm text-gray-400">{description}</p> : null}
+      {description ? <p className="text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>{description}</p> : null}
     </div>
   );
 }

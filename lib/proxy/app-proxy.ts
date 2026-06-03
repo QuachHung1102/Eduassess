@@ -1,4 +1,4 @@
-import { PUBLIC_ROUTES, ROLE_HOME, ROLE_PREFIX } from "@/lib/auth/access";
+import { PUBLIC_ROUTES, ROLE_HOME, getAllowedRolesFor } from "@/lib/auth/access";
 import type { Role } from "@/lib/types";
 import type { NextAuthRequest } from "next-auth";
 import { NextResponse } from "next/server";
@@ -7,8 +7,9 @@ export function appProxy(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
   const role = req.auth?.user?.role as Role | undefined;
 
+  // Đã đăng nhập mà còn ở public root/login/register → bật vào home theo role
   if (role && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL(ROLE_HOME[role], req.url));
+    return NextResponse.redirect(new URL(ROLE_HOME[role] ?? "/", req.url));
   }
 
   if (PUBLIC_ROUTES.includes(pathname)) {
@@ -21,10 +22,9 @@ export function appProxy(req: NextAuthRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  for (const [prefix, requiredRole] of Object.entries(ROLE_PREFIX)) {
-    if (pathname.startsWith(prefix) && role !== requiredRole) {
-      return NextResponse.redirect(new URL(ROLE_HOME[role], req.url));
-    }
+  const allowed = getAllowedRolesFor(pathname);
+  if (allowed && !allowed.includes(role)) {
+    return NextResponse.redirect(new URL(ROLE_HOME[role] ?? "/", req.url));
   }
 
   return NextResponse.next();

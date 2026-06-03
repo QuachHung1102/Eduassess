@@ -1,6 +1,7 @@
 ﻿@import "tailwindcss";
 @import "katex/dist/katex.min.css";
 @import "@fortawesome/fontawesome-svg-core/styles.css";
+@plugin "@tailwindcss/typography";
 
 :root {
   /* Thá»§y â€” máº·c Ä‘á»‹nh */
@@ -160,8 +161,8 @@
   --color-primary-dark: var(--primary-dark);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
-  --font-sans: var(--font-be-vietnam-pro);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-be-vietnam-pro), "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "Courier New", "Consolas", monospace;
 }
 
 * {
@@ -178,7 +179,7 @@ html {
 body {
   background: transparent;
   color: var(--foreground);
-  font-family: var(--font-be-vietnam-pro), "Segoe UI", sans-serif;
+  font-family: var(--font-be-vietnam-pro), "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
   text-rendering: optimizeLegibility;
 }
 
@@ -288,8 +289,7 @@ button {
 }
 
 .primary-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 24px 44px rgba(15, 136, 242, 0.34);
+  box-shadow: 0 22px 42px rgba(15, 136, 242, 0.31);
 }
 
 .secondary-button {
@@ -307,9 +307,8 @@ button {
 }
 
 .secondary-button:hover {
-  transform: translateY(-1px);
   border-color: rgba(15, 136, 242, 0.18);
-  box-shadow: 0 20px 40px rgba(18, 48, 71, 0.08);
+  box-shadow: 0 18px 34px rgba(18, 48, 71, 0.08);
 }
 
 .feature-card {
@@ -952,6 +951,108 @@ html[data-theme="tho"] {
     inset 0 -1.5px 0 rgba(0, 0, 0, 0.14);
 }
 
+.sidebar-shell {
+  will-change: transform, width;
+}
+
+.sidebar-shell[data-collapsed="true"] .sidebar-nav-item span {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+.sidebar-shell[data-collapsed="false"] .sidebar-nav-item span {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.sidebar-nav-item span {
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.sidebar-backdrop {
+  transition: opacity 220ms ease;
+}
+
+@keyframes dashboardLoaderSweep {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+
+.dashboard-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: dashboardLoaderSweep 1.35s ease-in-out infinite;
+}
+
+@keyframes routeLoaderSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  65% {
+    transform: translateX(5%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.dashboard-route-loader {
+  transition: opacity 180ms ease;
+}
+
+.dashboard-route-loader-bar {
+  width: 45%;
+  background: linear-gradient(90deg, var(--accent), var(--primary), var(--secondary));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 55%, transparent);
+  animation: routeLoaderSlide 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes bookingModalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bookingModalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.booking-modal-backdrop {
+  animation: bookingModalBackdropIn 180ms ease-out both;
+}
+
+.booking-modal-panel {
+  animation: bookingModalPanelIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.booking-card,
+.booking-card:hover,
+.booking-card:active {
+  transform: none;
+}
+
+.booking-card:hover {
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.11),
+    0 3px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.04);
+}
+
 /* â”€â”€â”€ Page entry animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(14px); }
@@ -977,6 +1078,30 @@ html[data-theme="tho"] {
 .stagger-4 { animation-delay: 240ms; }
 .stagger-5 { animation-delay: 300ms; }
 
+/* ─── Themed scrollbars ─────────────────────────────────────────── */
+.themed-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) transparent;
+}
+.themed-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.themed-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+.themed-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
+  border-radius: 999px;
+}
+.themed-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+.themed-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* â”€â”€â”€ Primary panel (theme-aware) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .primary-panel {
   background-color: var(--panel-bg);
@@ -990,6 +1115,66 @@ html[data-theme="tho"] {
     inset 0 -2px   0 rgba(0,   0,   0,   0.03);
 }
 
+/* ─── Quick-action link hover (theme-aware, no JS needed) ────────── */
+.quick-action-link:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+/* ─── Dashboard theme-aware utility overrides ───────────────────────────── */
+/* Fixes hardcoded Tailwind gray classes so they adapt to the active theme.  */
+/* Scoped to .dashboard-shell so landing/auth pages are unaffected.          */
+
+/* Card / panel backgrounds */
+.dashboard-shell .bg-white {
+  background-color: var(--surface-strong) !important;
+}
+
+/* Table headers, section dividers, group rows */
+.dashboard-shell .bg-gray-50 {
+  background-color: color-mix(in srgb, var(--foreground) 4%, var(--surface-strong)) !important;
+}
+
+/* Borders */
+.dashboard-shell .border-gray-100 {
+  border-color: var(--border-soft) !important;
+}
+.dashboard-shell .border-gray-200 {
+  border-color: var(--border-soft) !important;
+}
+
+/* Dividers inside card bodies */
+.dashboard-shell .divide-gray-50 > * + *,
+.dashboard-shell .divide-gray-100 > * + * {
+  border-color: var(--border-soft) !important;
+}
+
+/* Text colors */
+.dashboard-shell .text-gray-900 {
+  color: var(--foreground) !important;
+}
+.dashboard-shell .text-gray-800 {
+  color: color-mix(in srgb, var(--foreground) 90%, transparent) !important;
+}
+.dashboard-shell .text-gray-700 {
+  color: color-mix(in srgb, var(--foreground) 78%, transparent) !important;
+}
+.dashboard-shell .text-gray-600 {
+  color: color-mix(in srgb, var(--foreground) 65%, transparent) !important;
+}
+.dashboard-shell .text-gray-500 {
+  color: color-mix(in srgb, var(--foreground) 52%, transparent) !important;
+}
+.dashboard-shell .text-gray-400 {
+  color: color-mix(in srgb, var(--foreground) 38%, transparent) !important;
+}
+
+/* Row / element hover — the primary complaint */
+.dashboard-shell .hover\:bg-gray-50:hover {
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--surface-strong)) !important;
+}
+.dashboard-shell .hover\:bg-gray-100:hover {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--surface-strong)) !important;
+}
 
 
 /* ─── Themed Data Table ─────────────────────────────────────────────────── */
@@ -1238,15 +1423,13 @@ html[data-mode="dark"][data-theme="tho"] {
   transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
 .clay-card:hover {
-  transform: translateY(-3px);
   box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.13),
+    0 12px 28px rgba(0, 0, 0, 0.12),
     0  4px 10px rgba(0, 0, 0, 0.08),
     inset 0  1.5px 0 rgba(255, 255, 255, 0.80),
     inset 0 -2px   0 rgba(0,   0,   0,   0.04);
 }
 .clay-card:active {
-  transform: translateY(1px) scale(0.98);
   box-shadow:
     0 3px 8px rgba(0, 0, 0, 0.10),
     inset 0  3px 6px rgba(0, 0, 0, 0.08),
@@ -1275,14 +1458,12 @@ html[data-mode="dark"][data-theme="tho"] {
   cursor: pointer;
 }
 .clay-btn:hover {
-  transform: translateY(-2px);
   box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.20),
+    0 8px 18px rgba(0, 0, 0, 0.18),
     inset 0  1.5px 0   rgba(255, 255, 255, 0.40),
     inset 0 -2.5px 0   rgba(0,   0,   0,   0.14) !important;
 }
 .clay-btn:active {
-  transform: translateY(1px) scale(0.97);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.12),
     inset 0 3px 8px rgba(0, 0, 0, 0.18) !important;
@@ -1312,10 +1493,117 @@ html[data-mode="dark"][data-theme="tho"] {
 [data-theme] .rounded-xl.hover\:shadow-md:hover,
 [data-theme] .rounded-xl.shadow-sm:hover {
   box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.12),
+    0 12px 28px rgba(0, 0, 0, 0.11),
     0  4px 10px rgba(0, 0, 0, 0.07),
     inset 0  1.5px 0 rgba(255, 255, 255, 0.75),
     inset 0 -2px   0 rgba(0,   0,   0,   0.03) !important;
+}
+
+/* Sticky table header must be opaque to avoid row text bleeding through while scrolling */
+.dashboard-shell table thead.sticky,
+.dashboard-shell table thead[class*="sticky"] {
+  background-color: var(--surface-strong) !important;
+}
+
+.dashboard-shell table thead.sticky th,
+.dashboard-shell table thead[class*="sticky"] th {
+  background-color: var(--surface-strong) !important;
+  background-clip: padding-box;
+}
+
+/* Hover role system: keep interaction clear without noisy motion */
+
+/* Card / tile: lift + deeper clay shadow on hover */
+.hover-card-soft {
+  /* Include transform so it works alongside clay-card's own transition */
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+}
+
+.hover-card-soft:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.13),
+    0  5px 12px rgba(0, 0, 0, 0.08),
+    inset 0  1.5px 0 rgba(255, 255, 255, 0.80),
+    inset 0 -2px   0 rgba(0,   0,   0,   0.04);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border-soft));
+}
+
+/* CTA / primary action: stronger lift */
+.hover-action-primary {
+  transition: transform 160ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.hover-action-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20);
+}
+
+/* Inline action / link: visible tint + border highlight, no lift */
+.hover-action-subtle {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.hover-action-subtle:hover {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--surface-strong));
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-soft)) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* Interaction role system beyond hover: focus, press, disabled, loading */
+.focus-ring-soft:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 24%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border-soft));
+}
+
+.focus-ring-strong:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--primary) 30%, transparent),
+    0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.press-feedback-soft:active {
+  transform: translateY(1px);
+}
+
+.press-feedback-inset:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.state-disabled:disabled,
+.state-disabled[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.62;
+  filter: saturate(0.88);
+}
+
+@keyframes inlineSpin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-inline {
+  position: relative;
+}
+
+.loading-inline[aria-busy="true"] {
+  pointer-events: none;
+  padding-right: 2.1rem;
+}
+
+.loading-inline[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  transform: translateY(-50%);
+  animation: inlineSpin 720ms linear infinite;
 }
 [data-theme] .bg-white.rounded-xl {
   background-color: var(--surface-strong) !important;
@@ -1337,10 +1625,11 @@ html[data-mode="dark"][data-theme="tho"] {
     inset 0  1px 0 rgba(255, 255, 255, 0.07),
     inset 0 -2px 0 rgba(0,   0,   0,   0.25) !important;
 }
-[data-mode="dark"] .clay-card:hover {
+[data-mode="dark"] .clay-card:hover,
+[data-mode="dark"] .hover-card-soft:hover {
   box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.50),
-    0  4px 10px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0  5px 14px rgba(0, 0, 0, 0.38),
     inset 0  1px 0 rgba(255, 255, 255, 0.07),
     inset 0 -2px 0 rgba(0,   0,   0,   0.25) !important;
 }

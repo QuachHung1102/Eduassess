@@ -22,7 +22,6 @@ export default async function TeacherFlashcardsPage() {
         subject={set.subject.name}
         grade={set.grade}
         topicName={set.topicName}
-        difficulty={set.difficulty}
         badge={
           <span className={`text-xs px-2 py-0.5 rounded-full truncate max-w-36 ${set.canManage ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
             {set.canManage ? "Bộ của tôi" : `Chia sẻ bởi ${set.createdBy.name ?? "?"}`}

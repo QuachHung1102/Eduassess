@@ -23,8 +23,8 @@ export default function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <div className="auth-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl items-center gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8">
+    <div className="auth-shell min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-7xl items-center gap-4 sm:gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8">
         <aside className="auth-promo relative hidden overflow-hidden p-8 lg:block lg:p-10 xl:p-12">
           <div className="absolute inset-x-auto right-0 top-0 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
           <Link href="/" className="relative inline-flex items-center gap-3">
@@ -73,7 +73,7 @@ export default function AuthShell({
         </aside>
 
         <section className="mx-auto w-full max-w-xl lg:mx-0">
-          <div className="mb-6 px-1 sm:mb-8">
+          <div className="mb-4 px-1 sm:mb-6">
             <Link href="/" className="inline-flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f88f2,#19c2a8)] text-sm font-black text-white shadow-lg shadow-sky-200/70">
                 EA
@@ -85,17 +85,17 @@ export default function AuthShell({
             </Link>
           </div>
 
-          <div className="auth-card p-6 sm:p-8 md:p-10">
+          <div className="auth-card p-5 sm:p-7 md:p-9">
             <span className="soft-label">{eyebrow}</span>
-            <h1 className="mt-5 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+            <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
               {title}
             </h1>
-            <p className="mt-3 text-[15px] leading-7 text-slate-600 sm:text-base">{description}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-[15px] sm:leading-7">{description}</p>
 
-            <div className="mt-8">{children}</div>
+            <div className="mt-6 sm:mt-7">{children}</div>
           </div>
 
-          <div className="px-2 pt-5 text-center text-sm text-slate-500">{footer}</div>
+          <div className="px-2 pt-4 text-center text-sm text-slate-500">{footer}</div>
         </section>
       </div>
     </div>

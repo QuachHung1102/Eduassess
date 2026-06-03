@@ -38,8 +38,8 @@ export default function LoginPage() {
         </>
       }
     >
-      <div className="rounded-[1.75rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:p-5">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="rounded-[1.5rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:rounded-[1.75rem] sm:p-5">
+          <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 placeholder="ten@truong.edu.vn"
-                className="field-input"
+                className="field-input min-h-11"
               />
             </div>
 
@@ -76,14 +76,15 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 placeholder="Mật khẩu của bạn"
-                className="field-input"
+                className="field-input min-h-11"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="primary-button w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
+              aria-busy={loading}
+              className="primary-button focus-ring-strong press-feedback-inset state-disabled loading-inline w-full justify-center"
             >
               {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>

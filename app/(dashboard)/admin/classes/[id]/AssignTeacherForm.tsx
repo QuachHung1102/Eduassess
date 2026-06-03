@@ -12,30 +12,22 @@ interface Teacher {
 export function AssignTeacherForm({
   classId,
   teachers,
-  subjects,
 }: {
   classId: string;
   teachers: Teacher[];
-  subjects: { id: string; name: string }[];
+  subjects?: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [teacherId, setTeacherId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
   const [isPending, startTransition] = useTransition();
-
-  const selectedTeacher = teachers.find((t) => t.id === teacherId);
-  const availableSubjects = selectedTeacher
-    ? selectedTeacher.subjects
-    : subjects;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!teacherId || !subjectId) return;
+    if (!teacherId) return;
     startTransition(async () => {
-      await assignTeacherAction(teacherId, classId, subjectId);
+      await assignTeacherAction(teacherId, classId);
       setOpen(false);
       setTeacherId("");
-      setSubjectId("");
     });
   }
 
@@ -63,7 +55,7 @@ export function AssignTeacherForm({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Giáo viên</label>
                 <select
                   value={teacherId}
-                  onChange={(e) => { setTeacherId(e.target.value); setSubjectId(""); }}
+                  onChange={(e) => setTeacherId(e.target.value)}
                   required
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
@@ -75,23 +67,8 @@ export function AssignTeacherForm({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Môn học</label>
-                <select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  required
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">-- Chọn môn --</option>
-                  {availableSubjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">                <button
+              <div className="flex justify-end gap-2">
+                <button
                   type="button"
                   onClick={() => setOpen(false)}
                   className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -100,7 +77,7 @@ export function AssignTeacherForm({
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending || !teacherId || !subjectId}
+                  disabled={isPending || !teacherId}
                   className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 >
                   {isPending ? "Đang lưu..." : "Phân công"}

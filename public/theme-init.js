@@ -1,0 +1,1 @@
+try{var p=window.location.pathname;var isDash=/^\/(teacher|student|admin|notifications|settings|dashboard)(\/|$)/.test(p);if(isDash){var t=localStorage.getItem('edu-theme')||'thuy';document.documentElement.setAttribute('data-theme',t);var m=localStorage.getItem('edu-mode');if(m==='dark')document.documentElement.setAttribute('data-mode','dark');}}catch{}

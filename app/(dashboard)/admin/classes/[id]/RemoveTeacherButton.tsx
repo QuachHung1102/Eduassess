@@ -6,12 +6,10 @@ import { removeTeacherAction } from "@/lib/admin/actions";
 export function RemoveTeacherButton({
   teacherId,
   classId,
-  subjectId,
   label,
 }: {
   teacherId: string;
   classId: string;
-  subjectId: string;
   label: string;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -19,7 +17,7 @@ export function RemoveTeacherButton({
   function handleClick() {
     if (!confirm(`Xóa phân công "${label}"?`)) return;
     startTransition(async () => {
-      await removeTeacherAction(teacherId, classId, subjectId);
+      await removeTeacherAction(teacherId, classId);
     });
   }
 

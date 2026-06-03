@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/auth";
 import { ROLE_HOME } from "@/lib/auth/access";
 import { redirect } from "next/navigation";

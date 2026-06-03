@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTeacherQuestions, getSubjects } from "@/lib/teacher/queries";
+import { getTeacherQuestions, getSubjects, getGrades } from "@/lib/teacher/queries";
 import { DeleteQuestionButton } from "./DeleteQuestionButton";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faRobot, faPlus, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
@@ -23,23 +23,28 @@ export default async function QuestionBankPage({
 }: {
   searchParams: Promise<{
     subjectId?: string;
+    gradeId?: string;
     difficulty?: string;
     status?: string;
+    search?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10));
 
-  const [{ questions, total }, subjects] = await Promise.all([
+  const [{ questions, total }, subjects, grades] = await Promise.all([
     getTeacherQuestions({
       subjectId: params.subjectId,
+      gradeId: params.gradeId,
       difficulty: params.difficulty,
       status: params.status,
+      search: params.search,
       page: currentPage,
       pageSize: PAGE_SIZE,
     }),
     getSubjects(),
+    getGrades(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -47,8 +52,10 @@ export default async function QuestionBankPage({
   const buildUrl = (page: number) => {
     const q = new URLSearchParams();
     if (params.subjectId) q.set("subjectId", params.subjectId);
+    if (params.gradeId) q.set("gradeId", params.gradeId);
     if (params.difficulty) q.set("difficulty", params.difficulty);
     if (params.status) q.set("status", params.status);
+    if (params.search) q.set("search", params.search);
     if (page > 1) q.set("page", String(page));
     const qs = q.toString();
     return qs ? `/teacher/question-bank?${qs}` : "/teacher/question-bank";
@@ -82,10 +89,13 @@ export default async function QuestionBankPage({
       <QuestionFilters
         baseUrl="/teacher/question-bank"
         subjects={subjects}
+        grades={grades}
         defaults={{
           subjectId: params.subjectId,
+          gradeId: params.gradeId,
           difficulty: params.difficulty,
           status: params.status,
+          search: params.search,
         }}
       />
 

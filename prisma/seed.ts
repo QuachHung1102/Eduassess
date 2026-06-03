@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/db/prisma";
+import { seedPermissions } from "./seedPermissions";
 import fs from "fs";
 import path from "path";
 
@@ -303,120 +304,30 @@ async function main() {
       }),
     ),
   );
-  const teacherMap = new Map(teacherUsers.map((t) => [t.email, t]));
   console.log(`✅ 1 admin, ${teacherUsers.length} giáo viên`);
 
-  // Build subjectName → teacher email list
-  const subjectTeacherEmails = new Map<string, string[]>();
-  for (const t of teachersJson) {
-    for (const subj of t.subjects) {
-      if (!subjectTeacherEmails.has(subj)) subjectTeacherEmails.set(subj, []);
-      subjectTeacherEmails.get(subj)!.push(t.email);
-    }
-  }
-
-  // 6. Classes (36 lớp: 12 per grade)
-  const HIGH_GRADES = [10, 11, 12];
-  const SUFFIXES = [
-    "A1",
-    "A2",
-    "A3",
-    "A4",
-    "A5",
-    "A6",
-    "A7",
-    "A8",
-    "A9",
-    "A10",
-    "A11",
-    "A12",
-  ];
-  const allClassDefs = HIGH_GRADES.flatMap((g) =>
-    SUFFIXES.map((s) => ({ name: `${g}${s}`, gradeNumber: g })),
-  );
-
-  const upsertedClasses: { id: string; name: string; gradeId: string }[] = [];
-  for (const c of allClassDefs) {
-    const grade = gradeMap.get(c.gradeNumber)!;
-    const existing = await prisma.class.findFirst({
-      where: { name: c.name, gradeId: grade.id },
-    });
-    upsertedClasses.push(
-      existing ??
-        (await prisma.class.create({
-          data: { name: c.name, gradeId: grade.id },
-        })),
-    );
-  }
-  const classMap = new Map(upsertedClasses.map((c) => [c.name, c]));
-  console.log(`✅ ${upsertedClasses.length} lớp học`);
-
-  // 7. TeacherClass (round-robin per subject)
-  let tcCount = 0;
-  for (const subjectName of subjectNames) {
-    const subject = subjectMap.get(subjectName);
-    const emails = subjectTeacherEmails.get(subjectName) ?? [];
-    if (!subject || emails.length === 0) continue;
-    for (let i = 0; i < upsertedClasses.length; i++) {
-      const cls = upsertedClasses[i];
-      const teacher = teacherMap.get(emails[i % emails.length]);
-      if (!teacher) continue;
-      await prisma.teacherClass.upsert({
-        where: {
-          teacherId_classId_subjectId: {
-            teacherId: teacher.id,
-            classId: cls.id,
-            subjectId: subject.id,
-          },
-        },
-        update: {},
-        create: {
-          teacherId: teacher.id,
-          classId: cls.id,
-          subjectId: subject.id,
-        },
-      });
-      tcCount++;
-    }
-  }
-  console.log(`✅ ${tcCount} phân công giảng dạy`);
-
-  // 8. Students + StudentClass (30 × 36 = 1080)
-  const STUDENTS_PER_CLASS = 30;
+  // 6. Students (40 học sinh demo cho trung tâm luyện thi)
+  // Lớp học training center sẽ được tạo qua UI — không seed class ở đây.
+  const STUDENT_COUNT = 40;
   let studentCount = 0;
-  for (let ci = 0; ci < allClassDefs.length; ci++) {
-    const cls = classMap.get(allClassDefs[ci].name)!;
-    for (let s = 0; s < STUDENTS_PER_CLASS; s++) {
-      const gi = ci * STUDENTS_PER_CLASS + s;
-      const email = `hs${String(gi + 1).padStart(4, "0")}@eduassess.vn`;
-      const { name, sex } = genStudentName(gi);
-      const student = await prisma.user.upsert({
-        where: { email },
-        update: {},
-        create: {
-          name,
-          email,
-          password: studentPw,
-          role: "STUDENT",
-          sex,
-          address: genAddress(gi),
-          dateOfBirth: genDob(allClassDefs[ci].gradeNumber, gi),
-          phoneNumber: `09${String(gi).padStart(8, "0")}`.slice(0, 11),
-        },
-      });
-      await prisma.studentClass.upsert({
-        where: {
-          studentId_classId: { studentId: student.id, classId: cls.id },
-        },
-        update: {},
-        create: { studentId: student.id, classId: cls.id },
-      });
-      studentCount++;
-    }
-    if ((ci + 1) % 6 === 0)
-      console.log(
-        `   ... ${ci + 1} lớp xong (${(ci + 1) * STUDENTS_PER_CLASS} học sinh)`,
-      );
+  for (let gi = 0; gi < STUDENT_COUNT; gi++) {
+    const email = `hs${String(gi + 1).padStart(4, "0")}@eduassess.vn`;
+    const { name, sex } = genStudentName(gi);
+    await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        name,
+        email,
+        password: studentPw,
+        role: "STUDENT",
+        sex,
+        address: genAddress(gi),
+        dateOfBirth: genDob(10 + (gi % 3), gi),
+        phoneNumber: `09${String(gi).padStart(8, "0")}`.slice(0, 11),
+      },
+    });
+    studentCount++;
   }
   console.log(`✅ ${studentCount} học sinh`);
 
@@ -498,12 +409,155 @@ async function main() {
   }
   console.log(`✅ ${qCreated} câu hỏi mới (${qSkipped} đã tồn tại)`);
 
+  // 11. Owner (NVCN — developer)
+  const ownerPw = await bcrypt.hash("Owner123!", 12);
+  await prisma.user.upsert({
+    where: { email: "owner@eduassess.vn" },
+    update: { role: "OWNER" },
+    create: {
+      name: "NVCN - System Owner",
+      email: "owner@eduassess.vn",
+      password: ownerPw,
+      role: "OWNER",
+      sex: "MALE",
+      phoneNumber: "0900000001",
+      address: "TP.HCM",
+    },
+  });
+  console.log("✅ 1 owner (NVCN)");
+
+  // 12. Staff (1 per position + 2 CBDT thuộc 1 CBDTS để demo hierarchy)
+  const staffPw = await bcrypt.hash("Staff123!", 12);
+  const staffSeeds: Array<{
+    email: string;
+    name: string;
+    position: "NVSALE" | "NVLT" | "CBNK" | "CBDH" | "CBDT" | "CBDTS";
+  }> = [
+    { email: "nvsale1@eduassess.vn", name: "NV Tư vấn - Nguyễn Thị Sale",   position: "NVSALE" },
+    { email: "nvlt1@eduassess.vn",   name: "NV Lễ tân - Trần Thị Lễ Tân",   position: "NVLT"   },
+    { email: "cbnk1@eduassess.vn",   name: "CB Ngoại khoá - Lê Văn Khoá",   position: "CBNK"   },
+    { email: "cbdh1@eduassess.vn",   name: "CB Du học - Phạm Thị Du",       position: "CBDH"   },
+    { email: "cbdts1@eduassess.vn",  name: "CBDTS - Hoàng Văn Super",       position: "CBDTS"  },
+    { email: "cbdt1@eduassess.vn",   name: "CBDT - Vũ Thị Đào Tạo 1",       position: "CBDT"   },
+    { email: "cbdt2@eduassess.vn",   name: "CBDT - Đặng Văn Đào Tạo 2",     position: "CBDT"   },
+  ];
+  const staffUsers = await Promise.all(
+    staffSeeds.map((s) =>
+      prisma.user.upsert({
+        where: { email: s.email },
+        update: { role: "STAFF", staffPosition: s.position },
+        create: {
+          name: s.name,
+          email: s.email,
+          password: staffPw,
+          role: "STAFF",
+          staffPosition: s.position,
+          address: "TP.HCM",
+        },
+      }),
+    ),
+  );
+  // Hook CBDT → CBDTS supervisor
+  const cbdts = staffUsers.find((u) => u.email === "cbdts1@eduassess.vn");
+  if (cbdts) {
+    await prisma.user.updateMany({
+      where: {
+        email: { in: ["cbdt1@eduassess.vn", "cbdt2@eduassess.vn"] },
+      },
+      data: { supervisorId: cbdts.id },
+    });
+  }
+  console.log(`✅ ${staffUsers.length} nhân viên (NVSALE, NVLT, CBNK, CBDH, CBDTS, 2x CBDT)`);
+
+  // 13. Parents (2 phụ huynh, mỗi người link với 2 học sinh đầu tiên)
+  const parentPw = await bcrypt.hash("Parent123!", 12);
+  const parentSeeds = [
+    { email: "ph1@eduassess.vn", name: "PH - Nguyễn Văn Phụ Huynh 1" },
+    { email: "ph2@eduassess.vn", name: "PH - Trần Thị Phụ Huynh 2" },
+  ];
+  const parentUsers = await Promise.all(
+    parentSeeds.map((p) =>
+      prisma.user.upsert({
+        where: { email: p.email },
+        update: { role: "PARENT" },
+        create: {
+          name: p.name,
+          email: p.email,
+          password: parentPw,
+          role: "PARENT",
+          address: "TP.HCM",
+        },
+      }),
+    ),
+  );
+
+  // Link parent ↔ student (lấy 2 HS đầu)
+  const firstTwoStudents = await prisma.user.findMany({
+    where: { role: "STUDENT" },
+    take: 2,
+    orderBy: { email: "asc" },
+  });
+  for (let i = 0; i < parentUsers.length && i < firstTwoStudents.length; i++) {
+    await prisma.parentStudent.upsert({
+      where: {
+        parentId_studentId: {
+          parentId: parentUsers[i].id,
+          studentId: firstTwoStudents[i].id,
+        },
+      },
+      update: {},
+      create: {
+        parentId: parentUsers[i].id,
+        studentId: firstTwoStudents[i].id,
+        relation: i % 2 === 0 ? "FATHER" : "MOTHER",
+        isPrimary: true,
+      },
+    });
+  }
+  console.log(`✅ ${parentUsers.length} phụ huynh + ${parentUsers.length} liên kết PH-HS`);
+
+  // 14. Permission matrix
+  const permStats = await seedPermissions(prisma);
+  console.log(
+    `✅ ${permStats.permissions} permission keys, ${permStats.rolePermissions} role bindings, ${permStats.positionPermissions} position bindings`,
+  );
+
+  // 15. Rooms & Booking Reasons
+  const rooms = [
+    { name: "Phòng 101 – Lớp lớn",  capacity: 20, description: "Phòng học rộng, bảng trắng lớn" },
+    { name: "Phòng 102 – Lớp nhỏ",  capacity: 10, description: "Phòng học nhỏ, thích hợp kèm 1-1" },
+    { name: "Phòng 201 – Lớp lớn",  capacity: 20, description: "Tầng 2, máy chiếu" },
+    { name: "Phòng 202 – Hội thảo", capacity: 30, description: "Phòng họp lớn, âm thanh hội trường" },
+    { name: "Phòng họp A",           capacity: 8,  description: "Phòng họp nhỏ nội bộ" },
+  ];
+  for (const r of rooms) {
+    await prisma.room.upsert({ where: { name: r.name }, update: {}, create: r });
+  }
+  console.log(`✅ ${rooms.length} phòng`);
+
+  const reasons = [
+    { label: "Dạy học sinh (1-1)",           priority: 90 },
+    { label: "Dạy lớp nhóm",                 priority: 85 },
+    { label: "Gặp phụ huynh",               priority: 80 },
+    { label: "Thi thử / Kiểm tra",          priority: 75 },
+    { label: "Họp nội bộ",                  priority: 60 },
+    { label: "Ngoại khoá / Sự kiện",        priority: 50 },
+    { label: "Khác",                         priority: 10 },
+  ];
+  for (const reason of reasons) {
+    await prisma.bookingReason.upsert({ where: { label: reason.label }, update: {}, create: reason });
+  }
+  console.log(`✅ ${reasons.length} lý do đặt phòng`);
+
   // Summary
   console.log("\n🎉 Seed hoàn tất!");
   console.log("─".repeat(60));
-  console.log("  Admin     : quachhung389@gmail.com      / ErwinRommel1102");
-  console.log("  Giáo viên : gv.toan1@eduassess.vn       / Teacher123!");
-  console.log("  Học sinh  : hs0001–hs1080@eduassess.vn  / Student123!");
+  console.log("  Owner     : owner@eduassess.vn           / Owner123!");
+  console.log("  Admin     : quachhung389@gmail.com       / ErwinRommel1102");
+  console.log("  Staff     : nvsale1 | nvlt1 | cbnk1 | cbdh1 | cbdts1 | cbdt1 | cbdt2 @eduassess.vn / Staff123!");
+  console.log("  Giáo viên : gv.toan1@eduassess.vn        / Teacher123!");
+  console.log("  Học sinh  : hs0001–hs0040@eduassess.vn   / Student123!");
+  console.log("  Phụ huynh : ph1@eduassess.vn, ph2@...    / Parent123!");
   console.log("─".repeat(60));
 }
 

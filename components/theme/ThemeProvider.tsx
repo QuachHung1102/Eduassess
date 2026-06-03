@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 export type Theme = "kim" | "moc" | "thuy" | "hoa" | "tho";
 
@@ -92,46 +93,115 @@ const ThemeContext = createContext<ThemeContextValue>({
   setMode: () => {},
 });
 
+const DASHBOARD_PREFIX = /^\/(teacher|student|admin|notifications|settings|dashboard)(\/|$)/;
+const THEME_STORAGE_KEY = "edu-theme";
+const MODE_STORAGE_KEY = "edu-mode";
+const THEME_STORE_EVENT = "edu-theme-store-change";
+
+function isValidTheme(value: string | null): value is Theme {
+  return value !== null && (VALID_THEMES as string[]).includes(value);
+}
+
+function isValidMode(value: string | null): value is Mode {
+  return value !== null && (VALID_MODES as string[]).includes(value);
+}
+
+function subscribeThemeStore(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  const handleChange = () => onStoreChange();
+  window.addEventListener("storage", handleChange);
+  window.addEventListener(THEME_STORE_EVENT, handleChange);
+
+  return () => {
+    window.removeEventListener("storage", handleChange);
+    window.removeEventListener(THEME_STORE_EVENT, handleChange);
+  };
+}
+
+function readThemeSnapshot(onDashboard: boolean): Theme {
+  if (typeof window === "undefined" || !onDashboard) {
+    return "thuy";
+  }
+
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  if (isValidTheme(stored)) {
+    return stored;
+  }
+
+  const rootTheme = document.documentElement.getAttribute("data-theme");
+  return isValidTheme(rootTheme) ? rootTheme : "thuy";
+}
+
+function readModeSnapshot(onDashboard: boolean): Mode {
+  if (typeof window === "undefined" || !onDashboard) {
+    return "light";
+  }
+
+  const stored = localStorage.getItem(MODE_STORAGE_KEY);
+  if (isValidMode(stored)) {
+    return stored;
+  }
+
+  const rootMode = document.documentElement.getAttribute("data-mode");
+  return rootMode === "dark" ? "dark" : "light";
+}
+
+function notifyThemeStoreChange() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event(THEME_STORE_EVENT));
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("thuy");
-  const [mode, setModeState] = useState<Mode>("light");
+  const pathname = usePathname();
+  const onDashboard = pathname !== null && DASHBOARD_PREFIX.test(pathname);
+  const theme = useSyncExternalStore<Theme>(
+    subscribeThemeStore,
+    () => readThemeSnapshot(onDashboard),
+    () => "thuy",
+  );
+  const mode = useSyncExternalStore<Mode>(
+    subscribeThemeStore,
+    () => readModeSnapshot(onDashboard),
+    () => "light",
+  );
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("edu-theme");
-    const active: Theme =
-      savedTheme && (VALID_THEMES as string[]).includes(savedTheme)
-        ? (savedTheme as Theme)
-        : "thuy";
-    setThemeState(active);
-    document.documentElement.setAttribute("data-theme", active);
-
-    const savedMode = localStorage.getItem("edu-mode");
-    const activeMode: Mode =
-      savedMode && (VALID_MODES as string[]).includes(savedMode)
-        ? (savedMode as Mode)
-        : "light";
-    setModeState(activeMode);
-    if (activeMode === "dark") {
+    document.documentElement.setAttribute("data-theme", theme);
+    if (mode === "dark") {
       document.documentElement.setAttribute("data-mode", "dark");
     } else {
       document.documentElement.removeAttribute("data-mode");
     }
-  }, []);
+  }, [theme, mode]);
 
   function setTheme(t: Theme) {
-    setThemeState(t);
-    localStorage.setItem("edu-theme", t);
+    if (!onDashboard) {
+      return;
+    }
+
+    localStorage.setItem(THEME_STORAGE_KEY, t);
     document.documentElement.setAttribute("data-theme", t);
+    notifyThemeStoreChange();
   }
 
   function setMode(m: Mode) {
-    setModeState(m);
-    localStorage.setItem("edu-mode", m);
+    if (!onDashboard) {
+      return;
+    }
+
+    localStorage.setItem(MODE_STORAGE_KEY, m);
     if (m === "dark") {
       document.documentElement.setAttribute("data-mode", "dark");
     } else {
       document.documentElement.removeAttribute("data-mode");
     }
+    notifyThemeStoreChange();
   }
 
   return (

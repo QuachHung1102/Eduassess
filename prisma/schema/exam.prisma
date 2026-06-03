@@ -6,7 +6,7 @@ model Exam {
   subjectId   String
   classId     String
   createdById String
-  duration    Int       // Thời gian làm bài (phút)
+  duration    Int // Thời gian làm bài (phút)
   showAnswer  Boolean   @default(true) // Cho phép học sinh xem đáp án sau khi nộp
   allowRetake Boolean   @default(false) // Cho phép làm lại
   dueAt       DateTime? // Thời hạn nộp bài (NULL = không giới hạn)
@@ -20,6 +20,10 @@ model Exam {
   examQuestions ExamQuestion[]
   examAttempts  ExamAttempt[]
 
+  @@index([classId])
+  @@index([subjectId])
+  @@index([createdById])
+  @@index([dueAt])
   @@map("exams")
 }
 
@@ -43,14 +47,16 @@ model ExamAttempt {
   studentId   String
   startedAt   DateTime  @default(now())
   submittedAt DateTime? // NULL = chưa nộp
-  score       Float?    // % điểm (0–100), NULL = chưa chấm
-  aiFeedback  String?   // Nhận xét AI — cache lại, không regenerate cho cùng lượt nộp
+  score       Float? // % điểm (0–100), NULL = chưa chấm
+  aiFeedback  String? // Nhận xét AI — cache lại, không regenerate cho cùng lượt nộp
 
   exam    Exam @relation(fields: [examId], references: [id])
   student User @relation(fields: [studentId], references: [id])
 
   answers ExamAnswer[]
 
+  @@index([examId])
+  @@index([studentId])
   @@map("exam_attempts")
 }
 
@@ -59,11 +65,13 @@ model ExamAnswer {
   id             String  @id @default(cuid())
   attemptId      String
   questionId     String
-  selectedOption Int?    // Index đáp án chọn (0–3), NULL = bỏ qua
+  selectedOption Int? // Index đáp án chọn (0–3), NULL = bỏ qua
   isCorrect      Boolean
 
   attempt  ExamAttempt @relation(fields: [attemptId], references: [id])
   question Question    @relation(fields: [questionId], references: [id])
 
+  @@index([attemptId])
+  @@index([questionId])
   @@map("exam_answers")
 }

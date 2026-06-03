@@ -1,0 +1,110 @@
+// ─── Course & Lesson System ───────────────────────────────────
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text // Mô tả ngắn
+  thumbnail   String? // Cloudinary URL
+  subjectId   String
+  authorId    String
+  status      CourseStatus @default(DRAFT)
+  isFree      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  subject     Subject        @relation(fields: [subjectId], references: [id])
+  author      User           @relation("CoursesCreated", fields: [authorId], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  reviews     CourseReview[]
+  qaThreads   CourseQA[]
+
+  @@index([subjectId])
+  @@index([authorId])
+  @@index([status])
+  @@map("courses")
+}
+
+// Bài giảng: Markdown content + optional video
+model Lesson {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  content   String   @db.Text // Markdown (text, math, image refs)
+  videoUrl  String? // Cloudinary hoặc YouTube embed URL
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([courseId, order])
+  @@map("lessons")
+}
+
+// Học sinh đăng ký / ghi danh khóa học
+model Enrollment {
+  id         String   @id @default(cuid())
+  courseId   String
+  studentId  String
+  enrolledAt DateTime @default(now())
+
+  course  Course @relation(fields: [courseId], references: [id])
+  student User   @relation("CourseEnrollments", fields: [studentId], references: [id])
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+// Đánh dấu bài đã học
+model LessonProgress {
+  lessonId    String
+  studentId   String
+  completedAt DateTime @default(now())
+
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student User   @relation("LessonProgress", fields: [studentId], references: [id])
+
+  @@id([lessonId, studentId])
+  @@index([studentId])
+  @@map("lesson_progress")
+}
+
+// Đánh giá khóa học (1–5 sao + nhận xét)
+model CourseReview {
+  id        String   @id @default(cuid())
+  courseId  String
+  studentId String
+  rating    Int // 1–5
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  course  Course @relation(fields: [courseId], references: [id])
+  student User   @relation("CourseReviews", fields: [studentId], references: [id])
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+  @@map("course_reviews")
+}
+
+// Hỏi đáp trong khóa học (thread: question + replies)
+model CourseQA {
+  id        String   @id @default(cuid())
+  courseId  String
+  authorId  String
+  parentId  String? // NULL = câu hỏi gốc, non-NULL = trả lời
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  course  Course     @relation(fields: [courseId], references: [id])
+  author  User       @relation("CourseQAAuthored", fields: [authorId], references: [id])
+  parent  CourseQA?  @relation("QAReplies", fields: [parentId], references: [id])
+  replies CourseQA[] @relation("QAReplies")
+
+  @@index([courseId])
+  @@index([parentId])
+  @@map("course_qa")
+}

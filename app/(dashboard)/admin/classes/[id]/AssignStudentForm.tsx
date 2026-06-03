@@ -8,7 +8,7 @@ interface Student {
   name: string;
   email: string;
   sex: string | null;
-  studentClasses: { class: { name: string } }[];
+  classEnrollments: { class: { name: string } }[];
 }
 
 export function AssignStudentForm({
@@ -93,7 +93,7 @@ export function AssignStudentForm({
               )}
               {results.map((s) => {
                 const alreadyIn = existingStudentIds.includes(s.id);
-                const currentClass = s.studentClasses[0]?.class?.name;
+                const currentClass = s.classEnrollments[0]?.class?.name;
                 return (
                   <div
                     key={s.id}

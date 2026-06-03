@@ -7,21 +7,21 @@ export function ThemeSettingsSection() {
   const isDark = mode === "dark";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h2 className="font-semibold text-gray-900">Giao diện — Ngũ Hành</h2>
+    <div className="primary-panel">
+      <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--border-soft)" }}>
+        <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Giao diện — Ngũ Hành</h2>
       </div>
       <div className="px-6 py-5 space-y-6">
         {/* ── Light / Dark mode toggle ── */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-3">Chế độ hiển thị</p>
+          <p className="text-sm font-medium mb-3" style={{ color: "color-mix(in srgb, var(--foreground) 78%, transparent)" }}>Chế độ hiển thị</p>
           <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <button
               onClick={() => setMode("light")}
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all duration-200"
               style={{
                 backgroundColor: !isDark ? "var(--primary)" : "transparent",
-                color: !isDark ? "#ffffff" : "#6b7280",
+                color: !isDark ? "#ffffff" : "color-mix(in srgb, var(--foreground) 55%, transparent)",
               }}
             >
               <span className="text-base">☀️</span>
@@ -32,7 +32,7 @@ export function ThemeSettingsSection() {
               className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all duration-200"
               style={{
                 backgroundColor: isDark ? "var(--primary)" : "transparent",
-                color: isDark ? "#ffffff" : "#6b7280",
+                color: isDark ? "#ffffff" : "color-mix(in srgb, var(--foreground) 55%, transparent)",
               }}
             >
               <span className="text-base">🌙</span>
@@ -43,10 +43,10 @@ export function ThemeSettingsSection() {
 
         {/* ── Ngũ Hành color theme ── */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-3">
+          <p className="text-sm font-medium mb-3" style={{ color: "color-mix(in srgb, var(--foreground) 78%, transparent)" }}>
             Bảng màu Ngũ Hành
           </p>
-          <p className="text-xs text-gray-400 mb-4">
+          <p className="text-xs mb-4" style={{ color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
             Chọn hành phù hợp với bạn. Mỗi hành mang một bảng màu và năng lượng riêng.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -61,7 +61,7 @@ export function ThemeSettingsSection() {
                   style={{
                     borderColor: isActive ? t.color : "transparent",
                     backgroundColor: isActive ? `${t.color}0d` : "transparent",
-                    outline: isActive ? undefined : "1px solid #e5e7eb",
+                    outline: isActive ? undefined : "1px solid var(--border-soft)",
                     transform: isActive ? "scale(1.04)" : undefined,
                     boxShadow: isActive ? `0 4px 16px ${t.color}30` : undefined,
                   }}
@@ -80,11 +80,11 @@ export function ThemeSettingsSection() {
                   {/* Label */}
                   <span
                     className="text-sm font-semibold leading-tight"
-                    style={{ color: isActive ? t.color : "#374151" }}
+                    style={{ color: isActive ? t.color : "var(--foreground)" }}
                   >
                     {t.label}
                   </span>
-                  <span className="text-[11px] text-gray-400 leading-tight">
+                  <span className="text-[11px] leading-tight" style={{ color: "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
                     {t.element}
                   </span>
 

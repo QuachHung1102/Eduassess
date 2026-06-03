@@ -83,20 +83,16 @@ export async function saveSecurityQuestionsAction(formData: FormData) {
     bcrypt.hash(a3, 12),
   ]);
 
-  await prisma.securityQuestion.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      question1: q1, answer1: h1,
-      question2: q2, answer2: h2,
-      question3: q3, answer3: h3,
-    },
-    update: {
-      question1: q1, answer1: h1,
-      question2: q2, answer2: h2,
-      question3: q3, answer3: h3,
-    },
-  });
+  await prisma.$transaction([
+    prisma.securityAnswer.deleteMany({ where: { userId: session.user.id } }),
+    prisma.securityAnswer.createMany({
+      data: [
+        { userId: session.user.id, questionNo: 1, questionText: q1, answerHash: h1 },
+        { userId: session.user.id, questionNo: 2, questionText: q2, answerHash: h2 },
+        { userId: session.user.id, questionNo: 3, questionText: q3, answerHash: h3 },
+      ],
+    }),
+  ]);
 
   revalidatePath("/settings");
   return { success: true };

@@ -17,10 +17,10 @@ export default async function AdminFlashcardSetPage({
   return (
     <div className="flex flex-col h-full gap-4">
       <div>
-        <Link href="/admin/flashcards" className="text-sm text-blue-600 hover:underline">
+        <Link href="/admin/flashcards" className="text-sm hover:underline" style={{ color: "var(--primary)" }}>
           ← Danh sách flashcard
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">{set.title}</h1>
+        <h1 className="mt-1 text-2xl font-bold" style={{ color: "var(--foreground)" }}>{set.title}</h1>
         <FlashcardSetMeta
           subject={set.subject.name}
           grade={set.grade}

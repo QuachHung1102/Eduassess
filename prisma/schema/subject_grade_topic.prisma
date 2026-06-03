@@ -5,11 +5,13 @@ model Subject {
   name            String  @unique // Toán, Vật lý, Hóa học, Sinh học...
   canAddQuestions Boolean @default(true) // Admin có thể tắt để không cho GV tạo thêm câu hỏi
 
-  topics       Topic[]
-  questions    Question[]
-  exams        Exam[]
-  teacherClasses TeacherClass[]
-  flashcardSets  FlashcardSet[]
+  topics               Topic[]
+  questions            Question[]
+  exams                Exam[]
+  classes              Class[]
+  flashcardSets        FlashcardSet[]
+  courses              Course[]
+  studentSubjectLevels StudentSubjectLevel[]
 
   @@map("subjects")
 }
@@ -17,10 +19,9 @@ model Subject {
 model Grade {
   id          String      @id @default(cuid())
   level       SchoolLevel
-  gradeNumber Int         // 1–12
+  gradeNumber Int // 1–12
 
   topics        Topic[]
-  classes       Class[]
   flashcardSets FlashcardSet[]
 
   @@unique([level, gradeNumber])

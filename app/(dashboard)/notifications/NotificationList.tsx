@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { markNotificationReadAction, markAllNotificationsReadAction } from "@/lib/notifications/actions";

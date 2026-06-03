@@ -1,0 +1,68 @@
+// ─── Permission Framework ────────────────────────────────────
+//
+// Permission là table-driven, ADMIN có thể bật/tắt quyền qua UI
+// mà không cần deploy lại.
+//
+// Cơ chế kiểm tra: user có permission `key` nếu:
+//   - role của user có RolePermission(role, key)        — quyền theo vai trò gốc
+//   - HOẶC nếu user là STAFF: position có PositionPermission(position, key)
+//
+// OWNER mặc định có MỌI quyền (hard-coded ở tầng can()).
+
+model Permission {
+  key         String @id // VD: "room.create", "class.create", "user.manage"
+  domain      String // VD: "ROOM", "CLASS", "USER", "PERMISSION"
+  description String
+
+  roles     RolePermission[]
+  positions PositionPermission[]
+
+  @@index([domain])
+  @@map("permissions")
+}
+
+model RolePermission {
+  role          Role
+  permissionKey String
+
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([role, permissionKey])
+  @@index([permissionKey])
+  @@map("role_permissions")
+}
+
+model PositionPermission {
+  position      StaffPosition
+  permissionKey String
+
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([position, permissionKey])
+  @@index([permissionKey])
+  @@map("position_permissions")
+}
+
+// ─── Audit Log ───────────────────────────────────────────────
+//
+// Ghi nhận hành động nhạy cảm: phân quyền, đặt phòng duyệt/từ chối,
+// tạo lớp, đánh giá năng lực, phân học sinh, v.v.
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String   // VD: "permission.role.grant", "booking.approve"
+  entityType String   // VD: "RolePermission", "RoomBooking"
+  entityId   String?
+  payload    Json?    // Snapshot data (truoc/sau)
+  ipAddress  String?  // IP của request
+  userAgent  String?  // Browser / client info
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

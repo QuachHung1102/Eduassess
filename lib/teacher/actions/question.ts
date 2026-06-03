@@ -37,47 +37,30 @@ export async function createQuestionAction(formData: FormData) {
 
   // Kiểm tra giáo viên có được phép tạo câu hỏi cho môn này không
   // và môn đó phải còn bật canAddQuestions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subjectRecord = (await (prisma.subject as any).findUnique({ where: { id: subjectId } })) as { canAddQuestions: boolean } | null;
+  const subjectRecord = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { canAddQuestions: true },
+  });
   if (!subjectRecord?.canAddQuestions) {
     return { error: "Admin đã tắt quyền tạo câu hỏi cho môn này" };
   }
-  const allowedSubjectsResult = await prisma.teacherClass.findMany({
+  const classTeacherRows = await prisma.classTeacher.findMany({
     where: { teacherId: session.user.id },
-    select: { subjectId: true },
-    distinct: ["subjectId"],
+    select: { class: { select: { subjectId: true } } },
   });
-  const allowedIds = allowedSubjectsResult.map((r) => r.subjectId);
+  const allowedIds = [...new Set(classTeacherRows.map((r) => r.class.subjectId))];
   if (!allowedIds.includes(subjectId)) {
     return { error: "Bạn không có quyền tạo câu hỏi cho môn này" };
   }
 
-  // Upsert topic
-  const topic = await prisma.topic.upsert({
-    where: {
-      // Topic không có unique constraint — tìm bằng where + create
-      // Dùng findFirst để tránh tạo trùng
-      id: "nonexistent",
-    },
-    create: { name: topicName, subjectId, gradeId },
-    update: {},
-  });
-
-  // Vì upsert với id giả không hoạt động đúng, dùng findFirst + create
-  // (xử lý trùng tên topic trong cùng subject+grade)
-  void topic; // unused
-
+  // Tìm topic theo tên + môn + khối; nếu chưa có thì tạo mới
   const existingTopic = await prisma.topic.findFirst({
     where: { name: topicName, subjectId, gradeId },
   });
 
   const topicId = existingTopic
     ? existingTopic.id
-    : (
-        await prisma.topic.create({
-          data: { name: topicName, subjectId, gradeId },
-        })
-      ).id;
+    : (await prisma.topic.create({ data: { name: topicName, subjectId, gradeId } })).id;
 
   const options = ["A", "B", "C", "D"].map((l, i) => ({
     label: l,
@@ -189,12 +172,11 @@ export async function saveAiQuestionAction(params: {
   const subjectRecord = await prisma.subject.findUnique({ where: { id: subjectId }, select: { canAddQuestions: true } });
   if (!subjectRecord?.canAddQuestions) return { error: "Admin đã tắt quyền tạo câu hỏi cho môn này" };
 
-  const allowedSubjects = await prisma.teacherClass.findMany({
+  const allowedSubjects = await prisma.classTeacher.findMany({
     where: { teacherId: session.user.id },
-    select: { subjectId: true },
-    distinct: ["subjectId"],
+    select: { class: { select: { subjectId: true } } },
   });
-  if (!allowedSubjects.map((r) => r.subjectId).includes(subjectId))
+  if (![...new Set(allowedSubjects.map((r) => r.class.subjectId))].includes(subjectId))
     return { error: "Bạn không có quyền tạo câu hỏi cho môn này" };
 
   const existingTopic = await prisma.topic.findFirst({ where: { name: topicName, subjectId, gradeId } });

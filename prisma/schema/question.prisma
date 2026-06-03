@@ -11,8 +11,8 @@
 model Question {
   id          String         @id @default(cuid())
   content     String
-  options     Json           // 4 đáp án A/B/C/D + đánh dấu đúng/sai
-  explanation String?        // Giải thích đáp án (tuỳ chọn)
+  options     Json // 4 đáp án A/B/C/D + đánh dấu đúng/sai
+  explanation String? // Giải thích đáp án (tuỳ chọn)
   difficulty  Difficulty
   status      QuestionStatus @default(PENDING)
   isUnivExam  Boolean        @default(false) // TRUE = dùng được cho ôn thi ĐH (khối 12)
@@ -29,5 +29,10 @@ model Question {
   examQuestions ExamQuestion[]
   examAnswers   ExamAnswer[]
 
+  @@index([topicId])
+  @@index([subjectId])
+  @@index([createdById])
+  @@index([status])
+  @@index([difficulty])
   @@map("questions")
 }

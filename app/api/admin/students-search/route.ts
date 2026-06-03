@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (!q) return NextResponse.json({ students: [] });
 
-  const students = await (prisma.user as any).findMany({
+  const students = await prisma.user.findMany({
     where: {
       role: "STUDENT",
       OR: [
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       name: true,
       email: true,
       sex: true,
-      studentClasses: {
+      classEnrollments: {
         select: { class: { select: { name: true } } },
         take: 1,
       },

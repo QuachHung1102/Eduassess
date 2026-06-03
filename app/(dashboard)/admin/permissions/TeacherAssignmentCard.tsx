@@ -5,8 +5,8 @@ import { assignTeacherAction, removeTeacherAction } from "@/lib/admin/actions";
 import Link from "next/link";
 
 interface Subject { id: string; name: string }
-interface TeacherClass { class: { id: string; name: string }; subject: Subject }
-interface ClassItem { id: string; name: string; grade: { gradeNumber: number } }
+interface TeacherClass { class: { id: string; name: string; subject: Subject } }
+interface ClassItem { id: string; name: string; grade?: { gradeNumber: number } }
 
 interface Props {
   teacher: {
@@ -14,7 +14,7 @@ interface Props {
     name: string;
     email: string;
     subjects: Subject[];
-    teacherClasses: TeacherClass[];
+    classTeachers: TeacherClass[];
   };
   classes: ClassItem[];
   subjects: Subject[];
@@ -48,11 +48,11 @@ export function TeacherAssignmentCard({ teacher, classes, subjects }: Props) {
     });
   }
 
-  function handleRemove(tcClassId: string, tcSubjectId: string, label: string) {
+  function handleRemove(tcClassId: string, label: string) {
     if (!confirm(`Xóa phân công "${label}"?`)) return;
     startTransition(async () => {
       try {
-        await removeTeacherAction(teacher.id, tcClassId, tcSubjectId);
+        await removeTeacherAction(teacher.id, tcClassId);
       } catch {
         // silently ignore; page will revalidate
       }
@@ -66,9 +66,9 @@ export function TeacherAssignmentCard({ teacher, classes, subjects }: Props) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-semibold text-gray-900 truncate">{teacher.name}</p>
-            {teacher.teacherClasses.length > 0 && (
+            {teacher.classTeachers.length > 0 && (
               <span className="shrink-0 text-xs text-gray-400 font-normal">
-                {teacher.teacherClasses.length} lớp
+                {teacher.classTeachers.length} lớp
               </span>
             )}
           </div>
@@ -93,12 +93,12 @@ export function TeacherAssignmentCard({ teacher, classes, subjects }: Props) {
 
       {/* Assignment rows */}
       <div className="divide-y divide-gray-50 max-h-52 overflow-y-auto">
-        {teacher.teacherClasses.length === 0 ? (
+        {teacher.classTeachers.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-5">Chưa có lớp nào được phân công</p>
         ) : (
-          teacher.teacherClasses.map((tc) => (
+          teacher.classTeachers.map((tc) => (
             <div
-              key={`${tc.class.id}-${tc.subject.id}`}
+              key={tc.class.id}
               className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 group"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -108,14 +108,13 @@ export function TeacherAssignmentCard({ teacher, classes, subjects }: Props) {
                 >
                   {tc.class.name}
                 </Link>
-                <span className="text-xs text-gray-400 shrink-0">{tc.subject.name}</span>
+                <span className="text-xs text-gray-400 shrink-0">{tc.class.subject.name}</span>
               </div>
               <button
                 onClick={() =>
                   handleRemove(
                     tc.class.id,
-                    tc.subject.id,
-                    `${tc.class.name} – ${tc.subject.name}`,
+                    `${tc.class.name} – ${tc.class.subject.name}`,
                   )
                 }
                 disabled={isPending}
@@ -153,7 +152,7 @@ export function TeacherAssignmentCard({ teacher, classes, subjects }: Props) {
                   <option value="">-- Chọn lớp --</option>
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
-                      Lớp {c.grade.gradeNumber} – {c.name}
+                      {c.name}
                     </option>
                   ))}
                 </select>

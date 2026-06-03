@@ -1,40 +1,70 @@
 /**
  * Shared auth helpers for server actions.
- * Each helper returns { user, error } — caller decides what to do with error.
+ * Mỗi helper trả về { user, error } — caller tự quyết định cách xử lý error.
  */
 
 import { auth } from "@/auth";
-
-type SessionUser = {
-  id: string;
-  role: string;
-  name?: string | null;
-  email?: string | null;
-};
+import { can } from "@/lib/auth/permissions";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
+import type { Role, StaffPosition, SessionUserBase } from "@/lib/types";
 
 type AuthResult<T> =
   | { user: T; error: null }
   | { user: null; error: string };
 
-/** Require any authenticated session */
-export async function requireSession(): Promise<AuthResult<SessionUser>> {
+async function readSessionUser(): Promise<SessionUserBase | null> {
   const session = await auth();
-  if (!session?.user?.id) return { user: null, error: "Chưa đăng nhập" };
-  return { user: session.user as SessionUser, error: null };
+  if (!session?.user?.id) return null;
+  const u = session.user as Partial<SessionUserBase>;
+  if (!u.role) return null;
+  return {
+    id: session.user.id,
+    role: u.role as Role,
+    staffPosition: (u.staffPosition ?? null) as StaffPosition | null,
+    name: session.user.name,
+    email: session.user.email,
+  };
 }
 
-/** Require ADMIN role */
-export async function requireAdmin(): Promise<AuthResult<SessionUser>> {
+/** Yêu cầu phiên đăng nhập bất kỳ. */
+export async function requireSession(): Promise<AuthResult<SessionUserBase>> {
+  const user = await readSessionUser();
+  if (!user) return { user: null, error: "Chưa đăng nhập" };
+  return { user, error: null };
+}
+
+/** Yêu cầu user có ít nhất 1 trong các role được liệt kê. */
+export async function requireRole(
+  ...roles: Role[]
+): Promise<AuthResult<SessionUserBase>> {
   const result = await requireSession();
-  if (result.error) return result;
-  if (!result.user || result.user.role !== "ADMIN") return { user: null, error: "Không có quyền" };
+  if (result.error !== null) return result;
+  if (!roles.includes(result.user.role)) {
+    return { user: null, error: "Không có quyền" };
+  }
   return result;
 }
 
-/** Require TEACHER role */
-export async function requireTeacher(): Promise<AuthResult<SessionUser>> {
+/** Shortcut: yêu cầu ADMIN hoặc OWNER. */
+export async function requireAdmin(): Promise<AuthResult<SessionUserBase>> {
+  return requireRole("ADMIN", "OWNER");
+}
+
+/** Shortcut: yêu cầu TEACHER. */
+export async function requireTeacher(): Promise<AuthResult<SessionUserBase>> {
+  return requireRole("TEACHER");
+}
+
+/**
+ * Yêu cầu user có permission cụ thể (đọc từ permission framework).
+ * Dùng cho các action không gắn cứng vào 1 role.
+ */
+export async function requirePermission(
+  key: PermissionKey,
+): Promise<AuthResult<SessionUserBase>> {
   const result = await requireSession();
-  if (result.error) return result;
-  if (!result.user || result.user.role !== "TEACHER") return { user: null, error: "Không có quyền" };
+  if (result.error !== null) return result;
+  const ok = await can(result.user, key);
+  if (!ok) return { user: null, error: "Không có quyền" };
   return result;
 }

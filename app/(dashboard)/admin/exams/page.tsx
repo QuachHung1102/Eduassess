@@ -122,7 +122,7 @@ export default async function AdminExamsPage({
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
                       <span>{exam.subject.name}</span>
-                      <span className="text-gray-400"> · Lớp {exam.class.grade.gradeNumber} – {exam.class.name}</span>
+                      <span className="text-gray-400"> · Lớp {exam.class.name}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
                       {exam.createdBy.name}

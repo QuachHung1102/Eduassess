@@ -15,21 +15,23 @@ export async function getSecurityQuestionsAction(
   const user = await prisma.user.findUnique({
     where: { email: email.trim().toLowerCase() },
     select: {
-      securityQuestion: {
-        select: { question1: true, question2: true, question3: true },
+      securityAnswers: {
+        select: { questionText: true },
+        orderBy: { questionNo: "asc" },
       },
     },
   });
 
-  if (!user || !user.securityQuestion) {
+  if (!user || user.securityAnswers.length !== 3) {
+    // Trả cùng một message dù email không tồn tại hay chưa setup
+    // để tránh để lộ email hợp lệ (email enumeration)
     return {
-      error:
-        "Tài khoản này chưa thiết lập câu hỏi bảo mật. Vui lòng liên hệ quản trị viên.",
+      error: "Email không tồn tại hoặc tài khoản chưa thiết lập câu hỏi bảo mật. Vui lòng liên hệ quản trị viên.",
     };
   }
 
-  const { question1, question2, question3 } = user.securityQuestion;
-  return { questions: [question1, question2, question3] };
+  const [s1, s2, s3] = user.securityAnswers;
+  return { questions: [s1.questionText, s2.questionText, s3.questionText] };
 }
 
 /**
@@ -58,22 +60,23 @@ export async function resetPasswordBySecurityQuestionsAction(
     where: { email },
     select: {
       id: true,
-      securityQuestion: {
-        select: { answer1: true, answer2: true, answer3: true },
+      securityAnswers: {
+        select: { questionNo: true, answerHash: true },
+        orderBy: { questionNo: "asc" },
       },
     },
   });
 
-  if (!user || !user.securityQuestion) {
+  if (!user || user.securityAnswers.length !== 3) {
     return { error: "Xác minh thất bại. Vui lòng thử lại hoặc liên hệ quản trị viên." };
   }
 
-  const { answer1, answer2, answer3 } = user.securityQuestion;
+  const [s1, s2, s3] = user.securityAnswers;
 
   const [ok1, ok2, ok3] = await Promise.all([
-    bcrypt.compare(a1, answer1),
-    bcrypt.compare(a2, answer2),
-    bcrypt.compare(a3, answer3),
+    bcrypt.compare(a1, s1.answerHash),
+    bcrypt.compare(a2, s2.answerHash),
+    bcrypt.compare(a3, s3.answerHash),
   ]);
 
   if (!ok1 || !ok2 || !ok3) {

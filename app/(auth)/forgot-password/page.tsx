@@ -88,7 +88,8 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="primary-button w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                aria-busy={status === "loading"}
+                className="primary-button focus-ring-strong press-feedback-inset state-disabled loading-inline w-full justify-center"
               >
                 {status === "loading" ? "Đang gửi..." : "Gửi liên kết đặt lại"}
               </button>
