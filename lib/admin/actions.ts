@@ -6,6 +6,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import type { Difficulty } from "@/lib/types";
+import {
+  createQuestion,
+  updateQuestion,
+  type QuestionWriteInput,
+} from "@/lib/questions/store";
 
 // ── Toggle canAddQuestions for a subject ─────────────────────
 export async function toggleSubjectQuestionsAction(
@@ -90,69 +95,24 @@ export async function adminCreateQuestionAction(formData: FormData) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
-  const content = (formData.get("content") as string)?.trim();
-  const explanation =
-    (formData.get("explanation") as string | null)?.trim() || null;
-  const subjectId = formData.get("subjectId") as string;
-  const gradeId = formData.get("gradeId") as string;
-  const topicName = (formData.get("topicName") as string)?.trim();
-  const difficulty = formData.get("difficulty") as Difficulty;
-  const correctAnswer = formData.get("correct-answer") as string;
+  const input: QuestionWriteInput = {
+    content: (formData.get("content") as string)?.trim(),
+    explanation: (formData.get("explanation") as string | null)?.trim() || null,
+    subjectId: formData.get("subjectId") as string,
+    gradeId: formData.get("gradeId") as string,
+    topicName: (formData.get("topicName") as string)?.trim(),
+    difficulty: formData.get("difficulty") as Difficulty,
+    correctAnswer: formData.get("correct-answer") as string,
+    optionTexts: ["A", "B", "C", "D"].map(
+      (l) => (formData.get(`option-${l}`) as string)?.trim(),
+    ),
+  };
 
-  const optionTexts = ["A", "B", "C", "D"].map((l) =>
-    (formData.get(`option-${l}`) as string)?.trim(),
-  );
-
-  if (
-    !content ||
-    !subjectId ||
-    !gradeId ||
-    !difficulty ||
-    !correctAnswer ||
-    !topicName
-  ) {
-    return { error: "Vui lòng điền đầy đủ thông tin" };
-  }
-  if (optionTexts.some((t) => !t)) {
-    return { error: "Vui lòng nhập đủ 4 đáp án" };
-  }
-  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
-    return { error: "Độ khó không hợp lệ" };
-  }
-  if (!["A", "B", "C", "D"].includes(correctAnswer)) {
-    return { error: "Chưa chọn đáp án đúng" };
-  }
-
-  // Find or create topic
-  const existingTopic = await prisma.topic.findFirst({
-    where: { name: topicName, subjectId, gradeId },
+  const result = await createQuestion(input, {
+    createdById: session.user.id,
+    status: "APPROVED",
   });
-  const topicId = existingTopic
-    ? existingTopic.id
-    : (
-        await prisma.topic.create({
-          data: { name: topicName, subjectId, gradeId },
-        })
-      ).id;
-
-  const options = ["A", "B", "C", "D"].map((l, i) => ({
-    label: l,
-    text: optionTexts[i],
-    isCorrect: l === correctAnswer,
-  }));
-
-  await prisma.question.create({
-    data: {
-      content,
-      explanation,
-      options,
-      difficulty,
-      status: "APPROVED",
-      topicId,
-      subjectId,
-      createdById: session.user.id,
-    },
-  });
+  if ("error" in result) return { error: result.error };
 
   revalidatePath("/admin/questions");
 }
@@ -161,54 +121,30 @@ export async function adminCreateQuestionAction(formData: FormData) {
 export async function adminUpdateQuestionAction(
   questionId: string,
   formData: FormData,
-) {
+): Promise<{ error: string } | { success: true }> {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
-  const content = (formData.get("content") as string)?.trim();
-  const explanation = (formData.get("explanation") as string | null)?.trim() || null;
-  const subjectId = formData.get("subjectId") as string;
-  const gradeId = formData.get("gradeId") as string;
-  const topicName = (formData.get("topicName") as string)?.trim();
-  const difficulty = formData.get("difficulty") as Difficulty;
-  const correctAnswer = formData.get("correct-answer") as string;
+  const input: QuestionWriteInput = {
+    content: (formData.get("content") as string)?.trim(),
+    explanation: (formData.get("explanation") as string | null)?.trim() || null,
+    subjectId: formData.get("subjectId") as string,
+    gradeId: formData.get("gradeId") as string,
+    topicName: (formData.get("topicName") as string)?.trim(),
+    difficulty: formData.get("difficulty") as Difficulty,
+    correctAnswer: formData.get("correct-answer") as string,
+    optionTexts: ["A", "B", "C", "D"].map(
+      (l) => (formData.get(`option-${l}`) as string)?.trim(),
+    ),
+  };
 
-  const optionTexts = ["A", "B", "C", "D"].map((l) =>
-    (formData.get(`option-${l}`) as string)?.trim(),
-  );
-
-  if (!content || !subjectId || !gradeId || !difficulty || !correctAnswer || !topicName) {
-    return { error: "Vui lòng điền đầy đủ thông tin" };
-  }
-  if (optionTexts.some((t) => !t)) {
-    return { error: "Vui lòng nhập đủ 4 đáp án" };
-  }
-  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
-    return { error: "Độ khó không hợp lệ" };
-  }
-  if (!["A", "B", "C", "D"].includes(correctAnswer)) {
-    return { error: "Chưa chọn đáp án đúng" };
-  }
-
-  const existingTopic = await prisma.topic.findFirst({
-    where: { name: topicName, subjectId, gradeId },
+  const result = await updateQuestion(questionId, input, {
+    ownerId: undefined,
+    updateMeta: true,
   });
-  const topicId = existingTopic
-    ? existingTopic.id
-    : (await prisma.topic.create({ data: { name: topicName, subjectId, gradeId } })).id;
-
-  const options = ["A", "B", "C", "D"].map((l, i) => ({
-    label: l,
-    text: optionTexts[i],
-    isCorrect: l === correctAnswer,
-  }));
-
-  await prisma.question.update({
-    where: { id: questionId },
-    data: { content, explanation, options, difficulty, topicId, subjectId },
-  });
+  if ("error" in result) return result;
 
   revalidatePath("/admin/questions");
   revalidatePath(`/admin/questions/${questionId}/edit`);
@@ -253,13 +189,6 @@ async function requireAdmin() {
 }
 
 // ── Class CRUD ───────────────────────────────────────────────
-export async function createClassAction(name: string, gradeId?: string) {
-  void gradeId;
-  await requireAdmin();
-  if (!name.trim()) return { error: "Thiếu tên lớp" };
-  return { error: "Tạo lớp đào tạo qua trang quản lý lớp học mới." };
-}
-
 export async function deleteClassAction(classId: string) {
   await requireAdmin();
   await prisma.class.delete({ where: { id: classId } });

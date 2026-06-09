@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { listQuestions } from "@/lib/questions/store";
 
 // ── Dashboard stats ──────────────────────────────────────────
 export async function getAdminStats() {
@@ -36,49 +37,28 @@ export async function getAdminQuestions(filters?: {
   page?: number;
   pageSize?: number;
 }) {
-  const page = filters?.page ?? 1;
-  const pageSize = filters?.pageSize ?? 15;
-  const skip = (page - 1) * pageSize;
-
-  const where = {
-    ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
-    ...(filters?.gradeId ? { topic: { gradeId: filters.gradeId } } : {}),
-    ...(filters?.difficulty ? { difficulty: filters.difficulty as "EASY" | "MEDIUM" | "HARD" } : {}),
-    ...(filters?.status ? { status: filters.status as "PENDING" | "APPROVED" } : {}),
-    ...(filters?.creator
-      ? { createdBy: { name: { contains: filters.creator, mode: "insensitive" as const } } }
-      : {}),
-    ...(filters?.isUnivExam === "YES"
-      ? { isUnivExam: true }
-      : filters?.isUnivExam === "NO"
-        ? { isUnivExam: false }
-        : {}),
-    ...(filters?.hasExplanation === "YES"
-      ? { explanation: { not: null } }
-      : filters?.hasExplanation === "NO"
-        ? { OR: [{ explanation: null }, { explanation: "" }] }
-        : {}),
-    ...(filters?.search
-      ? { content: { contains: filters.search, mode: "insensitive" as const } }
-      : {}),
-  };
-
-  const [questions, total] = await Promise.all([
-    prisma.question.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: pageSize,
+  return listQuestions(
+    {
+      subjectId: filters?.subjectId,
+      gradeId: filters?.gradeId,
+      difficulty: filters?.difficulty,
+      status: filters?.status,
+      creator: filters?.creator,
+      isUnivExam: filters?.isUnivExam,
+      hasExplanation: filters?.hasExplanation,
+      search: filters?.search,
+    },
+    {
+      ownerId: undefined,
+      page: filters?.page ?? 1,
+      pageSize: filters?.pageSize ?? 15,
       include: {
         subject: { select: { name: true } },
         topic: { select: { name: true } },
         createdBy: { select: { name: true } },
       },
-    }),
-    prisma.question.count({ where }),
-  ]);
-
-  return { questions, total };
+    },
+  );
 }
 
 // ── Grades (for create question form) ───────────────────────

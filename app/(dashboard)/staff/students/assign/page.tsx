@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { can } from "@/lib/auth/permissions";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { prisma } from "@/lib/db/prisma";
 import { AdvisorsGrid } from "./AdvisorsGrid";
 import { FaIcon } from "@/components/ui/FaIcon";
@@ -10,10 +10,9 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AssignStudentAdvisorPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await requirePageSession();
 
-  const hasPermission = await can(session.user, "student.assign");
+  const hasPermission = await can(user, "student.assign");
   if (!hasPermission) notFound();
 
   // Chỉ load advisors (số ít) — học sinh được lazy-load khi mở từng card

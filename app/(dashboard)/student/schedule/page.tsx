@@ -1,7 +1,7 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { getMyStudentAvailability } from "@/lib/student/queries";
-import { MyAvailabilityMatrix } from "./MyAvailabilityMatrix";
+import { saveMyAvailabilityAction } from "@/lib/student/actions";
+import { requirePageSession } from "@/lib/auth/page-guard";
+import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faCalendarCheck, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import type { DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
@@ -9,12 +9,11 @@ import type { DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function StudentSchedulePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  await requirePageSession();
 
   const rawAvailability = await getMyStudentAvailability();
 
-  // Chuyển về shape mà MyAvailabilityMatrix cần
+  // Chuyển về shape mà AvailabilityMatrix cần
   const availability = rawAvailability.map((a) => ({
     dayOfWeek: a.dayOfWeek as DayOfWeek,
     slot: a.slot as TimeSlot,
@@ -60,7 +59,7 @@ export default async function StudentSchedulePage() {
 
       {/* Matrix card */}
       <div className="primary-panel p-5 md:p-6">
-        <MyAvailabilityMatrix initial={availability} />
+        <AvailabilityMatrix initial={availability} onSave={saveMyAvailabilityAction} />
       </div>
     </div>
   );

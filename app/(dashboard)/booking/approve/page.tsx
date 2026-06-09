@@ -3,23 +3,15 @@
  * Quyền: BOOKING_APPROVE
  */
 
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { can } from "@/lib/auth/permissions";
 import { PERMISSIONS } from "@/lib/auth/permission-keys";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { getAllBookings } from "@/lib/booking/queries";
 import { ApproveQueue } from "./ApproveQueue";
-import type { Role, StaffPosition } from "@/lib/types";
 
 export default async function BookingApprovePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
-  const user = {
-    id: session.user.id,
-    role: session.user.role as Role,
-    staffPosition: (session.user.staffPosition ?? null) as StaffPosition | null,
-  };
+  const user = await requirePageSession();
 
   const allowed = await can(user, PERMISSIONS.BOOKING_APPROVE.key);
   if (!allowed) redirect("/booking");

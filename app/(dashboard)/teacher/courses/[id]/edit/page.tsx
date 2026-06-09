@@ -1,7 +1,7 @@
-import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { getCourseWithLessons } from "@/lib/courses/queries";
 import { getAdminSubjects } from "@/lib/admin/queries";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { CourseEditorClient } from "./CourseEditorClient";
 
 export default async function CourseEditPage({
@@ -10,8 +10,7 @@ export default async function CourseEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requirePageSession();
 
   const [course, subjects] = await Promise.all([
     getCourseWithLessons(id),
@@ -21,10 +20,7 @@ export default async function CourseEditPage({
   if (!course) notFound();
 
   // Only author or admin can edit
-  if (
-    session.user.role !== "ADMIN" &&
-    course.authorId !== session.user.id
-  ) {
+  if (user.role !== "ADMIN" && course.authorId !== user.id) {
     redirect("/teacher/courses");
   }
 
@@ -32,7 +28,7 @@ export default async function CourseEditPage({
     <CourseEditorClient
       course={course}
       subjects={subjects}
-      userRole={session.user.role as string}
+      userRole={user.role}
     />
   );
 }

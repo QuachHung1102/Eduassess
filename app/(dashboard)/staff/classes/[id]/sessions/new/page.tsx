@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import {
   getClassDetail,
   getTeachersList,
-  getAvailableRooms,
+  getRoomUsageForDate,
   getNextSessionNumber,
 } from "@/lib/classes/queries";
-import { CreateSessionForm } from "./CreateSessionForm";
+import { SessionScheduler } from "./SessionScheduler";
 
 export default async function NewSessionPage({
   params,
@@ -18,29 +18,39 @@ export default async function NewSessionPage({
   const [cls, teachers, rooms, nextNum] = await Promise.all([
     getClassDetail(id),
     getTeachersList(),
-    getAvailableRooms(today, "00:00", "23:59"),
+    getRoomUsageForDate(today),
     getNextSessionNumber(id),
   ]);
   if (!cls) notFound();
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-4xl">
       <div className="mb-6">
-        <Link href={`/staff/classes/${id}`} className="text-sm text-blue-600 hover:underline">
+        <Link
+          href={`/staff/classes/${id}`}
+          className="text-sm hover:underline"
+          style={{ color: "var(--primary)" }}
+        >
           ← {cls.name}
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">Thêm buổi học mới</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="mt-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>
+          Thêm buổi học mới
+        </h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground, #6b7280)" }}>
           Lên lịch buổi học #{nextNum} cho lớp {cls.name}
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <CreateSessionForm
+      <div
+        className="rounded-xl p-6"
+        style={{ background: "var(--surface)", border: "1px solid var(--border-soft)" }}
+      >
+        <SessionScheduler
           classId={id}
           classMode={cls.mode as "ONLINE" | "OFFLINE" | "HYBRID"}
           nextSessionNumber={nextNum}
           teachers={teachers}
+          initialDate={today}
           initialRooms={rooms}
         />
       </div>

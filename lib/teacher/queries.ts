@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
+import { listQuestions } from "@/lib/questions/store";
 
 // Lấy danh sách môn học
 export async function getSubjects() {
@@ -52,39 +53,24 @@ export async function getTeacherQuestions(filters?: {
   const session = await auth();
   if (!session?.user?.id) return { questions: [], total: 0 };
 
-  const page = filters?.page ?? 1;
-  const pageSize = filters?.pageSize ?? 10;
-
-  const where = {
-    createdById: session.user.id,
-    ...(filters?.subjectId ? { subjectId: filters.subjectId } : {}),
-    ...(filters?.gradeId ? { topic: { gradeId: filters.gradeId } } : {}),
-    ...(filters?.difficulty && filters.difficulty !== "ALL"
-      ? { difficulty: filters.difficulty as "EASY" | "MEDIUM" | "HARD" }
-      : {}),
-    ...(filters?.status && filters.status !== "ALL"
-      ? { status: filters.status as "PENDING" | "APPROVED" }
-      : {}),
-    ...(filters?.search
-      ? { content: { contains: filters.search, mode: "insensitive" as const } }
-      : {}),
-  };
-
-  const [questions, total] = await Promise.all([
-    prisma.question.findMany({
-      where,
+  return listQuestions(
+    {
+      subjectId: filters?.subjectId,
+      gradeId: filters?.gradeId,
+      difficulty: filters?.difficulty,
+      status: filters?.status,
+      search: filters?.search,
+    },
+    {
+      ownerId: session.user.id,
+      page: filters?.page ?? 1,
+      pageSize: filters?.pageSize ?? 10,
       include: {
         subject: true,
         topic: { include: { grade: true } },
       },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.question.count({ where }),
-  ]);
-
-  return { questions, total };
+    },
+  );
 }
 
 // Lấy các lớp giáo viên hiện tại đang phụ trách

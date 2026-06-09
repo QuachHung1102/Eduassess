@@ -17,6 +17,7 @@ model Class {
   mode         ClassMode    @default(OFFLINE)
   targetLevel  StudentLevel @default(AVERAGE)
   sessionCount Int          @default(0)
+  startDate    DateTime?    @db.Date // Ngày bắt đầu lớp — gốc để sinh buổi từ khung tuần
   status       ClassStatus  @default(DRAFT)
   note         String?
   createdAt    DateTime     @default(now())
@@ -28,12 +29,34 @@ model Class {
   teachers    ClassTeacher[]
   enrollments ClassEnrollment[]
   sessions    ClassSession[]
+  weeklySlots ClassWeeklySlot[]
   exams       Exam[]
 
   @@index([subjectId])
   @@index([advisorId])
   @@index([status])
   @@map("classes")
+}
+
+/**
+ * Khung lịch tuần của lớp (mẫu lặp theo thứ + khung giờ).
+ * Là "trục xương sống" để sinh các ClassSession theo ngày cụ thể
+ * và để đề xuất buổi bù khi một buổi bị hủy.
+ * - 1 lớp có 1..n khung (VD: T2 18:00–20:00, T4 18:00–20:00).
+ * - Không giữ phòng/GV ở đây: phòng & GV được đóng dấu vào từng ClassSession.
+ */
+model ClassWeeklySlot {
+  id        String    @id @default(cuid())
+  classId   String
+  dayOfWeek DayOfWeek
+  startTime String    // "HH:mm"
+  endTime   String    // "HH:mm"
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, dayOfWeek, startTime])
+  @@index([classId])
+  @@map("class_weekly_slots")
 }
 
 /**

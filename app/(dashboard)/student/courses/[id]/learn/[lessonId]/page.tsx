@@ -1,7 +1,7 @@
-import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getLessonForStudent } from "@/lib/courses/queries";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { LessonViewer } from "@/components/courses/LessonViewer";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
@@ -15,10 +15,9 @@ export default async function LearnPage({
   params: Promise<{ id: string; lessonId: string }>;
 }) {
   const { id, lessonId } = await params;
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requirePageSession();
 
-  const data = await getLessonForStudent(lessonId, session.user.id!);
+  const data = await getLessonForStudent(lessonId, user.id);
   if (!data) notFound();
 
   // Redirect non-enrolled students

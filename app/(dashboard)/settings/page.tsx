@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { ProfileForm, ChangePasswordForm, SecurityQuestionsForm } from "./SettingsForms";
 import { ThemeSettingsSection } from "@/components/theme/ThemeSettingsSection";
 
@@ -8,11 +8,10 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Cài đặt tài khoản" };
 
 export default async function SettingsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const { id } = await requirePageSession();
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id },
     select: {
       name: true,
       email: true,

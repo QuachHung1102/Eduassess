@@ -5,81 +5,67 @@ import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { Difficulty } from "@/lib/types";
+import {
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
+  type QuestionWriteInput,
+} from "@/lib/questions/store";
 
-export async function createQuestionAction(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Chưa đăng nhập" };
-
-  const content = (formData.get("content") as string)?.trim();
-  const explanation = (formData.get("explanation") as string | null)?.trim() || null;
-  const subjectId = formData.get("subjectId") as string;
-  const gradeId = formData.get("gradeId") as string;
-  const topicName = (formData.get("topicName") as string)?.trim();
-  const difficulty = formData.get("difficulty") as Difficulty;
-  const correctAnswer = formData.get("correct-answer") as string;
-
-  const optionTexts = ["A", "B", "C", "D"].map(
-    (l) => (formData.get(`option-${l}`) as string)?.trim(),
-  );
-
-  if (!content || !subjectId || !gradeId || !difficulty || !correctAnswer || !topicName) {
-    return { error: "Vui lòng điền đầy đủ thông tin" };
-  }
-  if (optionTexts.some((t) => !t)) {
-    return { error: "Vui lòng nhập đủ 4 đáp án" };
-  }
-  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
-    return { error: "Độ khó không hợp lệ" };
-  }
-  if (!["A", "B", "C", "D"].includes(correctAnswer)) {
-    return { error: "Chưa chọn đáp án đúng" };
-  }
-
-  // Kiểm tra giáo viên có được phép tạo câu hỏi cho môn này không
-  // và môn đó phải còn bật canAddQuestions
+/**
+ * Chính sách riêng của giáo viên: chỉ được tạo câu hỏi cho môn mình đang dạy,
+ * và môn đó phải còn bật canAddQuestions. Trả null nếu hợp lệ, hoặc thông báo lỗi.
+ */
+async function assertTeacherCanUseSubject(
+  teacherId: string,
+  subjectId: string
+): Promise<string | null> {
   const subjectRecord = await prisma.subject.findUnique({
     where: { id: subjectId },
     select: { canAddQuestions: true },
   });
   if (!subjectRecord?.canAddQuestions) {
-    return { error: "Admin đã tắt quyền tạo câu hỏi cho môn này" };
+    return "Admin đã tắt quyền tạo câu hỏi cho môn này";
   }
   const classTeacherRows = await prisma.classTeacher.findMany({
-    where: { teacherId: session.user.id },
+    where: { teacherId },
     select: { class: { select: { subjectId: true } } },
   });
   const allowedIds = [...new Set(classTeacherRows.map((r) => r.class.subjectId))];
   if (!allowedIds.includes(subjectId)) {
-    return { error: "Bạn không có quyền tạo câu hỏi cho môn này" };
+    return "Bạn không có quyền tạo câu hỏi cho môn này";
   }
+  return null;
+}
 
-  // Tìm topic theo tên + môn + khối; nếu chưa có thì tạo mới
-  const existingTopic = await prisma.topic.findFirst({
-    where: { name: topicName, subjectId, gradeId },
+export async function createQuestionAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Chưa đăng nhập" };
+
+  const subjectId = formData.get("subjectId") as string;
+  if (!subjectId) return { error: "Vui lòng điền đầy đủ thông tin" };
+
+  const subjectError = await assertTeacherCanUseSubject(session.user.id, subjectId);
+  if (subjectError) return { error: subjectError };
+
+  const input: QuestionWriteInput = {
+    content: (formData.get("content") as string)?.trim(),
+    explanation: (formData.get("explanation") as string | null)?.trim() || null,
+    subjectId,
+    gradeId: formData.get("gradeId") as string,
+    topicName: (formData.get("topicName") as string)?.trim(),
+    difficulty: formData.get("difficulty") as Difficulty,
+    correctAnswer: formData.get("correct-answer") as string,
+    optionTexts: ["A", "B", "C", "D"].map(
+      (l) => (formData.get(`option-${l}`) as string)?.trim(),
+    ),
+  };
+
+  const result = await createQuestion(input, {
+    createdById: session.user.id,
+    status: "PENDING",
   });
-
-  const topicId = existingTopic
-    ? existingTopic.id
-    : (await prisma.topic.create({ data: { name: topicName, subjectId, gradeId } })).id;
-
-  const options = ["A", "B", "C", "D"].map((l, i) => ({
-    label: l,
-    text: optionTexts[i],
-    isCorrect: l === correctAnswer,
-  }));
-
-  await prisma.question.create({
-    data: {
-      content,
-      explanation,
-      options,
-      difficulty,
-      status: "PENDING",
-      topicId,
-      subjectId,
-      createdById: session.user.id,
-    },
-  });
+  if ("error" in result) return { error: result.error };
 
   redirect("/teacher/question-bank");
 }
@@ -88,50 +74,33 @@ export async function deleteQuestionAction(questionId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Chưa đăng nhập" };
 
-  const question = await prisma.question.findUnique({ where: { id: questionId } });
-  if (!question || question.createdById !== session.user.id) {
-    return { error: "Không tìm thấy câu hỏi" };
-  }
-
-  await prisma.question.delete({ where: { id: questionId } });
+  const result = await deleteQuestion(questionId, session.user.id);
+  if ("error" in result) return result;
   return { success: true };
 }
 
-export async function updateQuestionAction(questionId: string, formData: FormData) {
+export async function updateQuestionAction(
+  questionId: string,
+  formData: FormData,
+): Promise<{ error: string } | { success: true }> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Chưa đăng nhập" };
 
-  const question = await prisma.question.findFirst({
-    where: { id: questionId, createdById: session.user.id },
+  const input: QuestionWriteInput = {
+    content: (formData.get("content") as string)?.trim(),
+    explanation: (formData.get("explanation") as string | null)?.trim() || null,
+    difficulty: formData.get("difficulty") as Difficulty,
+    correctAnswer: formData.get("correct-answer") as string,
+    optionTexts: ["A", "B", "C", "D"].map(
+      (l) => (formData.get(`option-${l}`) as string)?.trim(),
+    ),
+  };
+
+  const result = await updateQuestion(questionId, input, {
+    ownerId: session.user.id,
+    updateMeta: false,
   });
-  if (!question) return { error: "Không tìm thấy câu hỏi hoặc bạn không có quyền" };
-
-  const content = (formData.get("content") as string)?.trim();
-  const explanation = (formData.get("explanation") as string | null)?.trim() || null;
-  const difficulty = formData.get("difficulty") as Difficulty;
-  const correctAnswer = formData.get("correct-answer") as string;
-  const optionTexts = ["A", "B", "C", "D"].map(
-    (l) => (formData.get(`option-${l}`) as string)?.trim(),
-  );
-
-  if (!content || !difficulty || !correctAnswer)
-    return { error: "Vui lòng điền đầy đủ thông tin" };
-  if (optionTexts.some((t) => !t)) return { error: "Vui lòng nhập đủ 4 đáp án" };
-  if (!["EASY", "MEDIUM", "HARD"].includes(difficulty))
-    return { error: "Độ khó không hợp lệ" };
-  if (!["A", "B", "C", "D"].includes(correctAnswer))
-    return { error: "Chưa chọn đáp án đúng" };
-
-  const options = ["A", "B", "C", "D"].map((l, i) => ({
-    label: l,
-    text: optionTexts[i],
-    isCorrect: l === correctAnswer,
-  }));
-
-  await prisma.question.update({
-    where: { id: questionId },
-    data: { content, explanation, difficulty, options },
-  });
+  if ("error" in result) return result;
 
   revalidatePath("/teacher/question-bank");
   return { success: true };
@@ -166,42 +135,23 @@ export async function saveAiQuestionAction(params: {
   const { content, explanation, options, correct, subjectId, gradeId, difficulty } = params;
   const topicName = params.topicName.trim();
 
-  if (!content || !subjectId || !gradeId || !topicName || !correct)
-    return { error: "Thiếu thông tin câu hỏi" };
+  const subjectError = await assertTeacherCanUseSubject(session.user.id, subjectId);
+  if (subjectError) return { error: subjectError };
 
-  const subjectRecord = await prisma.subject.findUnique({ where: { id: subjectId }, select: { canAddQuestions: true } });
-  if (!subjectRecord?.canAddQuestions) return { error: "Admin đã tắt quyền tạo câu hỏi cho môn này" };
-
-  const allowedSubjects = await prisma.classTeacher.findMany({
-    where: { teacherId: session.user.id },
-    select: { class: { select: { subjectId: true } } },
-  });
-  if (![...new Set(allowedSubjects.map((r) => r.class.subjectId))].includes(subjectId))
-    return { error: "Bạn không có quyền tạo câu hỏi cho môn này" };
-
-  const existingTopic = await prisma.topic.findFirst({ where: { name: topicName, subjectId, gradeId } });
-  const topicId = existingTopic
-    ? existingTopic.id
-    : (await prisma.topic.create({ data: { name: topicName, subjectId, gradeId } })).id;
-
-  const optionRows = (["A", "B", "C", "D"] as const).map((l) => ({
-    label: l,
-    text: options[l],
-    isCorrect: l === correct,
-  }));
-
-  await prisma.question.create({
-    data: {
+  const result = await createQuestion(
+    {
       content,
       explanation: explanation || null,
-      options: optionRows,
-      difficulty: difficulty as Difficulty,
-      status: "PENDING",
-      topicId,
       subjectId,
-      createdById: session.user.id,
+      gradeId,
+      topicName,
+      difficulty: difficulty as Difficulty,
+      correctAnswer: correct,
+      optionTexts: [options.A, options.B, options.C, options.D],
     },
-  });
+    { createdById: session.user.id, status: "PENDING" }
+  );
+  if ("error" in result) return { error: result.error };
 
   revalidatePath("/teacher/question-bank");
   return { success: true };

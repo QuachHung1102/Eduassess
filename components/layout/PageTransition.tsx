@@ -63,7 +63,7 @@ export function PageTransition({ children }: Props) {
   }, [pathname]);
 
   return (
-    <div ref={containerRef} className="flex flex-col flex-1 min-h-0">
+    <div ref={containerRef} className="page-stage flex flex-col flex-1 min-h-0">
       {children}
     </div>
   );

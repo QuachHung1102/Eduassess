@@ -3,14 +3,13 @@
  * Quyền: BOOKING_CREATE (hoặc BOOKING_CREATE_FOR_OTHER)
  */
 
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { can } from "@/lib/auth/permissions";
 import { PERMISSIONS } from "@/lib/auth/permission-keys";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { getMyBookings, getActiveRooms, getBookingReasons } from "@/lib/booking/queries";
 import { BookingList } from "./BookingList";
 import { BookingForm } from "./BookingForm";
-import type { Role, StaffPosition } from "@/lib/types";
 
 export default async function BookingPage({
   searchParams,
@@ -22,16 +21,9 @@ export default async function BookingPage({
     to?: string;
   }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await requirePageSession();
 
   const params = await searchParams;
-
-  const user = {
-    id: session.user.id,
-    role: session.user.role as Role,
-    staffPosition: (session.user.staffPosition ?? null) as StaffPosition | null,
-  };
 
   const [canCreate, canApprove] = await Promise.all([
     can(user, PERMISSIONS.BOOKING_CREATE.key),

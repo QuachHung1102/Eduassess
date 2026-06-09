@@ -1,7 +1,7 @@
-import { auth } from "@/auth";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCourseForStudent } from "@/lib/courses/queries";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faPlayCircle, faLock, faCheckCircle, faBookOpen,
@@ -17,10 +17,9 @@ export default async function StudentCourseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requirePageSession();
 
-  const data = await getCourseForStudent(id, session.user.id!);
+  const data = await getCourseForStudent(id, user.id);
   if (!data || !data.course) notFound();
 
   const { course, isEnrolled, completedLessonIds } = data as {
@@ -175,7 +174,7 @@ export default async function StudentCourseDetailPage({
           )}
           <CourseQASection
             courseId={course.id}
-            userName={session.user.name ?? "Ẩn danh"}
+            userName={user.name ?? "Ẩn danh"}
           />
         </div>
       </div>

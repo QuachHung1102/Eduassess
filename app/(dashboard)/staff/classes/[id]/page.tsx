@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getClassDetail, getAvailableStudents, getTeachersList } from "@/lib/classes/queries";
+import { getClassDetail, getAvailableStudents, getTeachersList, getSuggestedStudents } from "@/lib/classes/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
 import { UpdateClassStatusButton } from "./UpdateClassStatusButton";
-import { EnrollStudentForm } from "./EnrollStudentForm";
+import { AddStudentsButton } from "./AddStudentsButton";
 import { DropStudentButton } from "./DropStudentButton";
-import { AssignClassTeacherForm } from "./AssignClassTeacherForm";
+import { AddTeachersButton } from "./AddTeachersButton";
 import { RemoveClassTeacherButton } from "./RemoveClassTeacherButton";
+import { SessionOccurrenceTable } from "./SessionOccurrenceTable";
 import type { ClassStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +23,6 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 const MODE_LABEL: Record<string, string> = { ONLINE: "Online", OFFLINE: "Offline", HYBRID: "Hybrid" };
-const SESSION_STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: "Đã lên lịch", COMPLETED: "Hoàn thành",
-  CANCELLED: "Đã hủy", POSTPONED: "Tạm hoãn",
-};
-const SESSION_STATUS_COLOR: Record<string, string> = {
-  SCHEDULED: "bg-blue-100 text-blue-700", COMPLETED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700", POSTPONED: "bg-yellow-100 text-yellow-700",
-};
 const LEVEL_LABEL: Record<string, string> = { WEAK: "Yếu", AVERAGE: "Trung bình", GOOD: "Khá / Giỏi" };
 
 export default async function StaffClassDetailPage({
@@ -47,6 +40,23 @@ export default async function StaffClassDetailPage({
 
   const assignedTeacherIds = new Set(cls.teachers.map((t) => t.teacher.id));
   const availableTeachers = allTeachers.filter((t) => !assignedTeacherIds.has(t.id));
+  const suggested = await getSuggestedStudents(cls.subject.id, cls.targetLevel);
+  const suggestedIds = suggested.map((s) => s.id);
+
+  // Thống kê buổi theo trạng thái. sessionCount = mục tiêu giáo trình (cố định).
+  // Buổi nghỉ (CANCELLED) không tính vào tiến độ; buổi bù thay thế buổi nghỉ.
+  const sessionStats = cls.sessions.reduce(
+    (acc, s) => {
+      if (s.status === "CANCELLED") acc.cancelled += 1;
+      else acc.active += 1;
+      if (s.status === "COMPLETED") acc.completed += 1;
+      if (s.note?.startsWith("Bù cho buổi")) acc.makeup += 1;
+      return acc;
+    },
+    { active: 0, completed: 0, cancelled: 0, makeup: 0 },
+  );
+  const sessionProgress =
+    cls.sessionCount > 0 ? `${sessionStats.active} / ${cls.sessionCount}` : `${sessionStats.active}`;
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -85,7 +95,7 @@ export default async function StaffClassDetailPage({
         <div className="grid grid-cols-3 gap-3 mt-4">
           {[
             { label: "Học sinh", value: cls._count.enrollments },
-            { label: "Buổi học", value: `${cls._count.sessions}${cls.sessionCount > 0 ? ` / ${cls.sessionCount}` : ""}` },
+            { label: "Buổi học", value: sessionProgress },
             { label: "Đề kiểm tra", value: cls._count.exams },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-lg border border-gray-100 px-4 py-3 text-center shadow-sm">
@@ -94,6 +104,31 @@ export default async function StaffClassDetailPage({
             </div>
           ))}
         </div>
+
+        {/* Breakdown buổi học theo trạng thái */}
+        {cls._count.sessions > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+              {sessionStats.completed} diễn ra
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+              {sessionStats.active - sessionStats.completed} chờ học
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+              {sessionStats.cancelled} nghỉ
+            </span>
+            {sessionStats.makeup > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                {sessionStats.makeup} bù
+              </span>
+            )}
+            <span className="text-gray-400">· mục tiêu {cls.sessionCount} buổi</span>
+          </div>
+        )}
       </div>
 
       {/* Main content */}
@@ -105,7 +140,8 @@ export default async function StaffClassDetailPage({
             <h2 className="font-semibold text-gray-800">Lịch buổi học</h2>
             <Link
               href={`/staff/classes/${id}/sessions/new`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors hover:opacity-90"
+              style={{ background: "var(--primary)" }}
             >
               <FaIcon icon={faPlus} className="text-xs" /> Thêm buổi
             </Link>
@@ -116,61 +152,25 @@ export default async function StaffClassDetailPage({
               <div className="flex flex-col items-center justify-center h-full gap-2 py-12 text-gray-400">
                 <FaIcon icon={faCalendarCheck} className="text-3xl" />
                 <p className="text-sm">Chưa có buổi học nào</p>
-                <Link href={`/staff/classes/${id}/sessions/new`} className="text-xs text-emerald-600 hover:underline">
+                <Link href={`/staff/classes/${id}/sessions/new`} className="text-xs hover:underline" style={{ color: "var(--primary)" }}>
                   Lên lịch buổi đầu tiên
                 </Link>
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    {["#", "Ngày", "Giờ", "Phòng", "Giáo viên", "Trạng thái", ""].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {cls.sessions.map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-2.5 text-gray-400 text-xs">{s.sessionNumber}</td>
-                      <td className="px-4 py-2.5 font-medium text-gray-800 text-sm">
-                        {new Date(s.date).toLocaleDateString("vi-VN", {
-                          weekday: "short", day: "2-digit", month: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-500 text-xs">
-                        {s.startTime} – {s.endTime}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-500 text-xs">
-                        {s.room?.name ?? <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-500 text-xs">{s.teacher.name}</td>
-                      <td className="px-4 py-2.5">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            SESSION_STATUS_COLOR[s.status] ?? "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {SESSION_STATUS_LABEL[s.status] ?? s.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <Link
-                          href={`/staff/classes/${id}/sessions/${s.id}`}
-                          className="text-xs text-blue-500 hover:underline"
-                        >
-                          {s.status === "SCHEDULED" ? "Điểm danh" : "Xem"}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <SessionOccurrenceTable
+                classId={id}
+                sessions={cls.sessions.map((s) => ({
+                  id: s.id,
+                  sessionNumber: s.sessionNumber,
+                  date: s.date.toISOString().slice(0, 10),
+                  startTime: s.startTime,
+                  endTime: s.endTime,
+                  roomName: s.room?.name ?? null,
+                  teacherName: s.teacher.name,
+                  status: s.status,
+                  note: s.note,
+                }))}
+              />
             )}
           </div>
         </div>
@@ -203,7 +203,9 @@ export default async function StaffClassDetailPage({
                 ))
               )}
             </div>
-            <AssignClassTeacherForm classId={id} teachers={availableTeachers} />
+            <div className="border-t border-gray-100">
+              <AddTeachersButton classId={id} teachers={availableTeachers} />
+            </div>
           </div>
 
           {/* Students */}
@@ -245,7 +247,9 @@ export default async function StaffClassDetailPage({
                 </div>
               )}
             </div>
-            <EnrollStudentForm classId={id} students={availableStudents} />
+            <div className="border-t border-gray-100 shrink-0">
+              <AddStudentsButton classId={id} students={availableStudents} suggestedIds={suggestedIds} />
+            </div>
           </div>
         </div>
       </div>

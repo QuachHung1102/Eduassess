@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStudentDetail, getSubjectsList } from "@/lib/classes/queries";
-import { AvailabilityMatrix } from "./AvailabilityMatrix";
+import { saveStudentAvailabilityAction } from "@/lib/classes/actions";
+import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import { EvaluateForm } from "./EvaluateForm";
 import type { DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
@@ -110,12 +111,12 @@ export default async function StudentDetailPage({
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <h2 className="font-semibold text-gray-800 mb-4">Lịch rảnh hàng tuần</h2>
           <AvailabilityMatrix
-            studentId={id}
             initial={availability.map((a) => ({
               dayOfWeek: a.dayOfWeek as DayOfWeek,
               slot: a.slot as TimeSlot,
-              mode: a.availabilityMode as AvailabilityMode,
+              availabilityMode: a.availabilityMode as AvailabilityMode,
             }))}
+            onSave={saveStudentAvailabilityAction.bind(null, id)}
           />
         </div>
 

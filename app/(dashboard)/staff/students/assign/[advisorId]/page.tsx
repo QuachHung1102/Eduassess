@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { can } from "@/lib/auth/permissions";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { prisma } from "@/lib/db/prisma";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faUserTie, faUsers, faArrowLeft } from "@fortawesome/free-solid-svg-icons";
@@ -16,10 +16,9 @@ interface Props {
 export default async function AdvisorAssignPage({ params }: Props) {
   const { advisorId } = await params;
 
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await requirePageSession();
 
-  const hasPermission = await can(session.user, "student.assign");
+  const hasPermission = await can(user, "student.assign");
   if (!hasPermission) notFound();
 
   // Load advisor info

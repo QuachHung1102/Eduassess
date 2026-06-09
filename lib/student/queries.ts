@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
+import { loadAvailability } from "@/lib/availability/store";
 
 // ── Dashboard stats ──────────────────────────────────────────
 export async function getStudentStats() {
@@ -372,8 +373,5 @@ export async function getMyStudentAvailability() {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  return prisma.studentAvailability.findMany({
-    where: { studentId: session.user.id },
-    orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }],
-  });
+  return loadAvailability({ kind: "student", id: session.user.id });
 }

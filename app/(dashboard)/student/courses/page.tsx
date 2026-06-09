@@ -1,8 +1,7 @@
-import { auth } from "@/auth";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getPublishedCourses } from "@/lib/courses/queries";
 import { prisma } from "@/lib/prisma";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
@@ -13,13 +12,12 @@ export default async function StudentCoursesPage({
   searchParams: Promise<{ subjectId?: string }>;
 }) {
   const { subjectId } = await searchParams;
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requirePageSession();
 
   const [courses, enrollments, subjects] = await Promise.all([
     getPublishedCourses(subjectId ? { subjectId } : undefined),
     prisma.enrollment.findMany({
-      where: { studentId: session.user.id! },
+      where: { studentId: user.id },
       select: { courseId: true },
     }),
     prisma.subject.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),

@@ -1,7 +1,6 @@
 "use server";
 
-import type { TimeSlot as PrismaTimeSlot } from "@prisma/client";
-import { normalizeAvailabilitySlots } from "@/lib/availability/time-slots";
+import { saveAvailability } from "@/lib/availability/store";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
@@ -170,26 +169,8 @@ export async function saveMyAvailabilityAction(
 ) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  const studentId = session.user.id;
-  const normalizedSlots = normalizeAvailabilitySlots(slots);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.studentAvailability.deleteMany({ where: { studentId } });
-
-    if (normalizedSlots.length === 0) {
-      return;
-    }
-
-    await tx.studentAvailability.createMany({
-      data: normalizedSlots.map((slot) => ({
-        studentId,
-        dayOfWeek: slot.dayOfWeek,
-        slot: slot.slot as PrismaTimeSlot,
-        availabilityMode: slot.availabilityMode,
-      })),
-      skipDuplicates: true,
-    });
-  });
+  await saveAvailability({ kind: "student", id: session.user.id }, slots);
 
   revalidatePath("/student/schedule");
   return { success: true };

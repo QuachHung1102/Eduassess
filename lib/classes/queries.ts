@@ -62,6 +62,10 @@ export async function getClassDetail(classId: string) {
         },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
+      weeklySlots: {
+        select: { dayOfWeek: true, startTime: true, endTime: true },
+        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+      },
       _count: { select: { enrollments: true, sessions: true, exams: true } },
     },
   });
@@ -250,6 +254,15 @@ export async function getTeachersList() {
   });
 }
 
+/** Tất cả phòng đang hoạt động (id + tên + sức chứa) — để ưu tiên chọn phòng trước. */
+export async function getActiveRoomsList() {
+  return prisma.room.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, capacity: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 /** Danh sách môn học. */
 export async function getSubjectsList() {
   return prisma.subject.findMany({
@@ -280,6 +293,106 @@ export async function getNextSessionNumber(classId: string): Promise<number> {
     _max: { sessionNumber: true },
   });
   return (max._max.sessionNumber ?? 0) + 1;
+}
+
+// ── Lịch sử dụng phòng (cho lưới xếp buổi học) ────────────────
+
+export interface RoomOccupancyBlock {
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  label: string;     // mô tả (tên lớp / mục đích đặt phòng)
+  source: "CLASS_SESSION" | "BOOKING";
+}
+
+export interface RoomUsageForDate {
+  id: string;
+  name: string;
+  capacity: number;
+  blocks: RoomOccupancyBlock[];
+}
+
+function toLocalHhmm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Lịch sử dụng phòng trong một ngày — hợp nhất hai nguồn:
+ * ClassSession (buổi học của lớp khác) + RoomBooking (đặt phòng đã duyệt).
+ * Dùng để dựng lưới chọn phòng + giờ khi xếp buổi học.
+ */
+export async function getRoomUsageForDate(
+  date: string, // "YYYY-MM-DD"
+  excludeSessionId?: string,
+): Promise<RoomUsageForDate[]> {
+  const dayStart = new Date(`${date}T00:00:00`);
+  const dayEnd = new Date(`${date}T23:59:59`);
+
+  const [rooms, sessions, bookings] = await Promise.all([
+    prisma.room.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, capacity: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.classSession.findMany({
+      where: {
+        date: new Date(date),
+        roomId: { not: null },
+        status: { in: ["SCHEDULED", "COMPLETED"] },
+        id: excludeSessionId ? { not: excludeSessionId } : undefined,
+      },
+      select: {
+        roomId: true,
+        startTime: true,
+        endTime: true,
+        class: { select: { name: true } },
+      },
+    }),
+    prisma.roomBooking.findMany({
+      where: {
+        status: "APPROVED",
+        startAt: { lt: dayEnd },
+        endAt: { gt: dayStart },
+      },
+      select: {
+        roomId: true,
+        startAt: true,
+        endAt: true,
+        reason: { select: { label: true } },
+      },
+    }),
+  ]);
+
+  const blocksByRoom = new Map<string, RoomOccupancyBlock[]>();
+  for (const s of sessions) {
+    if (!s.roomId) continue;
+    const list = blocksByRoom.get(s.roomId) ?? [];
+    list.push({
+      startTime: s.startTime,
+      endTime: s.endTime,
+      label: s.class.name,
+      source: "CLASS_SESSION",
+    });
+    blocksByRoom.set(s.roomId, list);
+  }
+  for (const b of bookings) {
+    const list = blocksByRoom.get(b.roomId) ?? [];
+    list.push({
+      startTime: toLocalHhmm(b.startAt),
+      endTime: toLocalHhmm(b.endAt),
+      label: b.reason.label,
+      source: "BOOKING",
+    });
+    blocksByRoom.set(b.roomId, list);
+  }
+
+  return rooms.map((r) => ({
+    id: r.id,
+    name: r.name,
+    capacity: r.capacity,
+    blocks: (blocksByRoom.get(r.id) ?? []).sort((a, b) =>
+      a.startTime.localeCompare(b.startTime),
+    ),
+  }));
 }
 
 // ── Phân công học sinh cho CBDT (CBDTS) ───────────────────────

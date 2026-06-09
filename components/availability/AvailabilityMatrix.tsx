@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useTransition, useEffect, useRef, Fragment } from "react";
 import {
@@ -7,7 +7,6 @@ import {
   normalizeAvailabilitySlots,
   type AvailabilityDigitalTimeSlot,
 } from "@/lib/availability/time-slots";
-import { saveMyAvailabilityAction } from "@/lib/student/actions";
 import type { AvailabilityMode, DayOfWeek, TimeSlot } from "@/lib/types";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faXmark, faChevronRight } from "@fortawesome/free-solid-svg-icons";
@@ -51,11 +50,23 @@ const PAINT_COLOR: Record<PaintMode, string> = {
 type SlotKey = `${DayOfWeek}_${AvailabilityDigitalTimeSlot}`;
 type CellMap = Map<SlotKey, AvailabilityMode>;
 
+export type AvailabilitySlotInput = {
+  dayOfWeek: DayOfWeek;
+  slot: TimeSlot;
+  availabilityMode: AvailabilityMode;
+};
+
 interface Props {
-  initial: { dayOfWeek: DayOfWeek; slot: TimeSlot; availabilityMode: AvailabilityMode }[];
+  initial: AvailabilitySlotInput[];
+  /** Lưu lịch rảnh. Call site quyết định chủ thể + quyền. */
+  onSave: (
+    slots: AvailabilitySlotInput[],
+  ) => Promise<{ error?: string; success?: boolean } | void>;
+  /** Chỉ xem, không cho sửa (vd Owner/Parent xem lịch hộ). */
+  readOnly?: boolean;
 }
 
-function toMap(data: { dayOfWeek: DayOfWeek; slot: TimeSlot; availabilityMode: AvailabilityMode }[]): CellMap {
+function toMap(data: AvailabilitySlotInput[]): CellMap {
   const m = new Map<SlotKey, AvailabilityMode>();
   for (const entry of normalizeAvailabilitySlots(data)) {
     m.set(`${entry.dayOfWeek}_${entry.slot}`, entry.availabilityMode);
@@ -168,13 +179,13 @@ function MobileWeekGrid({ cells, isPending, onDayClick }: MobileWeekGridProps) {
 }
 
 interface DayModalProps {
-  day: DayOfWeek; cells: CellMap; paintMode: PaintMode; isPending: boolean;
+  day: DayOfWeek; cells: CellMap; paintMode: PaintMode; isPending: boolean; readOnly: boolean;
   onClose: () => void;
   onPaintCell: (day: DayOfWeek, slot: AvailabilityDigitalTimeSlot) => void;
   onFillDay: (day: DayOfWeek, mode: PaintMode) => void;
   onPaintModeChange: (mode: PaintMode) => void;
 }
-function DayModal({ day, cells, paintMode, isPending, onClose, onPaintCell, onFillDay, onPaintModeChange }: DayModalProps) {
+function DayModal({ day, cells, paintMode, isPending, readOnly, onClose, onPaintCell, onFillDay, onPaintModeChange }: DayModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -206,12 +217,14 @@ function DayModal({ day, cells, paintMode, isPending, onClose, onPaintCell, onFi
         >
           <div>
             <div className="font-bold text-base" style={{ color: "var(--foreground)" }}>{DAY_FULL_LABEL[day]}</div>
-            <div className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
-              Chế độ tô:
-              <span className={`font-semibold px-1.5 py-0.5 rounded-full border text-[10px] ${PAINT_COLOR[paintMode]}`}>
-                {PAINT_LABEL[paintMode]}
-              </span>
-            </div>
+            {!readOnly && (
+              <div className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
+                Chế độ tô:
+                <span className={`font-semibold px-1.5 py-0.5 rounded-full border text-[10px] ${PAINT_COLOR[paintMode]}`}>
+                  {PAINT_LABEL[paintMode]}
+                </span>
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -223,39 +236,43 @@ function DayModal({ day, cells, paintMode, isPending, onClose, onPaintCell, onFi
             <FaIcon icon={faXmark} className="text-sm" />
           </button>
         </div>
-        <div className="flex gap-2 px-4 pt-3 pb-2 flex-wrap items-center">
-          <span className="text-[11px] font-medium uppercase tracking-wide shrink-0" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>Tô:</span>
-          {PAINT_MODES.map((mode) => {
-            const active = paintMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => onPaintModeChange(mode)}
-                disabled={isPending}
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${PAINT_COLOR[mode]} ${active ? "ring-2 ring-offset-1" : ""}`}
-                style={active ? { borderColor: "var(--primary)" } : undefined}
-                aria-pressed={active}
-              >
-                {PAINT_LABEL[mode]}
+        {!readOnly && (
+          <>
+            <div className="flex gap-2 px-4 pt-3 pb-2 flex-wrap items-center">
+              <span className="text-[11px] font-medium uppercase tracking-wide shrink-0" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>Tô:</span>
+              {PAINT_MODES.map((mode) => {
+                const active = paintMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onPaintModeChange(mode)}
+                    disabled={isPending}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${PAINT_COLOR[mode]} ${active ? "ring-2 ring-offset-1" : ""}`}
+                    style={active ? { borderColor: "var(--primary)" } : undefined}
+                    aria-pressed={active}
+                  >
+                    {PAINT_LABEL[mode]}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 px-4 pb-3 pt-1 flex-wrap border-b" style={{ borderColor: "var(--border-soft)" }}>
+              <button type="button" disabled={isPending} onClick={() => onFillDay(day, "BOTH")}
+                className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-[11px] font-medium text-green-700 transition-colors hover:opacity-80">
+                Được cả ngày
               </button>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 px-4 pb-3 pt-1 flex-wrap border-b" style={{ borderColor: "var(--border-soft)" }}>
-          <button type="button" disabled={isPending} onClick={() => onFillDay(day, "BOTH")}
-            className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-[11px] font-medium text-green-700 transition-colors hover:opacity-80">
-            Được cả ngày
-          </button>
-          <button type="button" disabled={isPending} onClick={() => onFillDay(day, "ONLINE_ONLY")}
-            className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-[11px] font-medium text-yellow-700 transition-colors hover:opacity-80">
-            Online cả ngày
-          </button>
-          <button type="button" disabled={isPending} onClick={() => onFillDay(day, "BUSY")}
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:opacity-80">
-            Bận cả ngày
-          </button>
-        </div>
+              <button type="button" disabled={isPending} onClick={() => onFillDay(day, "ONLINE_ONLY")}
+                className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-[11px] font-medium text-yellow-700 transition-colors hover:opacity-80">
+                Online cả ngày
+              </button>
+              <button type="button" disabled={isPending} onClick={() => onFillDay(day, "BUSY")}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:opacity-80">
+                Bận cả ngày
+              </button>
+            </div>
+          </>
+        )}
         {AVAILABILITY_TIME_GROUPS.map((group) => (
           <div key={group.id} className="px-4 pt-3 pb-2">
             <div className="flex items-center gap-2 mb-2">
@@ -270,10 +287,10 @@ function DayModal({ day, cells, paintMode, isPending, onClose, onPaintCell, onFi
                   <button
                     key={slotMeta.slot}
                     type="button"
-                    disabled={isPending}
+                    disabled={isPending || readOnly}
                     onClick={() => onPaintCell(day, slotMeta.slot)}
                     aria-label={`${slotMeta.label} - ${mode ? MODE_LABEL[mode] : "Bận"}`}
-                    className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all hover:opacity-80 active:scale-95 press-feedback-soft focus-ring-soft ${mode ? MODE_COLOR[mode] : EMPTY_COLOR}`}
+                    className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all ${readOnly ? "cursor-default" : "hover:opacity-80 active:scale-95 press-feedback-soft"} focus-ring-soft ${mode ? MODE_COLOR[mode] : EMPTY_COLOR}`}
                   >
                     <span className="font-mono text-[11px] font-semibold">{slotMeta.label}</span>
                     <span className="text-[11px] font-medium">{mode ? MODE_LABEL[mode] : "Bận"}</span>
@@ -289,7 +306,7 @@ function DayModal({ day, cells, paintMode, isPending, onClose, onPaintCell, onFi
   );
 }
 
-export function MyAvailabilityMatrix({ initial }: Props) {
+export function AvailabilityMatrix({ initial, onSave, readOnly = false }: Props) {
   const [cells, setCells] = useState<CellMap>(() => toMap(initial));
   const [savedCells, setSavedCells] = useState<CellMap>(() => toMap(initial));
   const [paintMode, setPaintMode] = useState<PaintMode>("BOTH");
@@ -303,6 +320,7 @@ export function MyAvailabilityMatrix({ initial }: Props) {
 
   function markDirty() { setFeedback(null); }
   function updateCells(recipe: (current: CellMap) => CellMap) {
+    if (readOnly) return;
     setCells((prev) => recipe(prev));
     markDirty();
   }
@@ -335,7 +353,11 @@ export function MyAvailabilityMatrix({ initial }: Props) {
     setFeedback(null);
     startTransition(async () => {
       try {
-        await saveMyAvailabilityAction(slots);
+        const result = await onSave(slots);
+        if (result && "error" in result && result.error) {
+          setFeedback({ type: "error", text: result.error });
+          return;
+        }
         setSavedCells(nextCells);
         setFeedback({ type: "success", text: "Đã lưu lịch rảnh thành công." });
       } catch {
@@ -347,49 +369,51 @@ export function MyAvailabilityMatrix({ initial }: Props) {
   return (
     <div>
       {/* Paint mode selector */}
-      <div
-        className="mb-4 flex flex-col gap-3 rounded-xl border p-4"
-        style={{ borderColor: "var(--border-soft)", backgroundColor: "color-mix(in srgb, var(--foreground) 2%, var(--surface-strong))" }}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>
-            Chế độ tô
-          </span>
-          {PAINT_MODES.map((mode) => {
-            const active = paintMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setPaintMode(mode)}
-                disabled={isPending}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${PAINT_COLOR[mode]} ${active ? "ring-2 ring-offset-1" : ""}`}
-                style={active ? { borderColor: "var(--primary)" } : undefined}
-                aria-pressed={active}
-              >
-                {PAINT_LABEL[mode]}
-              </button>
-            );
-          })}
+      {!readOnly && (
+        <div
+          className="mb-4 flex flex-col gap-3 rounded-xl border p-4"
+          style={{ borderColor: "var(--border-soft)", backgroundColor: "color-mix(in srgb, var(--foreground) 2%, var(--surface-strong))" }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}>
+              Chế độ tô
+            </span>
+            {PAINT_MODES.map((mode) => {
+              const active = paintMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPaintMode(mode)}
+                  disabled={isPending}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${PAINT_COLOR[mode]} ${active ? "ring-2 ring-offset-1" : ""}`}
+                  style={active ? { borderColor: "var(--primary)" } : undefined}
+                  aria-pressed={active}
+                >
+                  {PAINT_LABEL[mode]}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
+            {PAINT_HINT[paintMode]}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => fillAll("BOTH")} disabled={isPending}
+              className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:opacity-80">
+              Đặt cả tuần là Được
+            </button>
+            <button type="button" onClick={() => fillAll("ONLINE_ONLY")} disabled={isPending}
+              className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700 transition-colors hover:opacity-80">
+              Đặt cả tuần là Online
+            </button>
+            <button type="button" onClick={() => fillAll("BUSY")} disabled={isPending}
+              className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:opacity-80">
+              Đặt cả tuần là Bận
+            </button>
+          </div>
         </div>
-        <p className="text-xs" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
-          {PAINT_HINT[paintMode]}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => fillAll("BOTH")} disabled={isPending}
-            className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:opacity-80">
-            Đặt cả tuần là Được
-          </button>
-          <button type="button" onClick={() => fillAll("ONLINE_ONLY")} disabled={isPending}
-            className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700 transition-colors hover:opacity-80">
-            Đặt cả tuần là Online
-          </button>
-          <button type="button" onClick={() => fillAll("BUSY")} disabled={isPending}
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:opacity-80">
-            Đặt cả tuần là Bận
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Summary */}
       <div className="mb-4 grid grid-cols-3 gap-2">
@@ -409,9 +433,11 @@ export function MyAvailabilityMatrix({ initial }: Props) {
 
       {/* Mobile: day card grid */}
       <div className="md:hidden mb-4">
-        <p className="text-xs mb-3" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
-          Nhấn vào ngày để khai báo lịch rảnh cho ngày đó.
-        </p>
+        {!readOnly && (
+          <p className="text-xs mb-3" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
+            Nhấn vào ngày để khai báo lịch rảnh cho ngày đó.
+          </p>
+        )}
         <MobileWeekGrid cells={cells} isPending={isPending} onDayClick={setDayModalOpen} />
       </div>
 
@@ -454,35 +480,37 @@ export function MyAvailabilityMatrix({ initial }: Props) {
                     >
                       {DAY_FULL_LABEL[day]}
                     </div>
-                    <div className="flex justify-center gap-1 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => fillDay(day, "BOTH")}
-                        disabled={isPending}
-                        title="Được cả ngày"
-                        className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 hover:opacity-75 transition-opacity"
-                      >
-                        Được
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fillDay(day, "ONLINE_ONLY")}
-                        disabled={isPending}
-                        title="Online cả ngày"
-                        className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 hover:opacity-75 transition-opacity"
-                      >
-                        Online
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fillDay(day, "BUSY")}
-                        disabled={isPending}
-                        title="Bận cả ngày"
-                        className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 hover:opacity-75 transition-opacity"
-                      >
-                        Bận
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex justify-center gap-1 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => fillDay(day, "BOTH")}
+                          disabled={isPending}
+                          title="Được cả ngày"
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 hover:opacity-75 transition-opacity"
+                        >
+                          Được
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fillDay(day, "ONLINE_ONLY")}
+                          disabled={isPending}
+                          title="Online cả ngày"
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 hover:opacity-75 transition-opacity"
+                        >
+                          Online
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fillDay(day, "BUSY")}
+                          disabled={isPending}
+                          title="Bận cả ngày"
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 hover:opacity-75 transition-opacity"
+                        >
+                          Bận
+                        </button>
+                      </div>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -514,38 +542,40 @@ export function MyAvailabilityMatrix({ initial }: Props) {
                       className="px-3 py-2 border-b"
                       style={{ borderColor: "var(--border-soft)" }}
                     >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="text-[10px]"
-                          style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
-                        >
-                          Cả buổi:
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => fillGroup(group.slots.map((s) => s.slot), "BOTH")}
-                          disabled={isPending}
-                          className="rounded px-2 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 hover:opacity-75 transition-opacity"
-                        >
-                          Được
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fillGroup(group.slots.map((s) => s.slot), "ONLINE_ONLY")}
-                          disabled={isPending}
-                          className="rounded px-2 py-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 hover:opacity-75 transition-opacity"
-                        >
-                          Online
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fillGroup(group.slots.map((s) => s.slot), "BUSY")}
-                          disabled={isPending}
-                          className="rounded px-2 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 hover:opacity-75 transition-opacity"
-                        >
-                          Bận buổi
-                        </button>
-                      </div>
+                      {!readOnly && (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-[10px]"
+                            style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
+                          >
+                            Cả buổi:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => fillGroup(group.slots.map((s) => s.slot), "BOTH")}
+                            disabled={isPending}
+                            className="rounded px-2 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 hover:opacity-75 transition-opacity"
+                          >
+                            Được
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => fillGroup(group.slots.map((s) => s.slot), "ONLINE_ONLY")}
+                            disabled={isPending}
+                            className="rounded px-2 py-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 hover:opacity-75 transition-opacity"
+                          >
+                            Online
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => fillGroup(group.slots.map((s) => s.slot), "BUSY")}
+                            disabled={isPending}
+                            className="rounded px-2 py-0.5 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 hover:opacity-75 transition-opacity"
+                          >
+                            Bận buổi
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
 
@@ -567,20 +597,22 @@ export function MyAvailabilityMatrix({ initial }: Props) {
                           >
                             {slotMeta.label}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => fillRow(slotMeta.slot, paintMode)}
-                            disabled={isPending}
-                            title="Tô cả hàng theo chế độ hiện tại"
-                            className="opacity-0 group-hover/row:opacity-100 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium border transition-all hover:opacity-75"
-                            style={{
-                              borderColor: "var(--border-soft)",
-                              color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
-                              backgroundColor: "color-mix(in srgb, var(--foreground) 5%, transparent)",
-                            }}
-                          >
-                            → hàng
-                          </button>
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              onClick={() => fillRow(slotMeta.slot, paintMode)}
+                              disabled={isPending}
+                              title="Tô cả hàng theo chế độ hiện tại"
+                              className="opacity-0 group-hover/row:opacity-100 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium border transition-all hover:opacity-75"
+                              style={{
+                                borderColor: "var(--border-soft)",
+                                color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
+                                backgroundColor: "color-mix(in srgb, var(--foreground) 5%, transparent)",
+                              }}
+                            >
+                              → hàng
+                            </button>
+                          )}
                         </div>
                       </td>
 
@@ -597,9 +629,9 @@ export function MyAvailabilityMatrix({ initial }: Props) {
                             <button
                               type="button"
                               onClick={() => paintCell(day, slotMeta.slot)}
-                              disabled={isPending}
+                              disabled={isPending || readOnly}
                               aria-label={`${DAY_LABEL[day]} ${slotMeta.label} – ${mode ? MODE_LABEL[mode] : "Bận"}`}
-                              className={`h-9 w-full text-[11px] font-medium transition-colors focus-ring-soft ${
+                              className={`h-9 w-full text-[11px] font-medium transition-colors focus-ring-soft ${readOnly ? "cursor-default" : ""} ${
                                 mode === "BOTH"
                                   ? "bg-green-100 text-green-800 hover:bg-green-200"
                                   : mode === "ONLINE_ONLY"
@@ -628,6 +660,7 @@ export function MyAvailabilityMatrix({ initial }: Props) {
           cells={cells}
           paintMode={paintMode}
           isPending={isPending}
+          readOnly={readOnly}
           onClose={() => setDayModalOpen(null)}
           onPaintCell={paintCell}
           onFillDay={fillDay}
@@ -636,36 +669,38 @@ export function MyAvailabilityMatrix({ initial }: Props) {
       )}
 
       {/* Save / reset */}
-      <div className="flex items-center gap-3 mt-4 flex-wrap">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={isPending || !isDirty}
-          className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ borderColor: "var(--border-soft)", backgroundColor: "var(--surface-strong)", color: "var(--foreground)" }}
-        >
-          Khôi phục đã lưu
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending || !isDirty}
-          aria-busy={isPending}
-          className="primary-button focus-ring-strong press-feedback-inset state-disabled px-5 py-2 text-sm"
-        >
-          {isPending ? "Đang lưu…" : "Lưu lịch rảnh"}
-        </button>
-        <span
-          className={`text-xs font-medium ${
-            feedback?.type === "error" ? "text-red-600"
-            : feedback?.type === "success" ? "text-green-600"
-            : isDirty ? "text-amber-600"
-            : "text-slate-500"
-          }`}
-        >
-          {feedback?.text ?? (isDirty ? "Có thay đổi chưa lưu" : "Đang dùng dữ liệu đã lưu")}
-        </span>
-      </div>
+      {!readOnly && (
+        <div className="flex items-center gap-3 mt-4 flex-wrap">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={isPending || !isDirty}
+            className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ borderColor: "var(--border-soft)", backgroundColor: "var(--surface-strong)", color: "var(--foreground)" }}
+          >
+            Khôi phục đã lưu
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isPending || !isDirty}
+            aria-busy={isPending}
+            className="primary-button focus-ring-strong press-feedback-inset state-disabled px-5 py-2 text-sm"
+          >
+            {isPending ? "Đang lưu…" : "Lưu lịch rảnh"}
+          </button>
+          <span
+            className={`text-xs font-medium ${
+              feedback?.type === "error" ? "text-red-600"
+              : feedback?.type === "success" ? "text-green-600"
+              : isDirty ? "text-amber-600"
+              : "text-slate-500"
+            }`}
+          >
+            {feedback?.text ?? (isDirty ? "Có thay đổi chưa lưu" : "Đang dùng dữ liệu đã lưu")}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,24 +1,28 @@
 import Link from "next/link";
-import { getSubjectsList } from "@/lib/classes/queries";
-import { CreateClassForm } from "./CreateClassForm";
+import { getSubjectsList, getTeachersList, getActiveRoomsList } from "@/lib/classes/queries";
+import { ClassBuilder } from "./ClassBuilder";
 
 export default async function NewClassPage() {
-  const subjects = await getSubjectsList();
+  const [subjects, teachers, rooms] = await Promise.all([
+    getSubjectsList(),
+    getTeachersList(),
+    getActiveRoomsList(),
+  ]);
 
   return (
-    <div className="max-w-xl">
+    <div className="w-full">
       <div className="mb-6">
-        <Link href="/staff/classes" className="text-sm text-blue-600 hover:underline">
+        <Link href="/staff/classes" className="text-sm hover:underline" style={{ color: "var(--primary)" }}>
           ← Quay lại danh sách lớp
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">Tạo lớp học mới</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Lớp sẽ được tạo với trạng thái <strong>Soạn thảo</strong>. Bạn có thể thêm buổi học và học sinh sau.
+        <h1 className="mt-2 text-2xl font-bold" style={{ color: "var(--foreground)" }}>Tạo lớp học mới</h1>
+        <p className="mt-1 text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>
+          Dựng khung lịch tuần, hệ thống tự lọc giáo viên, phòng và học sinh khả thi để tránh trùng lịch.
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <CreateClassForm subjects={subjects} />
+      <div className="rounded-xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border-soft)" }}>
+        <ClassBuilder subjects={subjects} teachers={teachers} rooms={rooms} />
       </div>
     </div>
   );

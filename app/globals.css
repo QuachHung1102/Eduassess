@@ -1177,6 +1177,18 @@ html[data-theme="tho"] {
 }
 
 
+/* ─── Full-width pages ──────────────────────────────────────────────────── */
+/* Mọi trang dashboard luôn trải hết chiều rộng vùng nội dung. Phần tử gốc    */
+/* của mỗi trang (con trực tiếp của .page-stage) bị gỡ giới hạn max-width và  */
+/* canh-giữa, nên không cần sửa từng trang.                                   */
+.page-stage > * {
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
+}
+
+
 /* ─── Themed Data Table ─────────────────────────────────────────────────── */
 .themed-table thead {
   background-color: var(--surface-strong);
@@ -1669,4 +1681,19 @@ html[data-mode="dark"][data-theme="tho"] {
   .clay-card, .clay-btn { transition: none; }
   .clay-card:hover, .clay-btn:hover,
   .clay-card:active, .clay-btn:active { transform: none; }
+
+  .flashcard-holo-card {
+    transition: none;
+    transform: none;
+  }
+  .flashcard-holo-card::before,
+  .flashcard-holo-card::after,
+  .flashcard-holo-card .flashcard-face::after,
+  .flashcard-holo-card .flashcard-media::after,
+  .flashcard-holo-card .flashcard-copy-panel::after {
+    display: none;
+  }
+  .flashcard-flip-inner {
+    transition: none;
+  }
 }

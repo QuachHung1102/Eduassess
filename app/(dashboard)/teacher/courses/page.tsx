@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import { getCoursesForAuthor } from "@/lib/courses/queries";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus, faBookOpen } from "@fortawesome/free-solid-svg-icons";
 
 export default async function TeacherCoursesPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requirePageSession();
 
-  const courses = await getCoursesForAuthor(session.user.id!);
+  const courses = await getCoursesForAuthor(user.id);
 
   return (
     <div className="flex flex-col gap-6">
