@@ -19,6 +19,7 @@ import {
   faShieldHalved,
   faToolbox,
   faUserGroup,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 
 export type DashboardNavItem = {
@@ -74,6 +75,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/teacher/exams",          label: "Đề kiểm tra",       icon: faFilePen,       permission: P.EXAM_VIEW.key },
     { href: "/teacher/classes",        label: "Lớp học",           icon: faSchool,        permission: P.CLASS_VIEW_OWN.key },
     { href: "/teacher/courses",        label: "Khóa học online",   icon: faBookOpen,      permission: P.COURSE_VIEW.key },
+    { href: "/teacher/schedule",       label: "Lịch rảnh",         icon: faClock },
     { href: "/booking",                label: "Đặt phòng",         icon: faCalendarCheck, permission: P.BOOKING_CREATE.key },
   ],
 

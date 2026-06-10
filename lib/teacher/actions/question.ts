@@ -9,6 +9,7 @@ import {
   createQuestion,
   updateQuestion,
   deleteQuestion,
+  assertTopicExists,
   type QuestionWriteInput,
 } from "@/lib/questions/store";
 
@@ -43,17 +44,21 @@ export async function createQuestionAction(formData: FormData) {
   if (!session?.user?.id) return { error: "Chưa đăng nhập" };
 
   const subjectId = formData.get("subjectId") as string;
-  if (!subjectId) return { error: "Vui lòng điền đầy đủ thông tin" };
+  const gradeId = formData.get("gradeId") as string;
+  const topicName = (formData.get("topicName") as string)?.trim();
+  if (!subjectId || !gradeId || !topicName) return { error: "Vui lòng điền đầy đủ thông tin" };
 
   const subjectError = await assertTeacherCanUseSubject(session.user.id, subjectId);
   if (subjectError) return { error: subjectError };
+  const topicError = await assertTopicExists(subjectId, gradeId, topicName);
+  if (topicError) return { error: topicError };
 
   const input: QuestionWriteInput = {
     content: (formData.get("content") as string)?.trim(),
     explanation: (formData.get("explanation") as string | null)?.trim() || null,
     subjectId,
-    gradeId: formData.get("gradeId") as string,
-    topicName: (formData.get("topicName") as string)?.trim(),
+    gradeId,
+    topicName,
     difficulty: formData.get("difficulty") as Difficulty,
     correctAnswer: formData.get("correct-answer") as string,
     optionTexts: ["A", "B", "C", "D"].map(
@@ -135,8 +140,14 @@ export async function saveAiQuestionAction(params: {
   const { content, explanation, options, correct, subjectId, gradeId, difficulty } = params;
   const topicName = params.topicName.trim();
 
+  if (!subjectId || !gradeId || !topicName) {
+    return { error: "Vui lòng điền đầy đủ thông tin" };
+  }
+
   const subjectError = await assertTeacherCanUseSubject(session.user.id, subjectId);
   if (subjectError) return { error: subjectError };
+  const topicError = await assertTopicExists(subjectId, gradeId, topicName);
+  if (topicError) return { error: topicError };
 
   const result = await createQuestion(
     {

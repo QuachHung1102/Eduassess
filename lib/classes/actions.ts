@@ -413,6 +413,37 @@ export async function markSessionAction(
     data: { status: "CANCELLED", note: input.reason.trim() },
   });
 
+  // Thông báo cho học sinh đang học + giáo viên dạy buổi này.
+  const dateLabel = new Date(`${ymdLocal(sess.date)}T00:00:00`).toLocaleDateString("vi-VN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
+  const buoiLabel = `Buổi ${sess.sessionNumber} – ${sess.class.name} (${dateLabel})`;
+  const enrollments = await prisma.classEnrollment.findMany({
+    where: { classId: sess.classId, status: "ACTIVE" },
+    select: { studentId: true },
+  });
+  const recipients: { userId: string; title: string; message: string; type: "SCHEDULE_CHANGED"; href: string }[] = [
+    ...enrollments.map((e) => ({
+      userId: e.studentId,
+      title: "Buổi học bị nghỉ",
+      message: `${buoiLabel} đã bị nghỉ. Lý do: ${input.reason!.trim()}. Lớp sẽ sắp xếp buổi bù.`,
+      type: "SCHEDULE_CHANGED" as const,
+      href: `/student/exams`,
+    })),
+    {
+      userId: sess.teacherId,
+      title: "Buổi học bị nghỉ",
+      message: `${buoiLabel} đã bị nghỉ. Lý do: ${input.reason!.trim()}.`,
+      type: "SCHEDULE_CHANGED" as const,
+      href: `/teacher/classes/${sess.classId}`,
+    },
+  ];
+  if (recipients.length > 0) {
+    await prisma.notification.createMany({ data: recipients, skipDuplicates: true });
+  }
+
   const weeklySlots: WeeklySlotInput[] = sess.class.weeklySlots.map((s) => ({
     dayOfWeek: s.dayOfWeek,
     startTime: s.startTime,
@@ -440,7 +471,7 @@ export async function createMakeupSessionAction(
 
   const sess = await prisma.classSession.findUnique({
     where: { id: cancelledSessionId },
-    include: { class: { select: { advisorId: true } } },
+    include: { class: { select: { advisorId: true, name: true } } },
   });
   if (!sess) return { error: "Không tìm thấy buổi học gốc" };
   if (session.user.role === "STAFF" && sess.class.advisorId !== session.user.id)
@@ -509,6 +540,37 @@ export async function createMakeupSessionAction(
       note: `Bù cho buổi #${sess.sessionNumber}`,
     },
   });
+
+  // Thông báo lịch bù cho học sinh đang học + giáo viên dạy.
+  const dateLabel = new Date(`${input.date}T00:00:00`).toLocaleDateString("vi-VN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
+  const msgBody = `Đã có buổi bù cho buổi #${sess.sessionNumber} của lớp ${sess.class.name}: ${dateLabel}, ${input.startTime}–${input.endTime}.`;
+  const enrollments = await prisma.classEnrollment.findMany({
+    where: { classId: sess.classId, status: "ACTIVE" },
+    select: { studentId: true },
+  });
+  const recipients: { userId: string; title: string; message: string; type: "SCHEDULE_CHANGED"; href: string }[] = [
+    ...enrollments.map((e) => ({
+      userId: e.studentId,
+      title: "Có buổi bù mới",
+      message: msgBody,
+      type: "SCHEDULE_CHANGED" as const,
+      href: `/student/exams`,
+    })),
+    {
+      userId: sess.teacherId,
+      title: "Có buổi bù mới",
+      message: msgBody,
+      type: "SCHEDULE_CHANGED" as const,
+      href: `/teacher/classes/${sess.classId}`,
+    },
+  ];
+  if (recipients.length > 0) {
+    await prisma.notification.createMany({ data: recipients, skipDuplicates: true });
+  }
 
   revalidatePath(`/staff/classes/${sess.classId}`);
   return { success: true };
@@ -746,6 +808,7 @@ export async function enrollStudentsAction(classId: string, studentIds: string[]
   ]);
 
   revalidatePath(`/staff/classes/${classId}`);
+  revalidatePath(`/admin/classes/${classId}`);
   return { success: true };
 }
 
@@ -813,6 +876,7 @@ export async function assignClassTeachersAction(classId: string, teacherIds: str
   );
 
   revalidatePath(`/staff/classes/${classId}`);
+  revalidatePath(`/admin/classes/${classId}`);
   return { success: true };
 }
 

@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { resolveUserIdByRole } from "@/lib/auth/require";
 import type { AvailabilityMode, DayOfWeek, TimeSlot } from "@/lib/types";
 
 // ── Bắt đầu làm bài (tạo ExamAttempt) ───────────────────────
@@ -170,7 +171,19 @@ export async function saveMyAvailabilityAction(
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  await saveAvailability({ kind: "student", id: session.user.id }, slots);
+  const studentId = await resolveUserIdByRole(
+    { id: session.user.id, email: session.user.email },
+    "STUDENT",
+  );
+  if (!studentId) {
+    return { error: "Không xác định được tài khoản học sinh. Vui lòng đăng nhập lại." };
+  }
+
+  try {
+    await saveAvailability({ kind: "student", id: studentId }, slots);
+  } catch {
+    return { error: "Không thể lưu lịch rảnh lúc này. Vui lòng đăng nhập lại và thử lại." };
+  }
 
   revalidatePath("/student/schedule");
   return { success: true };

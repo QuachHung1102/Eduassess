@@ -90,7 +90,9 @@ function applyPaintMode(cells: CellMap, key: SlotKey, mode: PaintMode): CellMap 
 function serializeSlots(cells: CellMap) {
   const slots: { dayOfWeek: DayOfWeek; slot: AvailabilityDigitalTimeSlot; availabilityMode: AvailabilityMode }[] = [];
   for (const [key, mode] of cells.entries()) {
-    const [day, slot] = key.split("_") as [DayOfWeek, AvailabilityDigitalTimeSlot];
+    const pivot = key.indexOf("_");
+    const day = key.slice(0, pivot) as DayOfWeek;
+    const slot = key.slice(pivot + 1) as AvailabilityDigitalTimeSlot;
     slots.push({ dayOfWeek: day, slot, availabilityMode: mode });
   }
   return slots;

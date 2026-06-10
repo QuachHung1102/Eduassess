@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { loadAvailability } from "@/lib/availability/store";
+import { resolveUserIdByRole } from "@/lib/auth/require";
 
 // ── Dashboard stats ──────────────────────────────────────────
 export async function getStudentStats() {
@@ -373,5 +374,11 @@ export async function getMyStudentAvailability() {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  return loadAvailability({ kind: "student", id: session.user.id });
+  const studentId = await resolveUserIdByRole(
+    { id: session.user.id, email: session.user.email },
+    "STUDENT",
+  );
+  if (!studentId) return [];
+
+  return loadAvailability({ kind: "student", id: studentId });
 }

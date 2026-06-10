@@ -123,7 +123,6 @@ app/
 │   ├── settings/        # Cài đặt cá nhân
 │   └── notifications/   # Thông báo
 ├── api/
-│   ├── admin/           # API routes cho admin (students-search, ...)
 │   ├── auth/            # NextAuth handlers
 │   ├── courses/         # Upload bài giảng
 │   └── upload/          # Upload ảnh Cloudinary

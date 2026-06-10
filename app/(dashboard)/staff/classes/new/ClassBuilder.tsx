@@ -522,6 +522,7 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
           type="button"
           onClick={handleFind}
           disabled={isFinding || !scheduleReady}
+          suppressHydrationWarning
           className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
           style={{ background: "var(--primary)" }}
         >
@@ -620,7 +621,27 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
                             {checked && <FaIcon icon={faCheck} className="text-[8px] text-white" />}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm" style={{ color: "var(--foreground)" }}>{s.name ?? s.email}</span>
+                            <span className="block truncate text-sm" style={{ color: "var(--foreground)" }}>
+                              {s.name ?? s.email}
+                              {s.level === targetLevel ? (
+                                <span
+                                  className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                                  style={{
+                                    background: "color-mix(in srgb, var(--primary) 14%, var(--surface))",
+                                    color: "var(--primary)",
+                                  }}
+                                >
+                                  Phù hợp
+                                </span>
+                              ) : (
+                                <span
+                                  className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                                  style={{ background: "var(--surface-strong)", color: "var(--muted-foreground, #6b7280)" }}
+                                >
+                                  Chưa đánh giá
+                                </span>
+                              )}
+                            </span>
                             <span className="block truncate text-xs" style={mutedStyle}>{s.email}</span>
                           </span>
                           {s.activeClassCount > 0 && (
@@ -667,6 +688,7 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
         <button
           type="submit"
           disabled={isSaving || !eligibility}
+          suppressHydrationWarning
           className="rounded-lg px-5 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
           style={{ background: "var(--primary)" }}
         >

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAdminClassDetail, getAdminTeachers, getAdminSubjects, getAdminClasses } from "@/lib/admin/queries";
+import { getAdminClassDetail, getAdminClasses } from "@/lib/admin/queries";
+import { getAvailableStudents, getSuggestedStudents, getTeachersList } from "@/lib/classes/queries";
 import { RemoveStudentButton } from "./RemoveStudentButton";
 import { TransferStudentButton } from "./TransferStudentButton";
 import { AssignTeacherForm } from "./AssignTeacherForm";
@@ -13,17 +14,20 @@ export default async function AdminClassDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [cls, allClasses, teachers, subjects] = await Promise.all([
-    getAdminClassDetail(id),
-    getAdminClasses(),
-    getAdminTeachers(),
-    getAdminSubjects(),
-  ]);
-
+  const cls = await getAdminClassDetail(id);
   if (!cls) notFound();
 
-  const studentIds = new Set(cls.enrollments.map((e) => e.student.id));
+  const [allClasses, availableStudents, suggested, allTeachers] = await Promise.all([
+    getAdminClasses(),
+    getAvailableStudents(id),
+    getSuggestedStudents(cls.subject.id, cls.targetLevel),
+    getTeachersList(),
+  ]);
+
   const otherClasses = allClasses.filter((c) => c.id !== id);
+  const suggestedIds = suggested.map((s) => s.id);
+  const assignedTeacherIds = new Set(cls.teachers.map((tc) => tc.teacher.id));
+  const availableTeachers = allTeachers.filter((t) => !assignedTeacherIds.has(t.id));
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -50,7 +54,7 @@ export default async function AdminClassDetailPage({
               <h2 className="font-semibold text-gray-800">
                 Danh sách học sinh ({cls.enrollments.length})
               </h2>
-              <AssignStudentForm classId={id} existingStudentIds={[...studentIds]} />
+              <AssignStudentForm classId={id} students={availableStudents} suggestedIds={suggestedIds} />
             </div>
             <div className="overflow-auto max-h-[calc(100vh-320px)]">
               <table className="w-full text-sm">
@@ -113,11 +117,7 @@ export default async function AdminClassDetailPage({
               <h2 className="font-semibold text-gray-800">
                 Giáo viên phân công ({cls.teachers.length})
               </h2>
-              <AssignTeacherForm
-                classId={id}
-                teachers={teachers}
-                subjects={subjects.map((s) => ({ id: s.id, name: s.name }))}
-              />
+              <AssignTeacherForm classId={id} teachers={availableTeachers} />
             </div>
             <div className="divide-y divide-gray-50">
               {cls.teachers.length === 0 ? (

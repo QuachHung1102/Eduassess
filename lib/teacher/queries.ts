@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { listQuestions } from "@/lib/questions/store";
+import { loadAvailability } from "@/lib/availability/store";
+import { resolveUserIdByRole } from "@/lib/auth/require";
 
 // Lấy danh sách môn học
 export async function getSubjects() {
@@ -439,4 +441,18 @@ export async function getTeacherSessionDetail(classId: string, sessionId: string
   if (!classSession || classSession.classId !== classId) return null;
 
   return { session: classSession, enrollments };
+}
+
+// ── Lịch rảnh của giáo viên đang đăng nhập ───────────────────
+export async function getMyTeacherAvailability() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const teacherId = await resolveUserIdByRole(
+    { id: session.user.id, email: session.user.email },
+    "TEACHER",
+  );
+  if (!teacherId) return [];
+
+  return loadAvailability({ kind: "teacher", id: teacherId });
 }

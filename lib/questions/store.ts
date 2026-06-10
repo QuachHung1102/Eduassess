@@ -71,6 +71,25 @@ function validateMeta(input: QuestionWriteInput): string | null {
   return null;
 }
 
+/**
+ * Kiểm tra topicName thuộc đúng (subjectId, gradeId) — Topic là option-list,
+ * client chỉ được chọn trong danh sách có sẵn. Trả null nếu hợp lệ.
+ */
+export async function assertTopicExists(
+  subjectId: string,
+  gradeId: string,
+  topicName: string,
+): Promise<string | null> {
+  const topic = await prisma.topic.findFirst({
+    where: { subjectId, gradeId, name: topicName },
+    select: { id: true },
+  });
+  if (!topic) {
+    return "Chủ đề không hợp lệ. Vui lòng chọn một chủ đề trong danh sách.";
+  }
+  return null;
+}
+
 /** Tìm topic theo tên + môn + khối; nếu chưa có thì tạo mới. */
 async function findOrCreateTopic(subjectId: string, gradeId: string, topicName: string) {
   const existing = await prisma.topic.findFirst({

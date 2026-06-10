@@ -11,7 +11,7 @@ import {
   type PlannedSession,
   type WeeklyCell,
 } from "@/lib/classes/scheduling";
-import type { AvailabilityMode, ClassMode, DayOfWeek, TimeSlot } from "@/lib/types";
+import type { AvailabilityMode, ClassMode, DayOfWeek, StudentLevel, TimeSlot } from "@/lib/types";
 
 // ─── Lọc GV / HS / phòng khả thi cho một khung lịch ───────────
 // Triết lý: LỌC CỨNG. Người chưa khai báo lịch rảnh = BUSY = bị loại.
@@ -28,7 +28,8 @@ export interface EligibleStudent {
   id: string;
   name: string | null;
   email: string;
-  level: string;
+  /** Năng lực môn học mới nhất, hoặc null nếu HS chưa từng được đánh giá môn này. */
+  level: StudentLevel | null;
   activeClassCount: number;
 }
 
@@ -133,24 +134,37 @@ export async function getEligibleStudentsForSchedule(opts: {
   const { cells, mode, subjectId, targetLevel, plannedSessions } = opts;
   if (cells.length === 0 || !subjectId || !targetLevel) return [];
 
-  // 1) Lấy HS đúng môn + đúng năng lực mục tiêu (đánh giá mới nhất).
+  // 1) Lấy HS đúng môn + đúng năng lực mục tiêu (đánh giá mới nhất),
+  // VÀ HS chưa từng được đánh giá môn này — hiện cả hai nhóm để CBĐT tự
+  // quyết định (nhóm "Chưa đánh giá" được đánh dấu riêng ở `level: null`).
   const levels = await prisma.studentSubjectLevel.findMany({
     where: { subjectId },
     select: { studentId: true, level: true },
     orderBy: { evaluatedAt: "desc" },
   });
-  const latestLevel = new Map<string, string>();
+  const latestLevel = new Map<string, StudentLevel>();
   for (const l of levels) {
     if (!latestLevel.has(l.studentId)) latestLevel.set(l.studentId, l.level);
   }
   const matchedIds = [...latestLevel.entries()]
     .filter(([, level]) => level === targetLevel)
     .map(([id]) => id);
-  if (matchedIds.length === 0) return [];
+
+  const evaluatedIds = [...latestLevel.keys()];
+  const unassessed = await prisma.user.findMany({
+    where: {
+      role: "STUDENT",
+      ...(evaluatedIds.length > 0 ? { id: { notIn: evaluatedIds } } : {}),
+    },
+    select: { id: true },
+  });
+
+  const seedCandidateIds = [...matchedIds, ...unassessed.map((u) => u.id)];
+  if (seedCandidateIds.length === 0) return [];
 
   // 2) Lọc theo lịch rảnh tuần.
   const students = await prisma.user.findMany({
-    where: { id: { in: matchedIds }, role: "STUDENT" },
+    where: { id: { in: seedCandidateIds }, role: "STUDENT" },
     select: {
       id: true,
       name: true,
@@ -230,9 +244,15 @@ export async function getEligibleStudentsForSchedule(opts: {
       id: s.id,
       name: s.name,
       email: s.email,
-      level: latestLevel.get(s.id) ?? targetLevel,
+      level: latestLevel.get(s.id) ?? null,
       activeClassCount: s._count.classEnrollments,
-    }));
+    }))
+    .sort((a, b) => {
+      // HS đúng năng lực mục tiêu lên trước nhóm "Chưa đánh giá".
+      const aMatched = a.level === targetLevel ? 0 : 1;
+      const bMatched = b.level === targetLevel ? 0 : 1;
+      return aMatched - bMatched;
+    });
 }
 
 // ─── Phòng khả thi ────────────────────────────────────────────

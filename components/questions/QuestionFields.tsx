@@ -13,8 +13,6 @@ type Topic = { id: string; name: string };
 
 const SELECT_CLS =
   "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900";
-const INPUT_CLS =
-  "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400";
 const TEXTAREA_CLS =
   "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 placeholder:text-gray-400";
 const LABEL_CLS = "block text-sm font-medium text-gray-700 mb-1.5";
@@ -79,10 +77,18 @@ export function QuestionMetadataFields({
   }, [subjectId, gradeId, topicName, difficulty, onChange]);
 
   async function loadTopics(sId: string, gId: string) {
-    if (!sId || !gId) return;
+    if (!sId || !gId) {
+      setTopics([]);
+      setTopicName("");
+      return;
+    }
     setLoadingTopics(true);
     const result = await getTopicsAction(sId, gId);
     setTopics(result);
+    setTopicName((prev) => {
+      if (!prev) return result[0]?.name ?? "";
+      return result.some((t) => t.name === prev) ? prev : (result[0]?.name ?? "");
+    });
     setLoadingTopics(false);
   }
 
@@ -95,8 +101,9 @@ export function QuestionMetadataFields({
           name="subjectId"
           value={subjectId}
           onChange={(e) => {
-            setSubjectId(e.target.value);
-            loadTopics(e.target.value, gradeId);
+            const nextSubjectId = e.target.value;
+            setSubjectId(nextSubjectId);
+            void loadTopics(nextSubjectId, gradeId);
           }}
           className={SELECT_CLS}
         >
@@ -115,8 +122,9 @@ export function QuestionMetadataFields({
           name="gradeId"
           value={gradeId}
           onChange={(e) => {
-            setGradeId(e.target.value);
-            loadTopics(subjectId, e.target.value);
+            const nextGradeId = e.target.value;
+            setGradeId(nextGradeId);
+            void loadTopics(subjectId, nextGradeId);
           }}
           className={SELECT_CLS}
         >
@@ -136,21 +144,29 @@ export function QuestionMetadataFields({
             ({loadingTopics ? "đang tải..." : `${topics.length} chủ đề hiện có`})
           </span>
         </label>
-        <input
+        <select
           name="topicName"
-          type="text"
           required
-          list="topics-list"
           value={topicName}
           onChange={(e) => setTopicName(e.target.value)}
-          placeholder="Nhập hoặc chọn chủ đề có sẵn..."
-          className={INPUT_CLS}
-        />
-        <datalist id="topics-list">
+          onFocus={() => {
+            if (topics.length === 0 && !loadingTopics) {
+              void loadTopics(subjectId, gradeId);
+            }
+          }}
+          className={SELECT_CLS}
+          disabled={loadingTopics || !subjectId || !gradeId}
+        >
+          <option value="" disabled>
+            {loadingTopics ? "Đang tải chủ đề..." : topics.length === 0 ? "Không có chủ đề cho môn/khối này" : "-- Chọn chủ đề --"}
+          </option>
+          {topicName && !topics.some((t) => t.name === topicName) && (
+            <option value={topicName}>{topicName}</option>
+          )}
           {topics.map((t) => (
-            <option key={t.id} value={t.name} />
+            <option key={t.id} value={t.name}>{t.name}</option>
           ))}
-        </datalist>
+        </select>
       </div>
 
       {/* Độ khó */}

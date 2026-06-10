@@ -9,6 +9,7 @@ import type { Difficulty } from "@/lib/types";
 import {
   createQuestion,
   updateQuestion,
+  assertTopicExists,
   type QuestionWriteInput,
 } from "@/lib/questions/store";
 
@@ -95,12 +96,20 @@ export async function adminCreateQuestionAction(formData: FormData) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
+  const subjectId = formData.get("subjectId") as string;
+  const gradeId = formData.get("gradeId") as string;
+  const topicName = (formData.get("topicName") as string)?.trim();
+  if (!subjectId || !gradeId || !topicName) return { error: "Vui lòng điền đầy đủ thông tin" };
+
+  const topicError = await assertTopicExists(subjectId, gradeId, topicName);
+  if (topicError) return { error: topicError };
+
   const input: QuestionWriteInput = {
     content: (formData.get("content") as string)?.trim(),
     explanation: (formData.get("explanation") as string | null)?.trim() || null,
-    subjectId: formData.get("subjectId") as string,
-    gradeId: formData.get("gradeId") as string,
-    topicName: (formData.get("topicName") as string)?.trim(),
+    subjectId,
+    gradeId,
+    topicName,
     difficulty: formData.get("difficulty") as Difficulty,
     correctAnswer: formData.get("correct-answer") as string,
     optionTexts: ["A", "B", "C", "D"].map(
@@ -127,12 +136,20 @@ export async function adminUpdateQuestionAction(
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
+  const subjectId = formData.get("subjectId") as string;
+  const gradeId = formData.get("gradeId") as string;
+  const topicName = (formData.get("topicName") as string)?.trim();
+  if (!subjectId || !gradeId || !topicName) return { error: "Vui lòng điền đầy đủ thông tin" };
+
+  const topicError = await assertTopicExists(subjectId, gradeId, topicName);
+  if (topicError) return { error: topicError };
+
   const input: QuestionWriteInput = {
     content: (formData.get("content") as string)?.trim(),
     explanation: (formData.get("explanation") as string | null)?.trim() || null,
-    subjectId: formData.get("subjectId") as string,
-    gradeId: formData.get("gradeId") as string,
-    topicName: (formData.get("topicName") as string)?.trim(),
+    subjectId,
+    gradeId,
+    topicName,
     difficulty: formData.get("difficulty") as Difficulty,
     correctAnswer: formData.get("correct-answer") as string,
     optionTexts: ["A", "B", "C", "D"].map(
@@ -197,20 +214,6 @@ export async function deleteClassAction(classId: string) {
 }
 
 // ── Student assignments ──────────────────────────────────────
-export async function assignStudentToClassAction(
-  studentId: string,
-  classId: string,
-) {
-  await requireAdmin();
-  await prisma.classEnrollment.upsert({
-    where: { classId_studentId: { classId, studentId } },
-    update: {},
-    create: { classId, studentId },
-  });
-  revalidatePath("/admin/classes");
-  return { success: true };
-}
-
 export async function removeStudentFromClassAction(
   studentId: string,
   classId: string,
