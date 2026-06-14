@@ -36,6 +36,7 @@ export const PERMISSIONS = {
   CLASS_DELETE:        { key: "class.delete",        domain: "CLASS",   description: "Xóa / huỷ lớp" },
   CLASS_MANAGE_SESSION:{ key: "class.manage_session",domain: "CLASS",   description: "Tạo / sửa lịch buổi học của lớp" },
   CLASS_TAKE_ATTENDANCE:{ key: "class.take_attendance", domain: "CLASS",description: "Điểm danh buổi học" },
+  CLASS_EVALUATE_SESSION:{ key: "class.evaluate_session", domain: "CLASS", description: "Đánh giá học sinh sau mỗi buổi học" },
 
   // ── STUDENT MANAGEMENT (Phase 3) ─────────────────────
   STUDENT_VIEW_ASSIGNED:{ key: "student.view_assigned", domain: "STUDENT", description: "Xem học sinh được phân cho mình" },

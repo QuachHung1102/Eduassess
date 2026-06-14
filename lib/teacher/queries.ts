@@ -429,6 +429,15 @@ export async function getTeacherSessionDetail(classId: string, sessionId: string
             student: { select: { id: true, name: true, email: true } },
           },
         },
+        evaluations: {
+          select: {
+            studentId: true,
+            performance: true,
+            diligence: true,
+            comprehension: true,
+            note: true,
+          },
+        },
       },
     }),
     prisma.classEnrollment.findMany({

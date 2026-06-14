@@ -1,6 +1,31 @@
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/auth";
 import { getOccupanciesBetween } from "@/lib/rooms/store";
+import type { SessionUserBase } from "@/lib/types";
+
+// ── Phân quyền đánh giá theo phân công ─────────────────────────
+
+/** Một HS có được phân cho CBĐT này không (quan hệ StudentAdvisor). */
+export async function isAssignedAdvisor(studentId: string, advisorId: string): Promise<boolean> {
+  const link = await prisma.studentAdvisor.findUnique({
+    where: { studentId_advisorId: { studentId, advisorId } },
+    select: { id: true },
+  });
+  return !!link;
+}
+
+/**
+ * CBĐT chỉ được đánh giá học sinh ĐƯỢC PHÂN CÔNG cho mình (StudentAdvisor).
+ * OWNER / ADMIN / CBDTS (super) bỏ qua giới hạn này.
+ */
+export async function canEvaluateStudent(
+  user: Pick<SessionUserBase, "id" | "role" | "staffPosition">,
+  studentId: string,
+): Promise<boolean> {
+  if (user.role === "OWNER" || user.role === "ADMIN") return true;
+  if (user.role === "STAFF" && user.staffPosition === "CBDTS") return true;
+  return isAssignedAdvisor(studentId, user.id);
+}
 
 // ── Lớp học ──────────────────────────────────────────────────
 
@@ -110,6 +135,15 @@ export async function getSessionWithAttendance(sessionId: string) {
       attendances: {
         include: { student: { select: { id: true, name: true } } },
       },
+      evaluations: {
+        select: {
+          studentId: true,
+          performance: true,
+          diligence: true,
+          comprehension: true,
+          note: true,
+        },
+      },
     },
   });
   return session;
@@ -164,6 +198,101 @@ export async function getMyStudents() {
       (lv) => lv.studentId === link.studentId,
     ),
   }));
+}
+
+/**
+ * Tổng quan tiến độ các HS được phân cho CBĐT đang đăng nhập:
+ * mức năng lực mới nhất theo môn + tỉ lệ điểm danh + TB đánh giá-buổi + số lớp.
+ * Dùng cho trang /staff/overview.
+ */
+export async function getMyStudentsOverview() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+  const advisorId = session.user.id;
+
+  const links = await prisma.studentAdvisor.findMany({
+    where: { advisorId },
+    select: {
+      studentId: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          _count: {
+            select: {
+              classEnrollments: { where: { class: { status: { in: ["RECRUITING", "ONGOING"] } } } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { assignedAt: "desc" },
+  });
+  const studentIds = links.map((l) => l.studentId);
+  if (studentIds.length === 0) return [];
+
+  const [levels, attendances, evals] = await Promise.all([
+    prisma.studentSubjectLevel.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, subjectId: true, level: true, subject: { select: { name: true } } },
+      orderBy: { evaluatedAt: "desc" },
+    }),
+    prisma.attendance.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, status: true },
+    }),
+    prisma.sessionEvaluation.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, performance: true, diligence: true, comprehension: true },
+    }),
+  ]);
+
+  // Mức mới nhất theo (HS, môn).
+  const levelsByStudent = new Map<string, { subject: string; level: string }[]>();
+  const seen = new Set<string>();
+  for (const lv of levels) {
+    const key = `${lv.studentId}:${lv.subjectId}`;
+    if (seen.has(key)) continue; // đã có bản mới hơn (orderBy desc)
+    seen.add(key);
+    const list = levelsByStudent.get(lv.studentId) ?? [];
+    list.push({ subject: lv.subject.name, level: lv.level });
+    levelsByStudent.set(lv.studentId, list);
+  }
+
+  const attByStudent = new Map<string, { present: number; total: number }>();
+  for (const a of attendances) {
+    const cur = attByStudent.get(a.studentId) ?? { present: 0, total: 0 };
+    cur.total += 1;
+    if (a.status === "PRESENT" || a.status === "LATE") cur.present += 1;
+    attByStudent.set(a.studentId, cur);
+  }
+
+  const evalSumByStudent = new Map<string, { sum: number; n: number }>();
+  for (const e of evals) {
+    const cur = evalSumByStudent.get(e.studentId) ?? { sum: 0, n: 0 };
+    for (const v of [e.performance, e.diligence, e.comprehension]) {
+      if (v !== null) {
+        cur.sum += v;
+        cur.n += 1;
+      }
+    }
+    evalSumByStudent.set(e.studentId, cur);
+  }
+
+  return links.map((l) => {
+    const att = attByStudent.get(l.studentId) ?? { present: 0, total: 0 };
+    const ev = evalSumByStudent.get(l.studentId);
+    return {
+      id: l.studentId,
+      name: l.student.name,
+      email: l.student.email,
+      activeClassCount: l.student._count.classEnrollments,
+      levels: levelsByStudent.get(l.studentId) ?? [],
+      attendance: att,
+      evalAvg: ev && ev.n > 0 ? ev.sum / ev.n : null,
+    };
+  });
 }
 
 /** Chi tiết học sinh: lịch rảnh + lịch sử năng lực + lớp đang học. */

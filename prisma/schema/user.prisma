@@ -43,6 +43,8 @@ model User {
   teacherAvailability  TeacherAvailability[] @relation("TeacherAvailability")
   studentLevels        StudentSubjectLevel[] @relation("StudentLevels")
   evaluatedLevels      StudentSubjectLevel[] @relation("EvaluatorLevels")
+  sessionEvaluations   SessionEvaluation[]   @relation("StudentSessionEvals")
+  givenSessionEvals    SessionEvaluation[]   @relation("EvaluatorSessionEvals")
   studentAdvisees      StudentAdvisor[]      @relation("StudentAdvisees")
   advisorStudents      StudentAdvisor[]      @relation("AdvisorStudents")
   advisorAssigned      StudentAdvisor[]      @relation("AdvisorAssigner")

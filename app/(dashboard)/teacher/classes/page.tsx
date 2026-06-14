@@ -2,12 +2,7 @@ import Link from "next/link";
 import { getTeacherClasses } from "@/lib/teacher/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faSchool } from "@fortawesome/free-solid-svg-icons";
-
-const TARGET_LEVEL_LABEL: Record<string, string> = {
-  WEAK: "Yếu",
-  AVERAGE: "Trung bình",
-  GOOD: "Khá / Giỏi",
-};
+import { STUDENT_LEVEL_LABEL as TARGET_LEVEL_LABEL } from "@/lib/constants/labels";
 
 export default async function ClassesPage() {
   const teacherClasses = await getTeacherClasses();

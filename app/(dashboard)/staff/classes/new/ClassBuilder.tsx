@@ -21,6 +21,7 @@ import type {
   SlotEligibleRooms,
 } from "@/lib/classes/eligibility";
 import { PickEntityModal, type PickItem } from "@/components/staff/PickEntityModal";
+import { STUDENT_LEVELS, STUDENT_LEVEL_LABEL } from "@/lib/constants/labels";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faSpinner,
@@ -44,11 +45,7 @@ const MODES: { value: ClassMode; label: string }[] = [
   { value: "ONLINE", label: "Online (tại nhà)" },
 ];
 
-const LEVELS: { value: StudentLevel; label: string }[] = [
-  { value: "WEAK", label: "Yếu" },
-  { value: "AVERAGE", label: "Trung bình" },
-  { value: "GOOD", label: "Khá / Giỏi" },
-];
+const LEVELS = STUDENT_LEVELS.map((value) => ({ value, label: STUDENT_LEVEL_LABEL[value] }));
 
 const DAY_LABEL: Record<DayOfWeek, string> = {
   MON: "T.2", TUE: "T.3", WED: "T.4", THU: "T.5", FRI: "T.6", SAT: "T.7", SUN: "CN",

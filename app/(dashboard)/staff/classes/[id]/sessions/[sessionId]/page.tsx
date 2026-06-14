@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { can } from "@/lib/auth/permissions";
 import { getSessionWithAttendance } from "@/lib/classes/queries";
 import { AttendanceForm } from "./AttendanceForm";
+import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import type { AttendanceStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +39,22 @@ export default async function SessionDetailPage({
   });
 
   const canTakeAttendance = session.status === "SCHEDULED" || session.status === "COMPLETED";
+
+  const sessionUser = (await auth())?.user;
+  const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
+  const evalMap = new Map(session.evaluations.map((e) => [e.studentId, e]));
+  const evalRows = students.map((s) => {
+    const ev = evalMap.get(s.id);
+    return {
+      studentId: s.id,
+      studentName: s.name,
+      email: s.email,
+      performance: ev?.performance ?? null,
+      diligence: ev?.diligence ?? null,
+      comprehension: ev?.comprehension ?? null,
+      note: ev?.note ?? "",
+    };
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -104,6 +123,14 @@ export default async function SessionDetailPage({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Đánh giá sau buổi học */}
+      {canTakeAttendance && canEvaluate && students.length > 0 && (
+        <div className="mt-2">
+          <h2 className="font-semibold text-gray-800 mb-3">Đánh giá sau buổi học</h2>
+          <SessionEvaluationForm sessionId={sessionId} students={evalRows} />
         </div>
       )}
     </div>

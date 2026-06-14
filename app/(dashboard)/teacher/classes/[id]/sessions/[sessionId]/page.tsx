@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { can } from "@/lib/auth/permissions";
 import { getTeacherSessionDetail } from "@/lib/teacher/queries";
 import { TeacherAttendanceForm } from "./TeacherAttendanceForm";
+import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faCalendarAlt,
@@ -69,6 +72,22 @@ export default async function TeacherSessionDetailPage({
   const presentCount = s.attendances.filter(
     (a) => a.status === "PRESENT" || a.status === "LATE"
   ).length;
+
+  const sessionUser = (await auth())?.user;
+  const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
+  const evalMap = new Map(s.evaluations.map((e) => [e.studentId, e]));
+  const evalRows = enrollments.map((e) => {
+    const ev = evalMap.get(e.student.id);
+    return {
+      studentId: e.student.id,
+      studentName: e.student.name,
+      email: e.student.email ?? "",
+      performance: ev?.performance ?? null,
+      diligence: ev?.diligence ?? null,
+      comprehension: ev?.comprehension ?? null,
+      note: ev?.note ?? "",
+    };
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -174,6 +193,17 @@ export default async function TeacherSessionDetailPage({
           />
         )}
       </div>
+
+      {/* Đánh giá sau buổi học */}
+      {canAttend && canEvaluate && enrollments.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span style={{ color: "var(--primary)" }}><FaIcon icon={faClipboardList} /></span>
+            <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Đánh giá sau buổi học</h2>
+          </div>
+          <SessionEvaluationForm sessionId={sessionId} students={evalRows} />
+        </div>
+      )}
     </div>
   );
 }

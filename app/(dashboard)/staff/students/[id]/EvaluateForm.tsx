@@ -7,6 +7,7 @@ import {
   getStudentSubjectReferenceAction,
   type StudentSubjectReference,
 } from "@/lib/classes/actions";
+import { STUDENT_LEVELS, STUDENT_LEVEL_LABEL as LEVEL_LABEL } from "@/lib/constants/labels";
 import type { StudentLevel } from "@/lib/types";
 
 interface Subject {
@@ -14,18 +15,7 @@ interface Subject {
   name: string;
 }
 
-const LEVELS: { value: StudentLevel; label: string }[] = [
-  { value: "WEAK", label: "Yếu" },
-  { value: "AVERAGE", label: "Trung bình" },
-  { value: "GOOD", label: "Khá / Giỏi" },
-];
-
-/** Gợi ý mức theo điểm TB (tham chiếu §glossary: <50 Yếu / 50–79 TB / 80+ Khá-Giỏi). */
-function suggestLevel(avg: number): { label: string } {
-  if (avg < 50) return { label: "Yếu" };
-  if (avg < 80) return { label: "Trung bình" };
-  return { label: "Khá / Giỏi" };
-}
+const LEVELS = STUDENT_LEVELS.map((value) => ({ value, label: LEVEL_LABEL[value] }));
 
 export function EvaluateForm({ studentId, subjects }: { studentId: string; subjects: Subject[] }) {
   const router = useRouter();
@@ -44,7 +34,13 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
     let cancelled = false;
     getStudentSubjectReferenceAction(studentId, subjectId).then((res) => {
       if (cancelled) return;
-      setLoaded({ subjectId, data: "error" in res ? null : res });
+      if ("error" in res) {
+        setLoaded({ subjectId, data: null });
+        return;
+      }
+      setLoaded({ subjectId, data: res });
+      // Bán tự động: điền sẵn mức theo đề xuất; CBĐT chỉnh nếu cần.
+      if (res.suggestedLevel) setLevel(res.suggestedLevel);
     });
     return () => {
       cancelled = true;
@@ -138,12 +134,24 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
                   <span className="text-gray-400">chưa có</span>
                 )}
               </span>
-              {ref.avgScore !== null && (
+              {ref.suggestedLevel && (
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
-                  Gợi ý: {suggestLevel(ref.avgScore).label}
+                  Gợi ý: {LEVEL_LABEL[ref.suggestedLevel]}
+                  {ref.suggestedReason ? ` (${ref.suggestedReason})` : ""} · đã điền sẵn
                 </span>
               )}
             </div>
+            {ref.sessionEval.count > 0 && (
+              <p className="text-gray-600">
+                Đánh giá buổi ({ref.sessionEval.count}):{" "}
+                <span className="text-gray-900">
+                  NL {ref.sessionEval.performance?.toFixed(1) ?? "—"} · CC{" "}
+                  {ref.sessionEval.diligence?.toFixed(1) ?? "—"} · TT{" "}
+                  {ref.sessionEval.comprehension?.toFixed(1) ?? "—"}
+                </span>{" "}
+                <span className="text-gray-400">(thang 5)</span>
+              </p>
+            )}
             {ref.attempts.length > 0 && (
               <div>
                 <p className="mb-1 text-gray-500">Bài kiểm tra gần đây:</p>

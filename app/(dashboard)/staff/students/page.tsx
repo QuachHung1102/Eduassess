@@ -2,15 +2,10 @@ import Link from "next/link";
 import { getMyStudents } from "@/lib/classes/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faUserGraduate } from "@fortawesome/free-solid-svg-icons";
-
-const LEVEL_LABEL: Record<string, string> = {
-  WEAK: "Yếu", AVERAGE: "Trung bình", GOOD: "Khá/Giỏi",
-};
-const LEVEL_COLOR: Record<string, string> = {
-  WEAK: "bg-red-100 text-red-700",
-  AVERAGE: "bg-yellow-100 text-yellow-700",
-  GOOD: "bg-green-100 text-green-700",
-};
+import {
+  STUDENT_LEVEL_LABEL as LEVEL_LABEL,
+  STUDENT_LEVEL_COLOR as LEVEL_COLOR,
+} from "@/lib/constants/labels";
 
 export default async function StaffStudentsPage() {
   const students = await getMyStudents();

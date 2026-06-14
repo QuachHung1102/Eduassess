@@ -120,6 +120,7 @@ model ClassSession {
   room        Room?        @relation(fields: [roomId], references: [id])
   teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id])
   attendances Attendance[]
+  evaluations SessionEvaluation[]
   occupancy   RoomOccupancy?
 
   @@index([classId, date])
@@ -127,6 +128,32 @@ model ClassSession {
   @@index([roomId])
   @@unique([classId, sessionNumber])
   @@map("class_sessions")
+}
+
+/**
+ * Đánh giá của giáo viên cho một học sinh SAU một buổi học.
+ * 3 chiều thang 1–5 (NULL = chưa chấm chiều đó): năng lực / chuyên cần / tiếp thu.
+ * Là dữ liệu đầu vào giúp CBĐT đánh giá năng lực môn (StudentSubjectLevel) chính xác hơn.
+ */
+model SessionEvaluation {
+  id            String   @id @default(cuid())
+  sessionId     String
+  studentId     String
+  performance   Int? // Năng lực 1–5
+  diligence     Int? // Chuyên cần 1–5
+  comprehension Int? // Mức độ tiếp thu 1–5
+  note          String?
+  evaluatedById String // GV thực hiện đánh giá
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  session     ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student     User         @relation("StudentSessionEvals", fields: [studentId], references: [id])
+  evaluatedBy User         @relation("EvaluatorSessionEvals", fields: [evaluatedById], references: [id])
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@map("session_evaluations")
 }
 
 /**

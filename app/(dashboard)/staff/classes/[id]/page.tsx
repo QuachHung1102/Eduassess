@@ -9,6 +9,7 @@ import { DropStudentButton } from "./DropStudentButton";
 import { AddTeachersButton } from "./AddTeachersButton";
 import { RemoveClassTeacherButton } from "./RemoveClassTeacherButton";
 import { SessionOccurrenceTable } from "./SessionOccurrenceTable";
+import { STUDENT_LEVEL_LABEL as LEVEL_LABEL } from "@/lib/constants/labels";
 import type { ClassStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,6 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-700",
 };
 const MODE_LABEL: Record<string, string> = { ONLINE: "Online", OFFLINE: "Offline", HYBRID: "Hybrid" };
-const LEVEL_LABEL: Record<string, string> = { WEAK: "Yếu", AVERAGE: "Trung bình", GOOD: "Khá / Giỏi" };
 const DAY_LABEL: Record<string, string> = {
   MON: "T.2", TUE: "T.3", WED: "T.4", THU: "T.5", FRI: "T.6", SAT: "T.7", SUN: "CN",
 };

@@ -66,7 +66,7 @@ Quy tắc `can(user, key)`:
 4. Kết quả cache trong process **5 phút**; gọi `invalidatePermissionCache()` sau khi sửa matrix.
 
 - **Source of truth của key:** `lib/auth/permission-keys.ts` (`PERMISSIONS`). Quy ước key `<domain>.<action>`. Thêm feature có phân quyền ⇒ thêm key ở đây **+ cập nhật seed**.
-- Mọi hành động nhạy cảm ghi `AuditLog` (`lib/...` → model `AuditLog`): phân quyền, duyệt/từ chối booking, tạo lớp, đánh giá năng lực, phân học sinh.
+- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
 
 ### 2.4 Routing & navigation
 
@@ -97,7 +97,7 @@ Quy tắc `can(user, key)`:
 
 **`StaffPosition`** (chỉ khi role = STAFF): `NVSALE` (tư vấn), `NVLT` (lễ tân — duyệt đặt phòng), `CBNK` (ngoại khóa), `CBDH` (du học), **`CBDT`** (cán bộ đào tạo — vai trò domain trung tâm), **`CBDTS`** (super CBDT, quản & phân công CBDT qua `supervisorId` và `StudentAdvisor`).
 
-Quan hệ người: `User.supervisorId` (CBDTS → CBDT), `ParentStudent` (phụ huynh ↔ học sinh, có `isPrimary`), `StudentAdvisor` (CBDTS phân Student cho CBDT — quan hệ này quyết định CBDT nào được đánh giá & tạo lớp cho HS đó).
+Quan hệ người: `User.supervisorId` (CBDTS → CBDT), `ParentStudent` (phụ huynh ↔ học sinh, có `isPrimary`), `StudentAdvisor` (CBDTS phân Student cho CBDT — quyết định CBDT nào được **đánh giá** HS đó; enforce qua `canEvaluateStudent`, OWNER/ADMIN/CBDTS bỏ qua giới hạn).
 
 ---
 
@@ -112,7 +112,7 @@ Trạng thái: ✅ đã có · 🚧 một phần / cần sửa · 📋 roadmap (
 - Tài khoản (`/admin/users`) · Phân quyền vai trò (`/admin/role-permissions`) · Phòng (`/admin/rooms`) · Lớp học (`/admin/classes`) · Môn học (`/admin/subjects`) · Đề kiểm tra (`/admin/exams`) · Flashcard (`/admin/flashcards`) · Ngân hàng câu hỏi (`/admin/questions`, duyệt PENDING→APPROVED) · Khóa học online (`/admin/courses`, duyệt) · Quản lý permission (`/admin/permissions`).
 
 ### `/staff` — Nhân viên (CBĐT/CBDTS/NVLT…)
-- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`, lịch sử dụng phòng `/staff/rooms/schedule`) · Học sinh (`/staff/students`, `/staff/students/[id]`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
+- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`, lịch sử dụng phòng `/staff/rooms/schedule`) · **Tiến độ học sinh** (`/staff/overview` — tổng quan mức năng lực + điểm danh + đánh giá-buổi của HS được phân) · Học sinh (`/staff/students`, `/staff/students/[id]`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
 
 ### `/teacher` — Giáo viên
 - Ngân hàng câu hỏi (`/teacher/question-bank`, create, edit, `ai-suggest`) · Đề kiểm tra (`/teacher/exams`, create, `[id]/results`) · Lớp học (`/teacher/classes`, sessions, điểm danh) · Khóa học online (`/teacher/courses`, lessons) · **Lịch rảnh** (`/teacher/schedule`) · Đặt phòng.
@@ -144,6 +144,7 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 - `ClassTeacher` (n-n GV↔lớp) · `ClassEnrollment` (HS trong lớp, `ACTIVE`/`DROPPED`).
 - `ClassSession` (buổi cụ thể: date, time, mode, roomId nullable, teacherId, `SessionStatus`).
 - `Attendance` (`PRESENT`/`ABSENT`/`LATE`/`EXCUSED`).
+- `SessionEvaluation` (GV đánh giá HS sau 1 buổi: `performance`/`diligence`/`comprehension` thang 1–5 nullable + note, unique `(sessionId, studentId)`) — đầu vào cho Assessment.
 - `StudentAvailability` / `TeacherAvailability` (matrix 7 ngày × TimeSlot × `AvailabilityMode`).
 - `StudentSubjectLevel` (**lịch sử** đánh giá; lấy hiện tại = ORDER BY `evaluatedAt` DESC LIMIT 1) · `StudentAdvisor` (CBDTS phân HS cho CBĐT).
 
@@ -159,7 +160,7 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 ### Phòng & đặt phòng (`booking.prisma`, `room_schedule.prisma`)
 `Room` (capacity, isActive, 1:1 `RoomLayoutImage`) · `BookingReason` (label + priority) · `RoomBooking` (requester/bookedFor/reviewer, start/end, `BookingStatus`) · `RoomLayoutImage` (ảnh sơ đồ vị trí phòng: `url` + `publicId` Cloudinary, 1:1 với Room) · `RoomOccupancy` (bảng `room_occupancies` — xem dưới).
 
-> ⚠️ **Chưa có trong schema** (đang là khái niệm/roadmap, xem §7): model `Quiz` riêng, mức `EXCELLENT` của `StudentLevel`.
+> ⚠️ **Chưa có trong schema** (đang là khái niệm/roadmap, xem §7): model `Quiz` riêng.
 >
 > ✅ **RoomSchedule đã là bảng denormalized** (ADR-0001 đã triển khai, model `RoomOccupancy` trong `prisma/schema/room_schedule.prisma`): hợp nhất 2 nguồn — ClassSession (SCHEDULED/COMPLETED, có roomId) + RoomBooking (APPROVED) — mỗi block giữ FK về nguồn (`sessionId`/`bookingId`, onDelete Cascade nên xóa lớp/phòng/booking tự dọn block). **Mọi đường ghi** đi qua module thuần `lib/rooms/store.ts` (`syncSessionOccupancy`, `syncBookingOccupancy`, `occupyForSessions`) trong **cùng transaction** với hành động gốc; **mọi đường check/đọc lịch phòng** (`checkSessionConflict`, seam booking, `getEligibleRoomsBySlot`, `getAvailableRooms`, `getRoomUsageForDate`) đọc bảng này qua `findRoomConflict`/`getOccupanciesBetween`. Tầng cuối chống đua tranh: EXCLUDE constraint `room_occupancies_no_overlap` (btree_gist, khoảng nửa mở `[startsAt, endsAt)`) — DB từ chối hai block giao nhau trên cùng phòng, seam bắt `isOverlapViolation()` để trả lỗi thân thiện. Check **GV trùng giờ** vẫn query `ClassSession` (GV không phải phòng). Nghi drift: `npm run db:rebuild-occupancy` (dựng lại từ nguồn), `npm run db:check-occupancy` (đếm + kiểm constraint).
 
@@ -170,10 +171,13 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 
 ## 6. Vòng đời & workflow cốt lõi
 
-- **Đánh giá năng lực (Assessment):** hiện **thủ công** — CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction` trong `lib/classes/actions.ts`. Mức: `WEAK` / `AVERAGE` / `GOOD` (ngưỡng <50 / 50–79 / 80–100 là ý nghĩa tham chiếu, **chưa** tự tính từ điểm Exam — xem roadmap §7.2). Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
-- **Phân học sinh:** CBDTS phân Student cho CBĐT (`StudentAdvisor`) → CBĐT mới được đánh giá & tạo lớp cho HS đó.
+> Liệt kê theo vòng đời: **phân HS → đánh giá ban đầu → tạo lớp → phân công → dạy & đánh giá theo buổi → bù buổi**.
+
+- **Phân học sinh:** CBDTS phân Student cho CBĐT (`StudentAdvisor`) → CBĐT mới được **đánh giá** HS đó (enforce qua `canEvaluateStudent`). Đây là bước đầu của vòng đời. *Quyết định thiết kế:* giới hạn theo phân công **chỉ áp cho đánh giá năng lực**; danh sách HS khả thi khi **tạo lớp cố ý KHÔNG lọc theo advisor** (mọi HS đúng môn/level đều hiện) để CBĐT xếp lớp linh hoạt — **không phải gap, không cần siết**.
+- **Đánh giá năng lực (Assessment):** CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction`. **CBĐT chỉ đánh giá HS được phân công** cho mình (`canEvaluateStudent`; OWNER/ADMIN/CBDTS bỏ qua) — form bị ẩn nếu không phụ trách. **Test đầu vào hiện làm OFFLINE** ⇒ đánh giá **ban đầu** bắt buộc CBĐT nhập tay; chính mức này là đầu vào cho **bộ lọc năng lực khi xếp lớp** (HS chưa có mức → nhãn "Chưa đánh giá"). Quyết định vẫn thủ công nhưng form có **panel tham chiếu theo môn** (`getStudentSubjectReferenceAction`): điểm TB Exam + tỉ lệ điểm danh + trung bình `SessionEvaluation` (3 chiều) + **gợi ý mức** theo ngưỡng <50 / 50–79 / 80–100. Mức đề xuất (`suggestedLevel`) được **điền sẵn tự động** (ưu tiên điểm Exam theo ngưỡng <50/50–79/80–89/≥90, fallback trung bình đánh giá-buổi) — CBĐT chỉ xác nhận/chỉnh. Ghi `StudentSubjectLevel` + `AuditLog` cùng transaction. Mức: `WEAK` / `AVERAGE` / `GOOD` / `EXCELLENT`. Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
 - **Tạo lớp ràng buộc:** CBĐT vẽ Khung lịch tuần trên lưới ngày×giờ → hệ thống **lọc cứng** GV/phòng/HS khả thi (Availability cho người + RoomSchedule cho phòng + Session đã có); chỉ bên khả thi mới hiện. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action trước khi tạo. **Phòng chọn theo TỪNG khung tuần** (`getEligibleRoomsBySlot` trả phòng trống riêng cho mỗi khung — T2 và T4 có thể khác phòng); mỗi buổi sinh ra kế thừa phòng của khung tương ứng. GV/phòng/HS chọn qua **modal tìm-kiếm** (`PickEntityModal`, `components/staff/`) thay vì dropdown — danh sách HS/GV lớn không nhét vừa dropdown. Danh sách HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp", lên đầu) lẫn nhóm **chưa từng được đánh giá môn đó** (nhãn "Chưa đánh giá", `level: null`) — hiển thị đồng thời để CBĐT tự chọn, không ẩn nhóm nào.
 - **Phân công lớp:** xếp GV/HS vào lớp tại trang chi tiết qua bảng chọn tìm-kiếm (HS đúng môn+đúng trình độ mục tiêu gắn nhãn "Phù hợp", đẩy lên đầu). Một lần xác nhận phân nhiều người + gửi noti từng người.
+- **Đánh giá sau buổi học:** trong quá trình học, GV (người dạy buổi / GV của lớp / advisor; OWNER/ADMIN/CBDTS bỏ qua) chấm mỗi HS 3 chiều 1–5 (năng lực/chuyên cần/tiếp thu) ở trang buổi học, ghi `SessionEvaluation` qua `saveSessionEvaluationsAction`. Trung bình theo môn nuôi panel tham chiếu của Assessment (vòng lặp về bước đánh giá).
 - **Buổi bù (makeup):** đánh dấu Session diễn ra/nghỉ; buổi nghỉ → nhập lý do → `CANCELLED`; hệ thống đề xuất ngày bù theo Khung lịch tuần, kiểm tra trùng phòng+GV rồi nối Session mới kế thừa phòng/GV gốc.
 - **Câu hỏi:** Teacher tạo → PENDING; Admin tạo/duyệt → APPROVED. Trường "Chủ đề" là option-list theo (môn+khối), server kiểm tra `topicName` thuộc đúng `subjectId+gradeId`.
 - **Khóa học:** Teacher soạn DRAFT → gửi PENDING → Admin duyệt PUBLISHED → ARCHIVED.
@@ -185,22 +189,18 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 
 > Phần này mô tả công việc **chưa hoàn thành / sắp xây**, xếp theo giai đoạn: giai đoạn trước là nền cho giai đoạn sau, trong cùng giai đoạn thứ tự bullet = thứ tự ưu tiên. Đánh dấu để agent phân biệt với hiện trạng. Khi một mục được build xong, chuyển mô tả lên §4–6 và xóa khỏi đây.
 
-### 7.1 Giai đoạn 1 — Nền tảng lịch phòng
+### 7.1 Giai đoạn 1 — Nền tảng lịch phòng (gần xong)
 
-> ✅ **RoomSchedule / RoomOccupancy (ADR-0001) đã triển khai** — bảng `room_occupancies` + module `lib/rooms/store.ts` + EXCLUDE constraint, mọi đường check/đọc đã migrate (xem §5). Còn lại trong giai đoạn:
+> ✅ Đã triển khai & ghi ở §5 / §8: **RoomSchedule / RoomOccupancy** (ADR-0001) và **RoomLayoutImage**. Còn lại một mục tùy chọn:
 
-- 📋 **Lưới xếp lịch hàng loạt:** lưới phòng × khung giờ 07:00–22:00 cho phép *chọn* phòng+giờ cho nhiều lớp/buổi trong một luồng — ô bị chiếm tô đỏ & khóa, bấm các ô trống liên tiếp để chọn. Khác hai thứ đã có: `SessionScheduler` (chọn cho *một* buổi lẻ) và `/staff/rooms/schedule` (chỉ *xem*, không chọn). Đọc occupancy qua `getOccupanciesBetween` (`lib/rooms/store.ts`).
+- 📋 *(speculative — chưa rõ nhu cầu thực tế, cân nhắc bỏ)* **Lưới xếp lịch hàng loạt:** lưới phòng × khung giờ 07:00–22:00 cho phép *chọn* phòng+giờ cho nhiều lớp/buổi trong một luồng. Khác hai thứ đã có: `SessionScheduler` (chọn cho *một* buổi lẻ) và `/staff/rooms/schedule` (chỉ *xem*). Đọc occupancy qua `getOccupanciesBetween`.
 
-> ✅ **RoomLayoutImage đã triển khai** — model `RoomLayoutImage` (1:1 Room), upload `/api/rooms/upload` (permission-checked, trả url+publicId), `RoomFormModal` bắt buộc ảnh khi tạo + dọn ảnh cũ trên Cloudinary khi thay/xóa (`lib/booking/room-actions.ts`), nút "Xem vị trí" (`components/rooms/RoomLayoutButton.tsx`) ở `/staff/rooms` + `/admin/rooms`.
+### 7.2 Giai đoạn 2 — Hoàn thiện hạt nhân Assessment (cốt lõi đã xong)
 
-### 7.2 Giai đoạn 2 — Hoàn thiện hạt nhân Assessment
+Assessment là tính năng cốt lõi (§6). **Đã xong toàn bộ phần cốt lõi:** GV đánh giá sau mỗi buổi học (`SessionEvaluation`); panel tham chiếu gom điểm Exam/điểm danh/đánh giá-buổi; **đề xuất mức bán tự động** (`suggestedLevel` điền sẵn theo quy tắc ngưỡng, CBĐT xác nhận) + ghi `AuditLog`; mức **`EXCELLENT`** (nhãn/màu tập trung ở `lib/constants/labels.ts`); **Trang tổng quan CBĐT** (`/staff/overview`). *(Test đầu vào làm OFFLINE nên mức **ban đầu** vẫn do CBĐT nhập tay — auto chỉ tinh chỉnh khi đã có điểm/đánh giá trong quá trình học.)* Còn lại các mục mở rộng/tùy chọn:
 
-Assessment là tính năng cốt lõi (§6) nhưng đang **thủ công 100%** — CBĐT tự chọn mức, chưa dùng dữ liệu nào từ ExamAttempt/Attendance đã có sẵn. Giai đoạn này biến dữ liệu đó thành đầu vào đánh giá.
-
-- 📋 **Giáo viên đánh giá sau mỗi buổi học** (năng lực / chuyên cần / mức độ tiếp thu): cần model mới gắn (Session × Student) + permission key mới; làm dữ liệu để CBĐT đánh giá chính xác hơn & xếp lớp phù hợp.
-- 📋 **Assessment bán tự động từ điểm Exam:** quy tắc/AI tổng hợp ExamAttempt (+ đánh giá theo buổi nếu có) → **đề xuất** `StudentSubjectLevel`; CBĐT xác nhận mới ghi (human-in-the-loop, giữ `evaluatedById` + AuditLog như luồng thủ công).
-- 📋 Mức **`EXCELLENT`** cho HS đạt full GOOD trong quá trình học (mở rộng enum `StudentLevel` — xem **ProficiencyLevel** §8).
-- 📋 **Trang tổng quan CBĐT** theo dõi tiến độ HS trong lớp (điểm danh + kết quả đánh giá năng lực + tiến độ Course nếu có) — nơi tiêu thụ dữ liệu của các mục trên, nên làm sau cùng trong giai đoạn.
+- 📋 *(tùy chọn)* Thay quy tắc ngưỡng bằng **đề xuất AI** nếu cần tổng hợp tinh vi hơn.
+- 📋 *(mở rộng)* **Trang tổng quan CBĐT** (`/staff/overview`) hiện liệt kê HS được phân + mức năng lực + điểm danh + TB đánh giá-buổi; có thể bổ sung tiến độ Course / lọc theo lớp nếu cần.
 
 ### 7.3 Giai đoạn 3 — Thông báo & tiện ích vận hành
 
@@ -263,10 +263,13 @@ _Avoid_: Reschedule, Compensatory session, Dạy bù (trong code)
 
 ### Đánh giá năng lực
 
-**Assessment** — Hành động Teacher/CBDT/AI đánh giá năng lực hiện tại của Student theo Subject, dựa trên điểm các Exam đã làm. Tính năng cốt lõi. UI: "Đánh giá năng lực".
+**Assessment** — Hành động CBDT (tương lai: AI hỗ trợ) chốt mức năng lực hiện tại của Student theo Subject, ghi `SubjectLevel`. Tham chiếu điểm Exam + đánh giá-buổi + điểm danh, nhưng test đầu vào làm offline nên **mức ban đầu do CBĐT nhập tay**. Chỉ CBĐT được phân công HS đó mới đánh giá được. Tính năng cốt lõi. UI: "Đánh giá năng lực".
 _Avoid_: Evaluation, Review, Grading, Nhận xét
 
-**ProficiencyLevel** — Mức năng lực gán cho Student trên một Subject: `WEAK` (<50), `AVERAGE` (50–79), `GOOD` (80–100); dự kiến thêm `EXCELLENT`. UI: "Mức năng lực".
+**SessionEvaluation** — Đánh giá của GV cho một Student **sau một Session** trên 3 chiều thang 1–5: `performance` (năng lực) / `diligence` (chuyên cần) / `comprehension` (tiếp thu) + ghi chú. 1 bản ghi/`(sessionId, studentId)`; là dữ liệu đầu vào để CBĐT ra `SubjectLevel` chính xác hơn (gom trung bình theo môn trong panel tham chiếu). Khác **Assessment**: đây là đánh giá *từng buổi* của GV, không phải mức năng lực *tổng* trên môn. UI: "Đánh giá sau buổi học".
+_Avoid_: Rating, Feedback, Review, Đánh giá (khi nói mức năng lực môn — dùng Assessment/SubjectLevel)
+
+**ProficiencyLevel** — Mức năng lực gán cho Student trên một Subject: `WEAK` (<50), `AVERAGE` (50–79), `GOOD` (80–89), `EXCELLENT` (90–100). Ngưỡng dùng cho gợi ý tự động; CBĐT có thể chốt khác. Nhãn/màu tập trung ở `lib/constants/labels.ts` (`STUDENT_LEVEL_LABEL`/`STUDENT_LEVEL_COLOR`/`STUDENT_LEVELS`). UI: "Mức năng lực".
 _Avoid_: Skill Level, Rating, Rank, Grade (nhầm khối lớp), StudentLevel
 
 **SubjectLevel** — Bản ghi gán một ProficiencyLevel cho Student trên một Subject tại thời điểm cụ thể (model `StudentSubjectLevel`). UI: "Năng lực môn của học sinh".

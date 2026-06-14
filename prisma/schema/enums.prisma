@@ -136,9 +136,10 @@ enum TimeSlot {
 }
 
 enum StudentLevel {
-  WEAK     // Yếu
-  AVERAGE  // Trung bình
-  GOOD     // Khá / Giỏi
+  WEAK      // Yếu
+  AVERAGE   // Trung bình
+  GOOD      // Khá / Giỏi
+  EXCELLENT // Xuất sắc
 }
 
 enum OccupancySource {

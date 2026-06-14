@@ -64,6 +64,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/booking",                label: "Đặt phòng",       icon: faCalendarCheck, permission: P.BOOKING_CREATE.key },
     { href: "/staff/rooms",            label: "Phòng",           icon: faDoorOpen,      permission: P.ROOM_VIEW.key },
     { href: "/booking/approve",        label: "Duyệt đặt phòng", icon: faClipboardList, permission: P.BOOKING_APPROVE.key },
+    { href: "/staff/overview",         label: "Tiến độ học sinh",icon: faChartLine,     permission: P.STUDENT_VIEW_ASSIGNED.key },
     { href: "/staff/students",         label: "Học sinh",        icon: faChildren,      permission: P.STUDENT_VIEW_ASSIGNED.key },
     { href: "/staff/students/assign",  label: "Phân công CBDT",  icon: faUserGroup,     permission: P.STUDENT_ASSIGN.key },
     { href: "/staff/classes",          label: "Lớp học",         icon: faSchool,        permission: P.CLASS_VIEW_ALL.key },

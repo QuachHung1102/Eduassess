@@ -1,21 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getStudentDetail, getSubjectsList } from "@/lib/classes/queries";
+import { auth } from "@/auth";
+import { getStudentDetail, getSubjectsList, canEvaluateStudent } from "@/lib/classes/queries";
 import { saveStudentAvailabilityAction } from "@/lib/classes/actions";
 import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import { EvaluateForm } from "./EvaluateForm";
+import {
+  STUDENT_LEVEL_LABEL as LEVEL_LABEL,
+  STUDENT_LEVEL_COLOR as LEVEL_COLOR,
+} from "@/lib/constants/labels";
 import type { DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const LEVEL_LABEL: Record<string, string> = {
-  WEAK: "Yếu", AVERAGE: "Trung bình", GOOD: "Khá/Giỏi",
-};
-const LEVEL_COLOR: Record<string, string> = {
-  WEAK: "bg-red-100 text-red-700",
-  AVERAGE: "bg-yellow-100 text-yellow-700",
-  GOOD: "bg-green-100 text-green-700",
-};
 const CLASS_STATUS_LABEL: Record<string, string> = {
   RECRUITING: "Tuyển sinh", ONGOING: "Đang học",
 };
@@ -33,6 +30,9 @@ export default async function StudentDetailPage({
   if (!data.student) notFound();
 
   const { student, availability, levelHistory, advisorLinks } = data;
+
+  const sessionUser = (await auth())?.user;
+  const canEvaluate = sessionUser ? await canEvaluateStudent(sessionUser, id) : false;
 
   return (
     <div className="flex flex-col gap-5">
@@ -123,7 +123,13 @@ export default async function StudentDetailPage({
         {/* Evaluation form */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <h2 className="font-semibold text-gray-800 mb-4">Đánh giá năng lực</h2>
-          <EvaluateForm studentId={id} subjects={subjects} />
+          {canEvaluate ? (
+            <EvaluateForm studentId={id} subjects={subjects} />
+          ) : (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+              Bạn không phụ trách học sinh này nên không thể đánh giá. Chỉ CBĐT được CBDTS phân công mới đánh giá được.
+            </p>
+          )}
 
           {/* Level history */}
           <div className="mt-5">
