@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission, requireSession } from "@/lib/auth/require";
 import { PERMISSIONS } from "@/lib/auth/permission-keys";
+import { findRoomConflict, isOverlapViolation, syncBookingOccupancy } from "@/lib/rooms/store";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -24,23 +25,22 @@ export type BookingFormData = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Kiểm tra conflict: startAt < existing.endAt AND endAt > existing.startAt (APPROVED only) */
-async function hasConflict(
+/**
+ * Thông báo lỗi khi phòng đã bị chiếm trong khoảng [startAt, endAt) —
+ * check trên room_occupancies nên bắt cả buổi học của lớp lẫn booking đã duyệt.
+ * Trả null nếu phòng trống.
+ */
+async function conflictMessage(
   roomId: string,
   startAt: Date,
   endAt: Date,
-  excludeId?: string,
-): Promise<boolean> {
-  const count = await prisma.roomBooking.count({
-    where: {
-      roomId,
-      status: "APPROVED",
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-      startAt: { lt: endAt },
-      endAt: { gt: startAt },
-    },
-  });
-  return count > 0;
+  excludeBookingId?: string,
+): Promise<string | null> {
+  const conflict = await findRoomConflict({ roomId, startsAt: startAt, endsAt: endAt, excludeBookingId });
+  if (!conflict) return null;
+  return conflict.source === "CLASS_SESSION"
+    ? `Phòng đã có buổi học của lớp "${conflict.label}" trong khung giờ này. Vui lòng chọn thời gian khác.`
+    : "Phòng đã được đặt trong khung giờ này. Vui lòng chọn thời gian khác.";
 }
 
 // ─── Create Booking ───────────────────────────────────────────────────────────
@@ -82,10 +82,8 @@ export async function createBookingAction(data: BookingFormData) {
   if (!room) return { error: "Phòng không tồn tại hoặc đang bảo trì" };
   if (!reason) return { error: "Lý do không hợp lệ" };
 
-  const conflict = await hasConflict(data.roomId, startAt, endAt);
-  if (conflict) {
-    return { error: "Phòng đã được đặt trong khung giờ này. Vui lòng chọn thời gian khác." };
-  }
+  const conflictMsg = await conflictMessage(data.roomId, startAt, endAt);
+  if (conflictMsg) return { error: conflictMsg };
 
   await prisma.roomBooking.create({
     data: {
@@ -147,15 +145,26 @@ export async function reviewBookingAction(
   }
 
   if (action === "approve") {
-    // Re-check conflict khi duyệt
-    const conflict = await hasConflict(booking.roomId, booking.startAt, booking.endAt, bookingId);
-    if (conflict) {
-      return { error: "Phòng đã có lịch đặt trùng thời gian này. Hãy từ chối yêu cầu này." };
+    // Re-check conflict khi duyệt (cả buổi học lẫn booking khác đã duyệt)
+    const conflictMsg = await conflictMessage(booking.roomId, booking.startAt, booking.endAt, bookingId);
+    if (conflictMsg) {
+      return { error: `${conflictMsg} Hãy từ chối yêu cầu này.` };
     }
-    await prisma.roomBooking.update({
-      where: { id: bookingId },
-      data: { status: "APPROVED", reviewerId: auth.user.id, reviewedAt: new Date() },
-    });
+    try {
+      // Duyệt + chiếm block phòng trong cùng transaction (ADR-0001);
+      // EXCLUDE constraint chặn nốt trường hợp hai người duyệt đồng thời.
+      await prisma.$transaction(async (tx) => {
+        const approved = await tx.roomBooking.update({
+          where: { id: bookingId },
+          data: { status: "APPROVED", reviewerId: auth.user.id, reviewedAt: new Date() },
+        });
+        await syncBookingOccupancy(approved, tx);
+      });
+    } catch (err) {
+      if (isOverlapViolation(err))
+        return { error: "Phòng vừa bị lịch khác chiếm. Tải lại trang và từ chối yêu cầu này." };
+      throw err;
+    }
   } else {
     if (!rejectReason?.trim()) {
       return { error: "Vui lòng nhập lý do từ chối" };

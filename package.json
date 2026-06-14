@@ -15,7 +15,9 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:rebuild-occupancy": "tsx scripts/rebuild-room-occupancy.ts",
+    "db:check-occupancy": "tsx scripts/check-occupancy.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",

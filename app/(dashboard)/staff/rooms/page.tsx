@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { FaIcon } from "@/components/ui/FaIcon";
-import { faDoorOpen, faCalendarCheck, faChair } from "@fortawesome/free-solid-svg-icons";
+import { RoomLayoutButton } from "@/components/rooms/RoomLayoutButton";
+import { faDoorOpen, faCalendarCheck, faChair, faTableCellsLarge } from "@fortawesome/free-solid-svg-icons";
 
 async function getRoomsForStaff() {
   const now = new Date();
@@ -16,6 +17,7 @@ async function getRoomsForStaff() {
           sessions: true,
         },
       },
+      layoutImage: { select: { url: true } },
       bookings: {
         where: {
           status: "APPROVED",
@@ -54,13 +56,22 @@ export default async function StaffRoomsPage() {
             {rooms.length} phòng · {activeCount} đang hoạt động
           </p>
         </div>
-        <Link
-          href="/booking"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          <FaIcon icon={faCalendarCheck} />
-          Đặt phòng
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/staff/rooms/schedule"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <FaIcon icon={faTableCellsLarge} />
+            Lịch sử dụng phòng
+          </Link>
+          <Link
+            href="/booking"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <FaIcon icon={faCalendarCheck} />
+            Đặt phòng
+          </Link>
+        </div>
       </div>
 
       {/* Grid */}
@@ -114,6 +125,7 @@ function RoomCard({ room }: { room: RoomItem }) {
             <p className="text-xs text-gray-400 mt-0.5 truncate">{room.description}</p>
           )}
         </div>
+        <RoomLayoutButton roomName={room.name} layoutImageUrl={room.layoutImage?.url ?? null} />
       </div>
 
       {/* Meta */}

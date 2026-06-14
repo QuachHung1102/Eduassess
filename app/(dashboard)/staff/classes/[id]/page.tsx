@@ -24,6 +24,9 @@ const STATUS_COLOR: Record<string, string> = {
 };
 const MODE_LABEL: Record<string, string> = { ONLINE: "Online", OFFLINE: "Offline", HYBRID: "Hybrid" };
 const LEVEL_LABEL: Record<string, string> = { WEAK: "Yếu", AVERAGE: "Trung bình", GOOD: "Khá / Giỏi" };
+const DAY_LABEL: Record<string, string> = {
+  MON: "T.2", TUE: "T.3", WED: "T.4", THU: "T.5", FRI: "T.6", SAT: "T.7", SUN: "CN",
+};
 
 export default async function StaffClassDetailPage({
   params,
@@ -127,6 +130,28 @@ export default async function StaffClassDetailPage({
               </span>
             )}
             <span className="text-gray-400">· mục tiêu {cls.sessionCount} buổi</span>
+          </div>
+        )}
+
+        {/* Khung lịch tuần — mỗi khung kèm phòng cố định của nó */}
+        {cls.weeklySlots.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-medium text-gray-500 mb-1.5">Khung lịch tuần</p>
+            <div className="flex flex-wrap gap-2">
+              {cls.weeklySlots.map((slot, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs shadow-sm"
+                >
+                  <span className="font-semibold text-gray-700">{DAY_LABEL[slot.dayOfWeek] ?? slot.dayOfWeek}</span>
+                  <span className="text-gray-500">{slot.startTime}–{slot.endTime}</span>
+                  <span className="text-gray-300">·</span>
+                  <span className={slot.room ? "text-blue-600 font-medium" : "text-gray-400"}>
+                    {slot.room ? slot.room.name : cls.mode === "ONLINE" ? "Online" : "Chưa gán phòng"}
+                  </span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>

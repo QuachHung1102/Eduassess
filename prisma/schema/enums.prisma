@@ -141,6 +141,11 @@ enum StudentLevel {
   GOOD     // Khá / Giỏi
 }
 
+enum OccupancySource {
+  CLASS_SESSION // Block sinh từ buổi học của lớp
+  BOOKING       // Block sinh từ đặt phòng đã duyệt
+}
+
 enum AvailabilityMode {
   BUSY         // Bận — không học được
   BOTH         // Rảnh — cả offline lẫn online

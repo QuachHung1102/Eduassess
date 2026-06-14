@@ -13,10 +13,26 @@ type Props = {
   reasons: Reason[];
 };
 
+/** Định dạng Date → chuỗi cho input datetime-local (giờ địa phương). */
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function BookingForm({ rooms, reasons }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Set khi mở modal (tránh lệch SSR/client); chặn chọn giờ quá khứ.
+  const [minDateTime, setMinDateTime] = useState("");
+  const [startValue, setStartValue] = useState("");
+
+  function openModal() {
+    setMsg(null);
+    setMinDateTime(toLocalInput(new Date()));
+    setStartValue("");
+    setOpen(true);
+  }
 
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
@@ -40,6 +56,22 @@ export function BookingForm({ rooms, reasons }: Props) {
       note: (fd.get("note") as string) || undefined,
     };
 
+    // Validate phía client để báo sớm, không đợi server.
+    if (!data.startAt || !data.endAt) {
+      setMsg({ type: "error", text: "Vui lòng chọn thời gian bắt đầu và kết thúc" });
+      return;
+    }
+    const start = new Date(data.startAt);
+    const end = new Date(data.endAt);
+    if (start < new Date()) {
+      setMsg({ type: "error", text: "Không thể đặt phòng trong quá khứ" });
+      return;
+    }
+    if (end <= start) {
+      setMsg({ type: "error", text: "Giờ kết thúc phải sau giờ bắt đầu" });
+      return;
+    }
+
     startTransition(async () => {
       const res = await createBookingAction(data);
       if (res.error) {
@@ -56,10 +88,7 @@ export function BookingForm({ rooms, reasons }: Props) {
     <>
       <button
         type="button"
-        onClick={() => {
-          setMsg(null);
-          setOpen(true);
-        }}
+        onClick={openModal}
         className="hover-action-primary focus-ring-strong press-feedback-inset inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
       >
         <FaIcon icon={faPlus} /> Đặt phòng mới
@@ -134,6 +163,9 @@ export function BookingForm({ rooms, reasons }: Props) {
                     type="datetime-local"
                     name="startAt"
                     required
+                    min={minDateTime}
+                    value={startValue}
+                    onChange={(e) => setStartValue(e.target.value)}
                     className="focus-ring-soft w-full rounded-lg border border-(--border-soft) bg-surface px-3 py-2 text-sm"
                   />
                 </div>
@@ -143,6 +175,7 @@ export function BookingForm({ rooms, reasons }: Props) {
                     type="datetime-local"
                     name="endAt"
                     required
+                    min={startValue || minDateTime}
                     className="focus-ring-soft w-full rounded-lg border border-(--border-soft) bg-surface px-3 py-2 text-sm"
                   />
                 </div>

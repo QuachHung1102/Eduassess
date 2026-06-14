@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { getSubjectsList, getTeachersList, getActiveRoomsList } from "@/lib/classes/queries";
+import { getSubjectsList, getTeachersList } from "@/lib/classes/queries";
 import { ClassBuilder } from "./ClassBuilder";
 
 export default async function NewClassPage() {
-  const [subjects, teachers, rooms] = await Promise.all([
+  const [subjects, teachers] = await Promise.all([
     getSubjectsList(),
     getTeachersList(),
-    getActiveRoomsList(),
   ]);
 
   return (
@@ -22,7 +21,7 @@ export default async function NewClassPage() {
       </div>
 
       <div className="rounded-xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border-soft)" }}>
-        <ClassBuilder subjects={subjects} teachers={teachers} rooms={rooms} />
+        <ClassBuilder subjects={subjects} teachers={teachers} />
       </div>
     </div>
   );

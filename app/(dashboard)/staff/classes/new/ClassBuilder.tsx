@@ -7,33 +7,36 @@ import {
   AVAILABILITY_DIGITAL_TIME_SLOTS,
   AVAILABILITY_TIME_GROUPS,
 } from "@/lib/availability/time-slots";
-import { DAY_ORDER } from "@/lib/classes/scheduling";
+import { DAY_ORDER, weeklySlotKey } from "@/lib/classes/scheduling";
 import type { WeeklySlotInput } from "@/lib/classes/scheduling";
 import {
   createClassWithScheduleAction,
   getScheduleEligibilityAction,
   getTeacherCellsAction,
-  getRoomBusyCellsAction,
 } from "@/lib/classes/actions";
 import type {
   EligibleRoom,
   EligibleStudent,
   EligibleTeacher,
+  SlotEligibleRooms,
 } from "@/lib/classes/eligibility";
+import { PickEntityModal, type PickItem } from "@/components/staff/PickEntityModal";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faSpinner,
   faTriangleExclamation,
   faMagnifyingGlass,
   faCircleInfo,
-  faCheck,
+  faChalkboardUser,
+  faDoorClosed,
+  faUserGroup,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import type { ClassMode, DayOfWeek, StudentLevel } from "@/lib/types";
 
 interface Props {
   subjects: { id: string; name: string }[];
   teachers: { id: string; name: string | null; email: string }[];
-  rooms: { id: string; name: string; capacity: number }[];
 }
 
 const MODES: { value: ClassMode; label: string }[] = [
@@ -51,7 +54,7 @@ const DAY_LABEL: Record<DayOfWeek, string> = {
   MON: "T.2", TUE: "T.3", WED: "T.4", THU: "T.5", FRI: "T.6", SAT: "T.7", SUN: "CN",
 };
 
-type Priority = "none" | "teacher" | "room";
+type Priority = "none" | "teacher";
 
 const fieldClass = "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2";
 const fieldStyle = {
@@ -64,6 +67,8 @@ const labelStyle = { color: "var(--foreground)" } as const;
 const mutedStyle = {
   color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
 } as const;
+const pickerBtnClass =
+  "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors hover:opacity-90";
 
 function ck(day: DayOfWeek, slot: string): string {
   return `${day}_${slot}`;
@@ -101,12 +106,12 @@ function summarizeSlots(slots: WeeklySlotInput[]): string {
 
 interface Eligibility {
   teachers: EligibleTeacher[];
-  rooms: EligibleRoom[];
+  roomsBySlot: SlotEligibleRooms[];
   students: EligibleStudent[];
   plannedCount: number;
 }
 
-export function ClassBuilder({ subjects, teachers, rooms }: Props) {
+export function ClassBuilder({ subjects, teachers }: Props) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [isFinding, startFinding] = useTransition();
@@ -126,16 +131,20 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
   const [painted, setPainted] = useState<Set<string>>(new Set());
   const [priority, setPriority] = useState<Priority>("none");
   const [priorityTeacherId, setPriorityTeacherId] = useState("");
-  const [priorityRoomId, setPriorityRoomId] = useState("");
-  // blockedCells = không thể tô (GV bận hoặc phòng bận theo pre-constrain)
+  // blockedCells = ô không thể tô (GV bận theo pre-constrain)
   const [blockedCells, setBlockedCells] = useState<Set<string>>(new Set());
 
   // Kết quả lọc + lựa chọn
   const [eligibility, setEligibility] = useState<Eligibility | null>(null);
   const [teacherId, setTeacherId] = useState("");
-  const [roomId, setRoomId] = useState("");
+  // Phòng theo từng khung tuần: slotKey → roomId
+  const [roomBySlot, setRoomBySlot] = useState<Map<string, string>>(new Map());
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
-  const [studentSearch, setStudentSearch] = useState("");
+
+  // Modal phân công
+  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
+  const [studentModalOpen, setStudentModalOpen] = useState(false);
+  const [roomModalSlotKey, setRoomModalSlotKey] = useState<string | null>(null);
 
   const weeklySlots = useMemo(() => deriveWeeklySlots(painted), [painted]);
   const needsRoom = mode !== "ONLINE";
@@ -143,11 +152,20 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
   const scheduleReady =
     weeklySlots.length > 0 && !!startDate && sessionCount > 0 && !!subjectId;
 
+  // slotKey → danh sách phòng khả thi cho khung đó.
+  const roomsBySlotMap = useMemo(() => {
+    const m = new Map<string, EligibleRoom[]>();
+    if (eligibility) for (const e of eligibility.roomsBySlot) m.set(e.slotKey, e.rooms);
+    return m;
+  }, [eligibility]);
+
+  const selectedTeacher = eligibility?.teachers.find((t) => t.id === teacherId) ?? null;
+
   // Bất kỳ thay đổi nào về lịch/thông tin nền ⇒ phải tìm lại danh sách khả thi.
   function invalidateEligibility() {
     setEligibility(null);
     setTeacherId("");
-    setRoomId("");
+    setRoomBySlot(new Map());
     setSelectedStudents(new Set());
   }
 
@@ -163,52 +181,32 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
     invalidateEligibility();
   }
 
-  // ── Pre-constrain: ưu tiên GV / phòng trước ──
+  // ── Pre-constrain: ưu tiên giáo viên trước (xám ô GV bận) ──
   function applyPriority(next: Priority, value: string) {
     setPriority(next);
-    if (next === "teacher") setPriorityTeacherId(value);
-    if (next === "room") setPriorityRoomId(value);
+    setPriorityTeacherId(next === "teacher" ? value : "");
 
     if (next === "none" || !value) {
       setBlockedCells(new Set());
       return;
     }
-    if (next === "teacher") {
-      startConstraining(async () => {
-        const res = await getTeacherCellsAction(value, mode);
-        if ("error" in res) {
-          setError(res.error);
-          return;
-        }
-        const free = new Set(res.cells);
-        // Khóa các ô GV KHÔNG rảnh.
-        const blocked = new Set<string>();
-        for (const day of DAY_ORDER)
-          for (const slot of AVAILABILITY_DIGITAL_TIME_SLOTS)
-            if (!free.has(ck(day, slot))) blocked.add(ck(day, slot));
-        setBlockedCells(blocked);
-        // bỏ các ô đã tô nay bị khóa
-        setPainted((prev) => new Set([...prev].filter((k) => !blocked.has(k))));
-        invalidateEligibility();
-      });
-    }
-    if (next === "room") {
-      if (!startDate) {
-        setError("Chọn ngày bắt đầu trước khi ưu tiên phòng");
+    startConstraining(async () => {
+      const res = await getTeacherCellsAction(value, mode);
+      if ("error" in res) {
+        setError(res.error);
         return;
       }
-      startConstraining(async () => {
-        const res = await getRoomBusyCellsAction(value, startDate, Math.max(1, sessionCount));
-        if ("error" in res) {
-          setError(res.error);
-          return;
-        }
-        const blocked = new Set(res.cells);
-        setBlockedCells(blocked);
-        setPainted((prev) => new Set([...prev].filter((k) => !blocked.has(k))));
-        invalidateEligibility();
-      });
-    }
+      const free = new Set(res.cells);
+      // Khóa các ô GV KHÔNG rảnh.
+      const blocked = new Set<string>();
+      for (const day of DAY_ORDER)
+        for (const slot of AVAILABILITY_DIGITAL_TIME_SLOTS)
+          if (!free.has(ck(day, slot))) blocked.add(ck(day, slot));
+      setBlockedCells(blocked);
+      // bỏ các ô đã tô nay bị khóa
+      setPainted((prev) => new Set([...prev].filter((k) => !blocked.has(k))));
+      invalidateEligibility();
+    });
   }
 
   // ── Tìm GV/phòng/HS khả thi ──
@@ -232,40 +230,52 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
         return;
       }
       setEligibility(res);
-      // tự chọn nếu pre-constrain còn khả thi
+      // tự chọn GV nếu pre-constrain còn khả thi; phòng & HS chọn lại từ đầu.
       setTeacherId(
         priorityTeacherId && res.teachers.some((t) => t.id === priorityTeacherId)
           ? priorityTeacherId
           : "",
       );
-      setRoomId(
-        priorityRoomId && res.rooms.some((r) => r.id === priorityRoomId)
-          ? priorityRoomId
-          : "",
-      );
+      setRoomBySlot(new Map());
       setSelectedStudents(new Set());
     });
   }
 
-  function toggleStudent(id: string) {
-    setSelectedStudents((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  // ── Items cho các modal ──
+  const teacherItems: PickItem[] = useMemo(
+    () =>
+      (eligibility?.teachers ?? []).map((t) => ({
+        id: t.id,
+        label: t.name ?? t.email,
+        sublabel: t.email,
+      })),
+    [eligibility],
+  );
 
-  const filteredStudents = useMemo(() => {
-    if (!eligibility) return [];
-    const q = studentSearch.trim().toLowerCase();
-    if (!q) return eligibility.students;
-    return eligibility.students.filter(
-      (s) =>
-        (s.name ?? "").toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q),
-    );
-  }, [eligibility, studentSearch]);
+  const studentItems: PickItem[] = useMemo(
+    () =>
+      (eligibility?.students ?? []).map((s) => {
+        const parts: string[] = [];
+        if (s.level !== targetLevel) parts.push("Chưa đánh giá");
+        if (s.activeClassCount > 0) parts.push(`${s.activeClassCount} lớp`);
+        return {
+          id: s.id,
+          label: s.name ?? s.email,
+          sublabel: s.email,
+          badge: parts.join(" · ") || undefined,
+          highlighted: s.level === targetLevel,
+        };
+      }),
+    [eligibility, targetLevel],
+  );
+
+  const roomModalItems: PickItem[] = roomModalSlotKey
+    ? (roomsBySlotMap.get(roomModalSlotKey) ?? []).map((r) => ({
+        id: r.id,
+        label: r.name,
+        sublabel: `Sức chứa ${r.capacity} người`,
+      }))
+    : [];
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -273,7 +283,15 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
     if (!name.trim()) return setError("Nhập tên lớp");
     if (!eligibility) return setError("Bấm \"Tìm người & phòng khả thi\" trước");
     if (!teacherId) return setError("Chọn giáo viên");
-    if (needsRoom && !roomId) return setError("Chọn phòng học");
+    if (needsRoom) {
+      const missing = weeklySlots.find(
+        (s) => !roomBySlot.get(weeklySlotKey(s.dayOfWeek, s.startTime, s.endTime)),
+      );
+      if (missing)
+        return setError(
+          `Chọn phòng cho khung ${DAY_LABEL[missing.dayOfWeek]} ${missing.startTime}–${missing.endTime}`,
+        );
+    }
 
     startSaving(async () => {
       const res = await createClassWithScheduleAction({
@@ -282,10 +300,14 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
         mode,
         targetLevel,
         startDate,
-        weeklySlots,
+        weeklySlots: weeklySlots.map((s) => ({
+          ...s,
+          roomId: needsRoom
+            ? roomBySlot.get(weeklySlotKey(s.dayOfWeek, s.startTime, s.endTime))
+            : undefined,
+        })),
         sessionCount,
         teacherId,
-        roomId: needsRoom ? roomId : undefined,
         studentIds: [...selectedStudents],
         note,
       });
@@ -362,7 +384,6 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
                 setBlockedCells(new Set());
                 setPriority("none");
                 setPriorityTeacherId("");
-                setPriorityRoomId("");
                 invalidateEligibility();
               }}
               className={fieldClass}
@@ -408,31 +429,17 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
             2 · Khung lịch tuần
           </h2>
           <div className="flex items-center gap-2 text-xs">
-            <span style={mutedStyle}>Ưu tiên trước:</span>
+            <span style={mutedStyle}>Ưu tiên giáo viên:</span>
             <select
-              value={priority === "teacher" ? `t:${priorityTeacherId}` : priority === "room" ? `r:${priorityRoomId}` : ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!v) return applyPriority("none", "");
-                if (v.startsWith("t:")) return applyPriority("teacher", v.slice(2));
-                return applyPriority("room", v.slice(2));
-              }}
+              value={priority === "teacher" ? priorityTeacherId : ""}
+              onChange={(e) => applyPriority(e.target.value ? "teacher" : "none", e.target.value)}
               className="rounded-lg border px-2 py-1 text-xs"
               style={fieldStyle}
             >
               <option value="">Không (chọn lịch tự do)</option>
-              <optgroup label="Giáo viên (chỉ hiện ô GV rảnh)">
-                {teachers.map((t) => (
-                  <option key={t.id} value={`t:${t.id}`}>{t.name ?? t.email}</option>
-                ))}
-              </optgroup>
-              {needsRoom && (
-                <optgroup label="Phòng (ẩn ô phòng bận)">
-                  {rooms.map((r) => (
-                    <option key={r.id} value={`r:${r.id}`}>{r.name}</option>
-                  ))}
-                </optgroup>
-              )}
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>{t.name ?? t.email}</option>
+              ))}
             </select>
             {isConstraining && (
               <span style={mutedStyle}>
@@ -541,123 +548,123 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
           {/* Giáo viên */}
           <div>
             <label className={labelClass} style={labelStyle}>
-              Giáo viên khả thi ({eligibility.teachers.length}) <span className="text-red-500">*</span>
+              Giáo viên <span className="text-red-500">*</span>
             </label>
             {eligibility.teachers.length === 0 ? (
               <p className="text-xs text-red-500">Không có giáo viên nào rảnh toàn bộ khung lịch này.</p>
             ) : (
-              <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className={fieldClass} style={fieldStyle}>
-                <option value="">-- Chọn giáo viên --</option>
-                {eligibility.teachers.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name ?? t.email}</option>
-                ))}
-              </select>
+              <button
+                type="button"
+                onClick={() => setTeacherModalOpen(true)}
+                className={pickerBtnClass}
+                style={fieldStyle}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span style={mutedStyle}><FaIcon icon={faChalkboardUser} /></span>
+                  <span className="truncate" style={{ color: selectedTeacher ? "var(--foreground)" : "var(--muted-foreground, #9ca3af)" }}>
+                    {selectedTeacher ? selectedTeacher.name ?? selectedTeacher.email : "Chọn giáo viên"}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0 text-xs" style={mutedStyle}>
+                  {eligibility.teachers.length} khả thi
+                  <FaIcon icon={faChevronRight} className="text-[10px]" />
+                </span>
+              </button>
             )}
           </div>
 
-          {/* Phòng */}
+          {/* Phòng theo từng khung tuần */}
           {needsRoom && (
             <div>
               <label className={labelClass} style={labelStyle}>
-                Phòng khả thi ({eligibility.rooms.length}) <span className="text-red-500">*</span>
+                Phòng theo khung lịch <span className="text-red-500">*</span>
               </label>
-              {eligibility.rooms.length === 0 ? (
-                <p className="text-xs text-red-500">Không có phòng nào trống cho toàn bộ buổi.</p>
-              ) : (
-                <select value={roomId} onChange={(e) => setRoomId(e.target.value)} className={fieldClass} style={fieldStyle}>
-                  <option value="">-- Chọn phòng --</option>
-                  {eligibility.rooms.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name} (sức chứa {r.capacity})</option>
-                  ))}
-                </select>
-              )}
+              <p className="mb-2 text-xs" style={mutedStyle}>
+                Mỗi khung lịch trong tuần chọn một phòng riêng — các buổi của khung đó dùng chung phòng này.
+              </p>
+              <div className="space-y-2">
+                {weeklySlots.map((slot) => {
+                  const key = weeklySlotKey(slot.dayOfWeek, slot.startTime, slot.endTime);
+                  const slotRooms = roomsBySlotMap.get(key) ?? [];
+                  const chosen = slotRooms.find((r) => r.id === roomBySlot.get(key)) ?? null;
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                      style={{ borderColor: "var(--border-soft)", background: "var(--surface)" }}
+                    >
+                      <span className="flex items-center gap-2 text-sm" style={{ color: "var(--foreground)" }}>
+                        <span style={mutedStyle}><FaIcon icon={faDoorClosed} /></span>
+                        {DAY_LABEL[slot.dayOfWeek]} · {slot.startTime}–{slot.endTime}
+                      </span>
+                      {slotRooms.length === 0 ? (
+                        <span className="text-xs text-red-500">Không có phòng trống</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setRoomModalSlotKey(key)}
+                          className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors hover:opacity-90"
+                          style={fieldStyle}
+                        >
+                          <span style={{ color: chosen ? "var(--foreground)" : "var(--muted-foreground, #9ca3af)" }}>
+                            {chosen ? `${chosen.name} (${chosen.capacity})` : "Chọn phòng"}
+                          </span>
+                          <span style={mutedStyle}><FaIcon icon={faChevronRight} className="text-[10px]" /></span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           {/* Học sinh */}
           <div>
-            <div className="mb-1 flex items-center justify-between">
-              <label className={labelClass} style={labelStyle}>
-                Học sinh khả thi ({eligibility.students.length}) · đã chọn {selectedStudents.size}
-              </label>
-            </div>
+            <label className={labelClass} style={labelStyle}>
+              Học sinh · đã chọn {selectedStudents.size}
+            </label>
             {eligibility.students.length === 0 ? (
               <p className="text-xs" style={mutedStyle}>
                 Không có học sinh nào đúng môn/năng lực và rảnh khung lịch này. Có thể thêm sau.
               </p>
             ) : (
-              <div className="rounded-lg" style={{ border: "1px solid var(--border-soft)" }}>
-                <div className="border-b p-2" style={{ borderColor: "var(--border-soft)" }}>
-                  <div className="flex items-center gap-2 rounded-md px-2 py-1.5" style={{ background: "var(--surface-strong)" }}>
-                    <span style={mutedStyle}>
-                      <FaIcon icon={faMagnifyingGlass} className="text-xs" />
+              <>
+                <button
+                  type="button"
+                  onClick={() => setStudentModalOpen(true)}
+                  className={pickerBtnClass}
+                  style={fieldStyle}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span style={mutedStyle}><FaIcon icon={faUserGroup} /></span>
+                    <span style={{ color: selectedStudents.size > 0 ? "var(--foreground)" : "var(--muted-foreground, #9ca3af)" }}>
+                      {selectedStudents.size > 0 ? `Đã chọn ${selectedStudents.size} học sinh` : "Chọn học sinh"}
                     </span>
-                    <input
-                      value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder="Tìm theo tên / email"
-                      className="w-full bg-transparent text-sm focus:outline-none"
-                      style={{ color: "var(--foreground)" }}
-                    />
-                  </div>
-                </div>
-                <ul className="max-h-64 overflow-auto themed-scrollbar">
-                  {filteredStudents.map((s) => {
-                    const checked = selectedStudents.has(s.id);
-                    return (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          onClick={() => toggleStudent(s.id)}
-                          className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-black/5"
+                  </span>
+                  <span className="flex items-center gap-2 shrink-0 text-xs" style={mutedStyle}>
+                    {eligibility.students.length} khả thi
+                    <FaIcon icon={faChevronRight} className="text-[10px]" />
+                  </span>
+                </button>
+                {selectedStudents.size > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[...selectedStudents].map((id) => {
+                      const s = eligibility.students.find((x) => x.id === id);
+                      if (!s) return null;
+                      return (
+                        <span
+                          key={id}
+                          className="rounded-full px-2.5 py-1 text-xs"
+                          style={{ background: "var(--surface-strong)", color: "var(--foreground)" }}
                         >
-                          <span
-                            className="flex h-4 w-4 shrink-0 items-center justify-center rounded border"
-                            style={{
-                              borderColor: checked ? "var(--primary)" : "var(--border-soft)",
-                              background: checked ? "var(--primary)" : "transparent",
-                            }}
-                          >
-                            {checked && <FaIcon icon={faCheck} className="text-[8px] text-white" />}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm" style={{ color: "var(--foreground)" }}>
-                              {s.name ?? s.email}
-                              {s.level === targetLevel ? (
-                                <span
-                                  className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                                  style={{
-                                    background: "color-mix(in srgb, var(--primary) 14%, var(--surface))",
-                                    color: "var(--primary)",
-                                  }}
-                                >
-                                  Phù hợp
-                                </span>
-                              ) : (
-                                <span
-                                  className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                                  style={{ background: "var(--surface-strong)", color: "var(--muted-foreground, #6b7280)" }}
-                                >
-                                  Chưa đánh giá
-                                </span>
-                              )}
-                            </span>
-                            <span className="block truncate text-xs" style={mutedStyle}>{s.email}</span>
-                          </span>
-                          {s.activeClassCount > 0 && (
-                            <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px]" style={{ background: "var(--surface-strong)", color: "var(--muted-foreground, #6b7280)" }}>
-                              {s.activeClassCount} lớp
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                  {filteredStudents.length === 0 && (
-                    <li className="px-3 py-4 text-center text-xs" style={mutedStyle}>Không tìm thấy học sinh.</li>
-                  )}
-                </ul>
-              </div>
+                          {s.name ?? s.email}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -695,6 +702,61 @@ export function ClassBuilder({ subjects, teachers, rooms }: Props) {
           {isSaving ? "Đang tạo lớp…" : "Tạo lớp"}
         </button>
       </div>
+
+      {/* Modal chọn giáo viên */}
+      <PickEntityModal
+        open={teacherModalOpen}
+        onClose={() => setTeacherModalOpen(false)}
+        title="Chọn giáo viên"
+        description="Chỉ hiện giáo viên rảnh toàn bộ khung lịch."
+        items={teacherItems}
+        multiSelect={false}
+        initialSelected={teacherId ? [teacherId] : []}
+        confirmLabel="Chọn"
+        emptyText="Không có giáo viên khả thi."
+        onApply={(ids) => setTeacherId(ids[0] ?? "")}
+      />
+
+      {/* Modal chọn học sinh */}
+      <PickEntityModal
+        open={studentModalOpen}
+        onClose={() => setStudentModalOpen(false)}
+        title="Chọn học sinh"
+        description='Học sinh đúng môn + đúng năng lực mục tiêu gắn nhãn "Phù hợp".'
+        items={studentItems}
+        multiSelect
+        initialSelected={[...selectedStudents]}
+        confirmLabel="Thêm"
+        emptyText="Không có học sinh khả thi."
+        onApply={(ids) => setSelectedStudents(new Set(ids))}
+      />
+
+      {/* Modal chọn phòng cho một khung */}
+      <PickEntityModal
+        open={roomModalSlotKey !== null}
+        onClose={() => setRoomModalSlotKey(null)}
+        title="Chọn phòng cho khung lịch"
+        description="Chỉ hiện phòng trống cho mọi buổi của khung này."
+        items={roomModalItems}
+        multiSelect={false}
+        initialSelected={
+          roomModalSlotKey && roomBySlot.get(roomModalSlotKey)
+            ? [roomBySlot.get(roomModalSlotKey)!]
+            : []
+        }
+        confirmLabel="Chọn"
+        emptyText="Không có phòng trống cho khung này."
+        searchPlaceholder="Tìm theo tên phòng..."
+        onApply={(ids) => {
+          if (!roomModalSlotKey) return;
+          setRoomBySlot((prev) => {
+            const next = new Map(prev);
+            if (ids[0]) next.set(roomModalSlotKey, ids[0]);
+            else next.delete(roomModalSlotKey);
+            return next;
+          });
+        }}
+      />
     </form>
   );
 }

@@ -242,6 +242,30 @@ export async function getStudentProgress() {
   });
 }
 
+// ── Lịch học (buổi học của các lớp HS đang theo) ─────────────
+export async function getMyClassSessions() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+  const studentId = session.user.id;
+
+  const enrollments = await prisma.classEnrollment.findMany({
+    where: { studentId, status: "ACTIVE" },
+    select: { classId: true },
+  });
+  const classIds = enrollments.map((e) => e.classId);
+  if (classIds.length === 0) return [];
+
+  return prisma.classSession.findMany({
+    where: { classId: { in: classIds } },
+    include: {
+      class: { select: { name: true, subject: { select: { name: true } } } },
+      room: { select: { name: true } },
+      teacher: { select: { name: true } },
+    },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+  });
+}
+
 // ── Flashcard sets available to all students ─────────────────
 export async function getStudentFlashcardSets(filters?: {
   subjectId?: string;

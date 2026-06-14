@@ -14,11 +14,33 @@ model Room {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings RoomBooking[]
-  sessions ClassSession[]
+  bookings    RoomBooking[]
+  sessions    ClassSession[]
+  occupancies RoomOccupancy[]
+  layoutImage RoomLayoutImage?
+  weeklySlots ClassWeeklySlot[]
 
   @@index([isActive])
   @@map("rooms")
+}
+
+/**
+ * Ảnh sơ đồ vị trí phòng (sơ đồ toàn trung tâm/tầng, highlight đỏ vị trí phòng này).
+ * 1:1 với Room — hiển thị qua nút "Xem vị trí" để người mới định hướng.
+ * - url      : secure_url Cloudinary.
+ * - publicId : public_id Cloudinary, giữ để xóa ảnh cũ khi thay (cleanup).
+ */
+model RoomLayoutImage {
+  id        String   @id @default(cuid())
+  roomId    String   @unique
+  url       String
+  publicId  String? // public_id Cloudinary để xóa ảnh cũ khi thay
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_layout_images")
 }
 
 /**
@@ -63,6 +85,7 @@ model RoomBooking {
   bookedFor  User         @relation("BookingFor", fields: [bookedForId], references: [id])
   reason     BookingReason @relation(fields: [reasonId], references: [id])
   reviewer   User?        @relation("BookingReviewer", fields: [reviewerId], references: [id])
+  occupancy  RoomOccupancy?
 
   @@index([roomId, status])
   @@index([requesterId])

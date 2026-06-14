@@ -51,8 +51,10 @@ model ClassWeeklySlot {
   dayOfWeek DayOfWeek
   startTime String    // "HH:mm"
   endTime   String    // "HH:mm"
+  roomId    String?   // Phòng cố định cho khung này (NULL nếu ONLINE); đóng dấu lên từng ClassSession sinh ra
 
   class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  room  Room? @relation(fields: [roomId], references: [id])
 
   @@unique([classId, dayOfWeek, startTime])
   @@index([classId])
@@ -118,6 +120,7 @@ model ClassSession {
   room        Room?        @relation(fields: [roomId], references: [id])
   teacher     User         @relation("SessionTeacher", fields: [teacherId], references: [id])
   attendances Attendance[]
+  occupancy   RoomOccupancy?
 
   @@index([classId, date])
   @@index([teacherId])

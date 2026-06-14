@@ -1,5 +1,14 @@
 # 0001 — RoomSchedule là bảng denormalized, không phải view computed
 
+**Status: Đã triển khai (2026-06-11).** Bảng `room_occupancies` (model `RoomOccupancy`,
+`prisma/schema/room_schedule.prisma`), module ghi/đọc duy nhất `lib/rooms/store.ts`,
+migration `20260611133020_add_room_occupancy` (backfill + constraint). "Unique
+constraint overlap" trong Decision được hiện thực bằng **EXCLUDE constraint**
+(`EXCLUDE USING gist ("roomId" WITH =, tsrange("startsAt","endsAt") WITH &&)`,
+extension btree_gist) — đúng nghĩa từ chối hai block giao nhau ở tầng DB; khoảng
+nửa mở nên block kề nhau (10:00–12:00 và 12:00–14:00) hợp lệ. Sửa drift:
+`npm run db:rebuild-occupancy`.
+
 ## Context
 
 Lịch phòng (`RoomSchedule`) phải hợp nhất hai nguồn dữ liệu khác nhau:

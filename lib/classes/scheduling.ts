@@ -92,6 +92,18 @@ export function cellKey(dayOfWeek: DayOfWeek, slot: AvailabilityDigitalTimeSlot)
   return `${dayOfWeek}_${slot}`;
 }
 
+/**
+ * Khóa định danh một khung lịch tuần (thứ + giờ bắt đầu/kết thúc) — dùng để
+ * khớp một PlannedSession với khung tuần sinh ra nó (vd gán phòng theo khung).
+ */
+export function weeklySlotKey(
+  dayOfWeek: DayOfWeek,
+  startTime: string,
+  endTime: string,
+): string {
+  return `${dayOfWeek}_${startTime}_${endTime}`;
+}
+
 // ─── Quy tắc khớp hình thức lớp với lịch rảnh ─────────────────
 // OFFLINE: học tại trung tâm → chỉ nhận BOTH.
 // ONLINE : học tại nhà       → nhận BOTH hoặc ONLINE_ONLY.

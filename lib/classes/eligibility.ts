@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { getOccupanciesBetween } from "@/lib/rooms/store";
 import {
   normalizeAvailabilitySlots,
 } from "@/lib/availability/time-slots";
@@ -6,10 +7,10 @@ import {
   allowedAvailabilityModes,
   cellKey,
   coversAllCells,
-  dayOfWeekFromYmd,
-  timeRangeToDigitalSlots,
+  weeklySlotKey,
   type PlannedSession,
   type WeeklyCell,
+  type WeeklySlotInput,
 } from "@/lib/classes/scheduling";
 import type { AvailabilityMode, ClassMode, DayOfWeek, StudentLevel, TimeSlot } from "@/lib/types";
 
@@ -255,70 +256,74 @@ export async function getEligibleStudentsForSchedule(opts: {
     });
 }
 
-// ─── Phòng khả thi ────────────────────────────────────────────
+// ─── Phòng khả thi theo TỪNG khung lịch tuần ──────────────────
+// Mỗi khung tuần (vd T2 18–20h, T4 18–20h) có thể đặt ở một phòng khác nhau.
+// Một phòng khả thi cho một khung ⇔ trống ở MỌI buổi sinh ra từ khung đó.
 
-export async function getEligibleRoomsForSchedule(opts: {
+export interface SlotEligibleRooms {
+  slotKey: string;
+  rooms: EligibleRoom[];
+}
+
+export async function getEligibleRoomsBySlot(opts: {
+  slots: WeeklySlotInput[];
   plannedSessions: PlannedSession[];
   capacityNeeded?: number;
-}): Promise<EligibleRoom[]> {
-  const { plannedSessions, capacityNeeded = 0 } = opts;
-  if (plannedSessions.length === 0) return [];
+}): Promise<SlotEligibleRooms[]> {
+  const { slots, plannedSessions, capacityNeeded = 0 } = opts;
+  if (slots.length === 0 || plannedSessions.length === 0) return [];
 
-  const plannedDates = [...new Set(plannedSessions.map((s) => s.date))];
-  const dateObjs = plannedDates.map((d) => new Date(d));
-  const spanStart = new Date(`${plannedDates.slice().sort()[0]}T00:00:00`);
-  const spanEnd = new Date(`${plannedDates.slice().sort().at(-1)}T23:59:59`);
+  const plannedDates = [...new Set(plannedSessions.map((s) => s.date))].sort();
+  const spanStart = new Date(`${plannedDates[0]}T00:00:00`);
+  const spanEnd = new Date(`${plannedDates.at(-1)}T23:59:59`);
 
-  const [rooms, sessions, bookings] = await Promise.all([
+  const [rooms, blocks] = await Promise.all([
     prisma.room.findMany({
       where: { isActive: true, capacity: { gte: capacityNeeded } },
       select: { id: true, name: true, capacity: true },
       orderBy: { name: "asc" },
     }),
-    prisma.classSession.findMany({
-      where: {
-        date: { in: dateObjs },
-        roomId: { not: null },
-        status: { in: ["SCHEDULED", "COMPLETED"] },
-      },
-      select: { roomId: true, date: true, startTime: true, endTime: true },
-    }),
-    prisma.roomBooking.findMany({
-      where: { status: "APPROVED", startAt: { lt: spanEnd }, endAt: { gt: spanStart } },
-      select: { roomId: true, startAt: true, endAt: true },
-    }),
+    // RoomSchedule (ADR-0001): một nguồn hợp nhất buổi học + đặt phòng đã duyệt.
+    getOccupanciesBetween({ from: spanStart, to: spanEnd }),
   ]);
 
   // roomId → ymd → danh sách khoảng bận.
   const busy = new Map<string, Map<string, { startTime: string; endTime: string }[]>>();
-  function addBusy(roomId: string, ymd: string, startTime: string, endTime: string) {
-    const byDate = busy.get(roomId) ?? new Map();
-    const list = byDate.get(ymd) ?? [];
-    list.push({ startTime, endTime });
-    byDate.set(ymd, list);
-    busy.set(roomId, byDate);
-  }
-  for (const s of sessions) {
-    if (!s.roomId) continue;
-    addBusy(s.roomId, toYmd(s.date), s.startTime, s.endTime);
-  }
-  for (const b of bookings) {
-    addBusy(b.roomId, toYmd(b.startAt), toLocalHhmm(b.startAt), toLocalHhmm(b.endAt));
+  for (const b of blocks) {
+    const byDate = busy.get(b.roomId) ?? new Map();
+    const list = byDate.get(toYmd(b.startsAt)) ?? [];
+    list.push({ startTime: toLocalHhmm(b.startsAt), endTime: toLocalHhmm(b.endsAt) });
+    byDate.set(toYmd(b.startsAt), list);
+    busy.set(b.roomId, byDate);
   }
 
-  return rooms
-    .filter((room) => {
-      const byDate = busy.get(room.id);
-      if (!byDate) return true;
-      for (const ps of plannedSessions) {
-        const intervals = byDate.get(ps.date) ?? [];
-        if (intervals.some((iv) => overlaps(ps.startTime, ps.endTime, iv.startTime, iv.endTime))) {
-          return false;
+  // Gom buổi học theo khung tuần sinh ra nó.
+  const sessionsBySlot = new Map<string, PlannedSession[]>();
+  for (const ps of plannedSessions) {
+    const key = weeklySlotKey(ps.dayOfWeek, ps.startTime, ps.endTime);
+    const list = sessionsBySlot.get(key) ?? [];
+    list.push(ps);
+    sessionsBySlot.set(key, list);
+  }
+
+  return slots.map((slot) => {
+    const key = weeklySlotKey(slot.dayOfWeek, slot.startTime, slot.endTime);
+    const group = sessionsBySlot.get(key) ?? [];
+    const eligible = rooms
+      .filter((room) => {
+        const byDate = busy.get(room.id);
+        if (!byDate) return true;
+        for (const ps of group) {
+          const intervals = byDate.get(ps.date) ?? [];
+          if (intervals.some((iv) => overlaps(ps.startTime, ps.endTime, iv.startTime, iv.endTime))) {
+            return false;
+          }
         }
-      }
-      return true;
-    })
-    .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity }));
+        return true;
+      })
+      .map((r) => ({ id: r.id, name: r.name, capacity: r.capacity }));
+    return { slotKey: key, rooms: eligible };
+  });
 }
 
 // ─── Hỗ trợ "tô khả thi" lên lưới (pre-constrain) ─────────────
@@ -335,47 +340,4 @@ export async function getTeacherAvailableCells(
   const allowed = new Set(allowedAvailabilityModes(mode));
   const map = availabilityMap(rows);
   return [...map.entries()].filter(([, m]) => allowed.has(m)).map(([k]) => k);
-}
-
-/**
- * Tập ô (cellKey) mà phòng BẬN trong khoảng `weeks` tuần kể từ startDate —
- * dùng để tô xám lưới khi chọn phòng trước. Xấp xỉ (an toàn theo hướng lọc cứng):
- * một ô bị coi là bận nếu phòng vướng lịch ở thứ+giờ đó trong BẤT KỲ tuần nào.
- */
-export async function getRoomBusyCells(opts: {
-  roomId: string;
-  startDate: string; // "YYYY-MM-DD"
-  weeks: number;
-}): Promise<string[]> {
-  const { roomId, startDate, weeks } = opts;
-  const spanStart = new Date(`${startDate}T00:00:00`);
-  const spanEnd = new Date(spanStart);
-  spanEnd.setDate(spanEnd.getDate() + weeks * 7);
-
-  const [sessions, bookings] = await Promise.all([
-    prisma.classSession.findMany({
-      where: {
-        roomId,
-        date: { gte: spanStart, lt: spanEnd },
-        status: { in: ["SCHEDULED", "COMPLETED"] },
-      },
-      select: { date: true, startTime: true, endTime: true },
-    }),
-    prisma.roomBooking.findMany({
-      where: { roomId, status: "APPROVED", startAt: { lt: spanEnd }, endAt: { gt: spanStart } },
-      select: { startAt: true, endAt: true },
-    }),
-  ]);
-
-  const busyCells = new Set<string>();
-  function mark(ymd: string, startTime: string, endTime: string) {
-    const dow = dayOfWeekFromYmd(ymd);
-    for (const slot of timeRangeToDigitalSlots(startTime, endTime)) {
-      busyCells.add(cellKey(dow, slot));
-    }
-  }
-  for (const s of sessions) mark(toYmd(s.date), s.startTime, s.endTime);
-  for (const b of bookings) mark(toYmd(b.startAt), toLocalHhmm(b.startAt), toLocalHhmm(b.endAt));
-
-  return [...busyCells];
 }

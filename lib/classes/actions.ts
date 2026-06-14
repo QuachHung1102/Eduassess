@@ -9,18 +9,25 @@ import {
   generateSessionPlan,
   weeklyPatternToCells,
   suggestMakeupDate,
+  weeklySlotKey,
   type WeeklySlotInput,
 } from "@/lib/classes/scheduling";
 import {
   getEligibleTeachersForSchedule,
-  getEligibleRoomsForSchedule,
+  getEligibleRoomsBySlot,
   getEligibleStudentsForSchedule,
   getTeacherAvailableCells,
-  getRoomBusyCells,
   type EligibleTeacher,
-  type EligibleRoom,
   type EligibleStudent,
+  type SlotEligibleRooms,
 } from "@/lib/classes/eligibility";
+import {
+  findRoomConflict,
+  isOverlapViolation,
+  occupyForSessions,
+  sessionOccupancyRange,
+  syncSessionOccupancy,
+} from "@/lib/rooms/store";
 import { revalidatePath } from "next/cache";
 import type { ClassMode, ClassStatus, SessionStatus, AttendanceStatus, StudentLevel, DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
@@ -30,6 +37,11 @@ async function requireSession() {
   if (!session?.user?.id) throw new Error("Chưa đăng nhập");
   return session;
 }
+
+// EXCLUDE constraint trên room_occupancies từ chối hai block giao nhau —
+// thông báo khi thua cuộc đua ghi đồng thời với một CBĐT/NVLT khác.
+const OVERLAP_RACE_ERROR =
+  "Phòng vừa bị lịch khác chiếm trong lúc bạn thao tác. Tải lại trang để xem lịch mới nhất.";
 
 // ── Class CRUD ─────────────────────────────────────────────────
 
@@ -44,10 +56,10 @@ export async function createClassWithScheduleAction(data: {
   mode: ClassMode; // OFFLINE | ONLINE
   targetLevel: StudentLevel;
   startDate: string; // "YYYY-MM-DD"
-  weeklySlots: WeeklySlotInput[];
+  /** Mỗi khung tuần mang phòng riêng (roomId bắt buộc nếu OFFLINE). */
+  weeklySlots: (WeeklySlotInput & { roomId?: string })[];
   sessionCount: number;
   teacherId: string;
-  roomId?: string; // bắt buộc nếu OFFLINE
   studentIds: string[];
   note?: string;
 }) {
@@ -63,7 +75,15 @@ export async function createClassWithScheduleAction(data: {
   if (!data.teacherId) return { error: "Chưa chọn giáo viên" };
 
   const needsRoom = data.mode !== "ONLINE";
-  if (needsRoom && !data.roomId) return { error: "Lớp offline cần chọn phòng" };
+
+  // Phòng theo từng khung tuần (OFFLINE bắt buộc đủ phòng cho mọi khung).
+  const roomBySlot = new Map<string, string>();
+  if (needsRoom) {
+    for (const s of data.weeklySlots) {
+      if (!s.roomId) return { error: "Mỗi khung lịch của lớp offline cần chọn phòng" };
+      roomBySlot.set(weeklySlotKey(s.dayOfWeek, s.startTime, s.endTime), s.roomId);
+    }
+  }
 
   const cells = weeklyPatternToCells(data.weeklySlots);
   const plan = generateSessionPlan({
@@ -84,12 +104,30 @@ export async function createClassWithScheduleAction(data: {
     return { error: "Giáo viên không còn rảnh/đã trùng lịch với khung này" };
 
   if (needsRoom) {
-    const eligibleRooms = await getEligibleRoomsForSchedule({
-      plannedSessions: plan,
-      capacityNeeded: data.studentIds.length,
-    });
-    if (!eligibleRooms.some((r) => r.id === data.roomId))
-      return { error: "Phòng không còn trống cho toàn bộ buổi của khung này" };
+    // Mỗi buổi: phòng của khung tương ứng phải còn trống (room_occupancies).
+    for (const p of plan) {
+      const roomId = roomBySlot.get(weeklySlotKey(p.dayOfWeek, p.startTime, p.endTime))!;
+      const conflict = await findRoomConflict({
+        roomId,
+        ...sessionOccupancyRange({ date: p.date, startTime: p.startTime, endTime: p.endTime }),
+      });
+      if (conflict)
+        return {
+          error: `Phòng cho khung ${p.dayOfWeek} ${p.startTime}–${p.endTime} đã bị chiếm vào ${p.date} (${conflict.source === "CLASS_SESSION" ? "buổi học khác" : "đặt phòng"}).`,
+        };
+    }
+    // Sức chứa phòng phải đủ cho số học sinh được chọn.
+    if (data.studentIds.length > 0) {
+      const chosenRooms = await prisma.room.findMany({
+        where: { id: { in: [...new Set(roomBySlot.values())] } },
+        select: { name: true, capacity: true },
+      });
+      const tooSmall = chosenRooms.find((r) => r.capacity < data.studentIds.length);
+      if (tooSmall)
+        return {
+          error: `Phòng ${tooSmall.name} (sức chứa ${tooSmall.capacity}) không đủ cho ${data.studentIds.length} học sinh.`,
+        };
+    }
   }
 
   if (data.studentIds.length > 0) {
@@ -106,9 +144,9 @@ export async function createClassWithScheduleAction(data: {
       return { error: `${invalid.length} học sinh không còn khả thi với lịch này` };
   }
 
-  const roomId = needsRoom ? data.roomId! : null;
-
-  const classId = await prisma.$transaction(async (tx) => {
+  let classId: string;
+  try {
+    classId = await prisma.$transaction(async (tx) => {
     const cls = await tx.class.create({
       data: {
         name: data.name.trim(),
@@ -130,6 +168,9 @@ export async function createClassWithScheduleAction(data: {
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         endTime: s.endTime,
+        roomId: needsRoom
+          ? roomBySlot.get(weeklySlotKey(s.dayOfWeek, s.startTime, s.endTime)) ?? null
+          : null,
       })),
     });
 
@@ -145,11 +186,20 @@ export async function createClassWithScheduleAction(data: {
         startTime: p.startTime,
         endTime: p.endTime,
         mode: data.mode,
-        roomId,
+        roomId: needsRoom
+          ? roomBySlot.get(weeklySlotKey(p.dayOfWeek, p.startTime, p.endTime)) ?? null
+          : null,
         teacherId: data.teacherId,
         status: "SCHEDULED" as const,
       })),
     });
+
+    // RoomSchedule (ADR-0001): chiếm block cho các buổi có phòng (ONLINE → bỏ qua).
+    const createdSessions = await tx.classSession.findMany({
+      where: { classId: cls.id },
+      select: { id: true, roomId: true, date: true, startTime: true, endTime: true },
+    });
+    await occupyForSessions(createdSessions, tx);
 
     if (data.studentIds.length > 0) {
       await tx.classEnrollment.createMany({
@@ -165,13 +215,17 @@ export async function createClassWithScheduleAction(data: {
           title: "Bạn đã được thêm vào lớp học",
           message: `Bạn đã được thêm vào lớp "${cls.name}". Kiểm tra lịch học của bạn để biết thêm chi tiết.`,
           type: "CLASS_ASSIGNED" as const,
-          href: `/student/exams`,
+          href: `/student/classes`,
         })),
       });
     }
 
     return cls.id;
-  });
+    });
+  } catch (err) {
+    if (isOverlapViolation(err)) return { error: OVERLAP_RACE_ERROR };
+    throw err;
+  }
 
   revalidatePath("/staff/classes");
   return { success: true, classId };
@@ -192,7 +246,7 @@ export async function getScheduleEligibilityAction(input: {
   | { error: string }
   | {
       teachers: EligibleTeacher[];
-      rooms: EligibleRoom[];
+      roomsBySlot: SlotEligibleRooms[];
       students: EligibleStudent[];
       plannedCount: number;
     }
@@ -210,7 +264,7 @@ export async function getScheduleEligibilityAction(input: {
     sessionCount: input.sessionCount,
   });
 
-  const [teachers, students, rooms] = await Promise.all([
+  const [teachers, students, roomsBySlot] = await Promise.all([
     getEligibleTeachersForSchedule({ cells, mode: input.mode, plannedSessions: plan }),
     input.subjectId && input.targetLevel
       ? getEligibleStudentsForSchedule({
@@ -222,11 +276,11 @@ export async function getScheduleEligibilityAction(input: {
         })
       : Promise.resolve([] as EligibleStudent[]),
     input.mode === "ONLINE"
-      ? Promise.resolve([] as EligibleRoom[])
-      : getEligibleRoomsForSchedule({ plannedSessions: plan }),
+      ? Promise.resolve([] as SlotEligibleRooms[])
+      : getEligibleRoomsBySlot({ slots: input.weeklySlots, plannedSessions: plan }),
   ]);
 
-  return { teachers, rooms, students, plannedCount: plan.length };
+  return { teachers, roomsBySlot, students, plannedCount: plan.length };
 }
 
 /** Ô lịch GV rảnh — tô lưới khi ưu tiên chọn giáo viên trước. */
@@ -238,18 +292,6 @@ export async function getTeacherCellsAction(
   if (!(await can(session.user, "class.create"))) return { error: "Không có quyền" };
   if (!teacherId) return { error: "Chưa chọn giáo viên" };
   return { cells: await getTeacherAvailableCells(teacherId, mode) };
-}
-
-/** Ô lịch phòng BẬN — tô xám lưới khi ưu tiên chọn phòng trước. */
-export async function getRoomBusyCellsAction(
-  roomId: string,
-  startDate: string,
-  weeks: number,
-): Promise<{ cells: string[] } | { error: string }> {
-  const session = await requireSession();
-  if (!(await can(session.user, "class.create"))) return { error: "Không có quyền" };
-  if (!roomId || !startDate) return { error: "Thiếu phòng hoặc ngày bắt đầu" };
-  return { cells: await getRoomBusyCells({ roomId, startDate, weeks: Math.max(1, weeks) }) };
 }
 
 export async function updateClassAction(
@@ -322,20 +364,38 @@ export async function createSessionAction(
   if (existing)
     return { error: `Buổi số ${data.sessionNumber} đã tồn tại trong lớp` };
 
-  await prisma.classSession.create({
-    data: {
-      classId,
-      sessionNumber: data.sessionNumber,
-      date: new Date(data.date),
-      startTime: data.startTime,
-      endTime: data.endTime,
-      mode: data.mode,
-      roomId: data.roomId || null,
-      teacherId: data.teacherId,
-      note: data.note?.trim() || null,
-      status: "SCHEDULED",
-    },
+  const dateObj = new Date(`${data.date}T00:00:00`);
+  const conflict = await checkSessionConflict({
+    date: dateObj,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    teacherId: data.teacherId,
+    roomId: data.roomId || null,
   });
+  if (conflict) return { error: conflict };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.classSession.create({
+        data: {
+          classId,
+          sessionNumber: data.sessionNumber,
+          date: dateObj,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          mode: data.mode,
+          roomId: data.roomId || null,
+          teacherId: data.teacherId,
+          note: data.note?.trim() || null,
+          status: "SCHEDULED",
+        },
+      });
+      await syncSessionOccupancy(created, tx);
+    });
+  } catch (err) {
+    if (isOverlapViolation(err)) return { error: OVERLAP_RACE_ERROR };
+    throw err;
+  }
 
   revalidatePath(`/staff/classes/${classId}`);
   return { success: true };
@@ -363,8 +423,46 @@ export async function getRoomUsageAction(
 function ymdLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function hhmmLocal(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+/**
+ * Kiểm tra GV/phòng có bị trùng giờ. GV check trên ClassSession; phòng check
+ * trên bảng room_occupancies (hợp nhất buổi học + đặt phòng đã duyệt — ADR-0001).
+ * Trả về thông báo lỗi nếu trùng, null nếu khả thi.
+ */
+async function checkSessionConflict(opts: {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  teacherId: string;
+  roomId: string | null;
+  excludeSessionId?: string;
+}): Promise<string | null> {
+  const { date, startTime, endTime, teacherId, roomId, excludeSessionId } = opts;
+
+  const teacherBusy = await prisma.classSession.findFirst({
+    where: {
+      teacherId,
+      date,
+      status: { in: ["SCHEDULED", "COMPLETED"] },
+      ...(excludeSessionId ? { id: { not: excludeSessionId } } : {}),
+      AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
+    },
+  });
+  if (teacherBusy) return "Giáo viên đã có buổi khác trùng giờ ngày này";
+
+  if (!roomId) return null;
+
+  const conflict = await findRoomConflict({
+    roomId,
+    ...sessionOccupancyRange({ date, startTime, endTime }),
+    excludeSessionId,
+  });
+  if (conflict)
+    return conflict.source === "CLASS_SESSION"
+      ? "Phòng đã có buổi khác trùng giờ ngày này"
+      : "Phòng đã có lịch đặt trùng giờ ngày này";
+
+  return null;
 }
 
 /**
@@ -399,18 +497,40 @@ export async function markSessionAction(
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   if (!input.cancelled) {
-    await prisma.classSession.update({
-      where: { id: sessionId },
-      data: { status: "SCHEDULED" },
+    // Khôi phục buổi: block phòng đã bị nhả khi hủy — re-check phòng/GV còn trống.
+    const conflict = await checkSessionConflict({
+      date: sess.date,
+      startTime: sess.startTime,
+      endTime: sess.endTime,
+      teacherId: sess.teacherId,
+      roomId: sess.roomId,
+      excludeSessionId: sessionId,
     });
+    if (conflict) return { error: `Không thể khôi phục buổi học: ${conflict}` };
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const updated = await tx.classSession.update({
+          where: { id: sessionId },
+          data: { status: "SCHEDULED" },
+        });
+        await syncSessionOccupancy(updated, tx);
+      });
+    } catch (err) {
+      if (isOverlapViolation(err)) return { error: OVERLAP_RACE_ERROR };
+      throw err;
+    }
     revalidatePath(`/staff/classes/${sess.classId}`);
     return { success: true };
   }
 
   if (!input.reason?.trim()) return { error: "Cần nhập lý do nghỉ" };
-  await prisma.classSession.update({
-    where: { id: sessionId },
-    data: { status: "CANCELLED", note: input.reason.trim() },
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.classSession.update({
+      where: { id: sessionId },
+      data: { status: "CANCELLED", note: input.reason!.trim() },
+    });
+    await syncSessionOccupancy(updated, tx);
   });
 
   // Thông báo cho học sinh đang học + giáo viên dạy buổi này.
@@ -430,7 +550,7 @@ export async function markSessionAction(
       title: "Buổi học bị nghỉ",
       message: `${buoiLabel} đã bị nghỉ. Lý do: ${input.reason!.trim()}. Lớp sẽ sắp xếp buổi bù.`,
       type: "SCHEDULE_CHANGED" as const,
-      href: `/student/exams`,
+      href: `/student/classes`,
     })),
     {
       userId: sess.teacherId,
@@ -483,40 +603,14 @@ export async function createMakeupSessionAction(
 
   const dateObj = new Date(`${input.date}T00:00:00`);
 
-  // GV bận?
-  const teacherBusy = await prisma.classSession.findFirst({
-    where: {
-      teacherId: sess.teacherId,
-      date: dateObj,
-      status: { in: ["SCHEDULED", "COMPLETED"] },
-      AND: [{ startTime: { lt: input.endTime } }, { endTime: { gt: input.startTime } }],
-    },
+  const conflict = await checkSessionConflict({
+    date: dateObj,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    teacherId: sess.teacherId,
+    roomId: sess.roomId,
   });
-  if (teacherBusy) return { error: "Giáo viên đã có buổi khác trùng giờ ngày này" };
-
-  // Phòng bận?
-  if (sess.roomId) {
-    const roomBusy = await prisma.classSession.findFirst({
-      where: {
-        roomId: sess.roomId,
-        date: dateObj,
-        status: { in: ["SCHEDULED", "COMPLETED"] },
-        AND: [{ startTime: { lt: input.endTime } }, { endTime: { gt: input.startTime } }],
-      },
-    });
-    if (roomBusy) return { error: "Phòng đã có buổi khác trùng giờ ngày này" };
-
-    const dayStart = new Date(`${input.date}T00:00:00`);
-    const dayEnd = new Date(`${input.date}T23:59:59`);
-    const bookings = await prisma.roomBooking.findMany({
-      where: { roomId: sess.roomId, status: "APPROVED", startAt: { lt: dayEnd }, endAt: { gt: dayStart } },
-      select: { startAt: true, endAt: true },
-    });
-    const bookingClash = bookings.some(
-      (b) => hhmmLocal(b.startAt) < input.endTime && hhmmLocal(b.endAt) > input.startTime,
-    );
-    if (bookingClash) return { error: "Phòng đã có lịch đặt trùng giờ ngày này" };
-  }
+  if (conflict) return { error: conflict };
 
   const max = await prisma.classSession.aggregate({
     where: { classId: sess.classId },
@@ -526,20 +620,28 @@ export async function createMakeupSessionAction(
 
   // Buổi bù KHÔNG tăng sessionCount: con số mục tiêu giữ nguyên số buổi của
   // giáo trình; buổi bù chỉ thay thế buổi đã nghỉ, không phải buổi mới.
-  await prisma.classSession.create({
-    data: {
-      classId: sess.classId,
-      sessionNumber: nextNumber,
-      date: dateObj,
-      startTime: input.startTime,
-      endTime: input.endTime,
-      mode: sess.mode,
-      roomId: sess.roomId,
-      teacherId: sess.teacherId,
-      status: "SCHEDULED",
-      note: `Bù cho buổi #${sess.sessionNumber}`,
-    },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.classSession.create({
+        data: {
+          classId: sess.classId,
+          sessionNumber: nextNumber,
+          date: dateObj,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          mode: sess.mode,
+          roomId: sess.roomId,
+          teacherId: sess.teacherId,
+          status: "SCHEDULED",
+          note: `Bù cho buổi #${sess.sessionNumber}`,
+        },
+      });
+      await syncSessionOccupancy(created, tx);
+    });
+  } catch (err) {
+    if (isOverlapViolation(err)) return { error: OVERLAP_RACE_ERROR };
+    throw err;
+  }
 
   // Thông báo lịch bù cho học sinh đang học + giáo viên dạy.
   const dateLabel = new Date(`${input.date}T00:00:00`).toLocaleDateString("vi-VN", {
@@ -558,7 +660,7 @@ export async function createMakeupSessionAction(
       title: "Có buổi bù mới",
       message: msgBody,
       type: "SCHEDULE_CHANGED" as const,
-      href: `/student/exams`,
+      href: `/student/classes`,
     })),
     {
       userId: sess.teacherId,
@@ -604,19 +706,51 @@ export async function updateSessionAction(
   if (data.startTime && data.endTime && data.startTime >= data.endTime)
     return { error: "Giờ bắt đầu phải trước giờ kết thúc" };
 
-  await prisma.classSession.update({
-    where: { id: sessionId },
-    data: {
-      ...(data.date ? { date: new Date(data.date) } : {}),
-      ...(data.startTime ? { startTime: data.startTime } : {}),
-      ...(data.endTime ? { endTime: data.endTime } : {}),
-      ...(data.mode ? { mode: data.mode } : {}),
-      ...("roomId" in data ? { roomId: data.roomId } : {}),
-      ...(data.teacherId ? { teacherId: data.teacherId } : {}),
-      ...(data.status ? { status: data.status } : {}),
-      ...(data.note !== undefined ? { note: data.note?.trim() || null } : {}),
-    },
-  });
+  // Re-check trùng GV/phòng nếu thay đổi lịch (hoặc buổi quay lại trạng thái
+  // chiếm phòng từ CANCELLED/POSTPONED) và buổi vẫn còn diễn ra.
+  const finalDate = data.date ? new Date(`${data.date}T00:00:00`) : sess.date;
+  const finalStartTime = data.startTime ?? sess.startTime;
+  const finalEndTime = data.endTime ?? sess.endTime;
+  const finalTeacherId = data.teacherId ?? sess.teacherId;
+  const finalRoomId = "roomId" in data ? data.roomId ?? null : sess.roomId;
+  const finalStatus = data.status ?? sess.status;
+  const scheduleFieldsChanged =
+    !!data.date || !!data.startTime || !!data.endTime || !!data.teacherId || "roomId" in data;
+  const wasOccupying = sess.status === "SCHEDULED" || sess.status === "COMPLETED";
+  const willOccupy = finalStatus === "SCHEDULED" || finalStatus === "COMPLETED";
+  if (willOccupy && (scheduleFieldsChanged || !wasOccupying)) {
+    const conflict = await checkSessionConflict({
+      date: finalDate,
+      startTime: finalStartTime,
+      endTime: finalEndTime,
+      teacherId: finalTeacherId,
+      roomId: finalRoomId,
+      excludeSessionId: sessionId,
+    });
+    if (conflict) return { error: conflict };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.classSession.update({
+        where: { id: sessionId },
+        data: {
+          ...(data.date ? { date: finalDate } : {}),
+          ...(data.startTime ? { startTime: data.startTime } : {}),
+          ...(data.endTime ? { endTime: data.endTime } : {}),
+          ...(data.mode ? { mode: data.mode } : {}),
+          ...("roomId" in data ? { roomId: data.roomId } : {}),
+          ...(data.teacherId ? { teacherId: data.teacherId } : {}),
+          ...(data.status ? { status: data.status } : {}),
+          ...(data.note !== undefined ? { note: data.note?.trim() || null } : {}),
+        },
+      });
+      await syncSessionOccupancy(updated, tx);
+    });
+  } catch (err) {
+    if (isOverlapViolation(err)) return { error: OVERLAP_RACE_ERROR };
+    throw err;
+  }
 
   // Thông báo lịch thay đổi nếu ngày/giờ thay đổi hoặc buổi bị huỷ/hoãn
   const scheduleChanged = data.date || data.startTime || data.endTime;
@@ -640,7 +774,7 @@ export async function updateSessionAction(
           title: cancelled ? "Buổi học bị huỷ" : postponed ? "Buổi học bị hoãn" : "Lịch học thay đổi",
           message: msgBody,
           type: "SCHEDULE_CHANGED" as const,
-          href: `/student/exams`,
+          href: `/student/classes`,
         })),
         skipDuplicates: true,
       });
@@ -722,6 +856,53 @@ export async function evaluateStudentLevelAction(data: {
   return { success: true };
 }
 
+export type StudentSubjectReference = {
+  avgScore: number | null;
+  attempts: { title: string; score: number | null; submittedAt: string }[];
+  attendance: { present: number; total: number };
+};
+
+/**
+ * Dữ liệu tham chiếu giúp CBĐT đánh giá năng lực một HS trên một môn:
+ * điểm các bài kiểm tra đã nộp (cùng môn) + tỉ lệ điểm danh các lớp môn đó.
+ * Chỉ đọc — không thay StudentSubjectLevel; CBĐT vẫn tự quyết mức.
+ */
+export async function getStudentSubjectReferenceAction(
+  studentId: string,
+  subjectId: string,
+): Promise<{ error: string } | StudentSubjectReference> {
+  const session = await requireSession();
+  if (!(await can(session.user, "student.evaluate"))) return { error: "Không có quyền" };
+  if (!studentId || !subjectId) return { error: "Thiếu thông tin" };
+
+  const [attempts, attendances] = await Promise.all([
+    prisma.examAttempt.findMany({
+      where: { studentId, submittedAt: { not: null }, exam: { subjectId } },
+      select: { score: true, submittedAt: true, exam: { select: { title: true } } },
+      orderBy: { submittedAt: "desc" },
+      take: 8,
+    }),
+    prisma.attendance.findMany({
+      where: { studentId, session: { class: { subjectId } } },
+      select: { status: true },
+    }),
+  ]);
+
+  const scored = attempts.map((a) => a.score).filter((s): s is number => s !== null);
+  const avgScore = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null;
+  const present = attendances.filter((a) => a.status === "PRESENT" || a.status === "LATE").length;
+
+  return {
+    avgScore,
+    attempts: attempts.slice(0, 5).map((a) => ({
+      title: a.exam.title,
+      score: a.score,
+      submittedAt: a.submittedAt!.toISOString(),
+    })),
+    attendance: { present, total: attendances.length },
+  };
+}
+
 // ── Lịch rảnh học sinh ────────────────────────────────────────
 
 export async function saveStudentAvailabilityAction(
@@ -768,7 +949,7 @@ export async function enrollStudentAction(classId: string, studentId: string) {
       title: "Bạn đã được thêm vào lớp học",
       message: `Bạn đã được thêm vào lớp "${cls.name}". Kiểm tra lịch học của bạn để biết thêm chi tiết.`,
       type: "CLASS_ASSIGNED",
-      href: `/student/exams`,
+      href: `/student/classes`,
     },
   });
 
@@ -802,7 +983,7 @@ export async function enrollStudentsAction(classId: string, studentIds: string[]
         title: "Bạn đã được thêm vào lớp học",
         message: `Bạn đã được thêm vào lớp "${cls.name}". Kiểm tra lịch học của bạn để biết thêm chi tiết.`,
         type: "CLASS_ASSIGNED" as const,
-        href: `/student/exams`,
+        href: `/student/classes`,
       })),
     }),
   ]);

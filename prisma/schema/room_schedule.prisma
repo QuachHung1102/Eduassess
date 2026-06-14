@@ -1,0 +1,34 @@
+// ─── RoomSchedule (ADR-0001) ─────────────────────────────────
+// Bảng denormalized hợp nhất mọi khoảng thời gian một Room bị chiếm,
+// từ 2 nguồn: ClassSession (SCHEDULED/COMPLETED, có roomId) và
+// RoomBooking đã APPROVED. Mọi đường ghi đi qua module `lib/rooms/store.ts`
+// trong CÙNG transaction với hành động sinh ra block.
+//
+// Chống double-booking ở tầng DB bằng EXCLUDE constraint (xem migration
+// `add_room_occupancy`): EXCLUDE USING gist ("roomId" WITH =,
+// tsrange("startsAt","endsAt") WITH &&) — Prisma chưa diễn đạt được
+// exclusion constraint trong schema nên constraint nằm trong SQL migration.
+
+/**
+ * Một block thời gian đơn lẻ trên RoomSchedule.
+ * - Đúng một trong sessionId / bookingId khác null (theo source).
+ * - startsAt/endsAt: timestamp đầy đủ (ngày + giờ), nửa mở [startsAt, endsAt).
+ */
+model RoomOccupancy {
+  id        String          @id @default(cuid())
+  roomId    String
+  startsAt  DateTime
+  endsAt    DateTime
+  source    OccupancySource
+  sessionId String?         @unique
+  bookingId String?         @unique
+  createdAt DateTime        @default(now())
+
+  room    Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  session ClassSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  booking RoomBooking?  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, startsAt, endsAt])
+  @@index([startsAt, endsAt])
+  @@map("room_occupancies")
+}

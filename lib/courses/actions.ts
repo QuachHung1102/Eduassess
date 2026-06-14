@@ -114,9 +114,20 @@ export async function deleteCourseAction(courseId: string) {
 export async function approveCourseAction(courseId: string) {
   await requireAuth(["ADMIN"]);
 
-  await prisma.course.update({
+  const course = await prisma.course.update({
     where: { id: courseId },
     data: { status: "PUBLISHED" },
+    select: { title: true, authorId: true },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: course.authorId,
+      title: "Khóa học đã được duyệt",
+      message: `Khóa học "${course.title}" của bạn đã được admin phê duyệt và xuất bản.`,
+      type: "COURSE_APPROVED",
+      href: "/teacher/courses",
+    },
   });
 
   revalidatePath("/admin/courses");

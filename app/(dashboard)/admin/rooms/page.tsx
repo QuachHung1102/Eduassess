@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { RoomFormModal } from "./RoomFormModal";
 import { DeleteRoomButton } from "./DeleteRoomButton";
 import { ToggleActiveButton } from "./ToggleActiveButton";
+import { RoomLayoutButton } from "@/components/rooms/RoomLayoutButton";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faDoorOpen } from "@fortawesome/free-solid-svg-icons";
 
@@ -10,6 +11,7 @@ async function getAllRooms() {
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     include: {
       _count: { select: { bookings: true } },
+      layoutImage: { select: { url: true } },
     },
   });
 }
@@ -44,7 +46,7 @@ export default async function AdminRoomsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
                 <tr>
-                  {["Tên phòng", "Sức chứa", "Mô tả", "Trạng thái", "Lịch đặt", ""].map((h) => (
+                  {["Tên phòng", "Sức chứa", "Mô tả", "Sơ đồ", "Trạng thái", "Lịch đặt", ""].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide"
@@ -65,6 +67,13 @@ export default async function AdminRoomsPage() {
                       {room.description ?? <span className="text-gray-300 italic">—</span>}
                     </td>
                     <td className="px-4 py-4">
+                      {room.layoutImage ? (
+                        <RoomLayoutButton roomName={room.name} layoutImageUrl={room.layoutImage.url} />
+                      ) : (
+                        <span className="text-xs text-amber-500">Chưa có</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
                       <ToggleActiveButton
                         roomId={room.id}
                         roomName={room.name}
@@ -76,7 +85,13 @@ export default async function AdminRoomsPage() {
                       <div className="flex items-center gap-2">
                         <RoomFormModal
                           mode="edit"
-                          room={{ id: room.id, name: room.name, capacity: room.capacity, description: room.description }}
+                          room={{
+                            id: room.id,
+                            name: room.name,
+                            capacity: room.capacity,
+                            description: room.description,
+                            layoutImageUrl: room.layoutImage?.url ?? null,
+                          }}
                         />
                         <DeleteRoomButton roomId={room.id} roomName={room.name} />
                       </div>

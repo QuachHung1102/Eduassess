@@ -85,6 +85,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/student/flashcards", label: "Flashcard",     icon: faLayerGroup, permission: P.FLASHCARD_VIEW.key },
     { href: "/student/progress",   label: "Tiến trình",    icon: faChartLine },
     { href: "/student/courses",    label: "Khóa học",      icon: faBookOpen,   permission: P.COURSE_VIEW.key },
+    { href: "/student/classes",    label: "Lịch học",      icon: faSchool },
     { href: "/student/schedule",   label: "Lịch rảnh",     icon: faCalendarCheck },
   ],
 

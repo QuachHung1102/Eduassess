@@ -41,6 +41,7 @@ Các module đã theo pattern này — dùng làm mẫu khi viết feature mới
 | `lib/flashcards/store.ts` | `lib/teacher/actions/flashcard.ts`, `lib/admin/flashcard-actions.ts` | `ownerId` giới hạn theo người tạo |
 | `lib/availability/store.ts` | `lib/student/actions.ts`, `lib/teacher/actions/schedule.ts`, seam CBĐT xem-sửa hộ | interface thống nhất `subject: { kind: "student" \| "teacher"; id }` |
 | `lib/classes/scheduling.ts` (logic thuần) + `lib/classes/eligibility.ts` (query lọc) | `lib/classes/actions.ts` | logic sinh Session & lọc khả thi tách khỏi action |
+| `lib/rooms/store.ts` | `lib/classes/actions.ts`, `lib/booking/actions.ts` | RoomSchedule denormalized (ADR-0001): `syncSessionOccupancy`/`syncBookingOccupancy` ghi block trong cùng transaction với hành động gốc; `findRoomConflict`/`getOccupanciesBetween` cho mọi đường đọc lịch phòng; `isOverlapViolation` bắt lỗi EXCLUDE constraint |
 
 **Khi thêm feature có ghi DB:** tạo/đặt logic trong module thuần, để auth + revalidate ở seam. Đừng viết Prisma trực tiếp trong server action nếu domain đã có module.
 
@@ -111,13 +112,13 @@ Trạng thái: ✅ đã có · 🚧 một phần / cần sửa · 📋 roadmap (
 - Tài khoản (`/admin/users`) · Phân quyền vai trò (`/admin/role-permissions`) · Phòng (`/admin/rooms`) · Lớp học (`/admin/classes`) · Môn học (`/admin/subjects`) · Đề kiểm tra (`/admin/exams`) · Flashcard (`/admin/flashcards`) · Ngân hàng câu hỏi (`/admin/questions`, duyệt PENDING→APPROVED) · Khóa học online (`/admin/courses`, duyệt) · Quản lý permission (`/admin/permissions`).
 
 ### `/staff` — Nhân viên (CBĐT/CBDTS/NVLT…)
-- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`) · Học sinh (`/staff/students`, `/staff/students/[id]`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
+- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`, lịch sử dụng phòng `/staff/rooms/schedule`) · Học sinh (`/staff/students`, `/staff/students/[id]`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
 
 ### `/teacher` — Giáo viên
 - Ngân hàng câu hỏi (`/teacher/question-bank`, create, edit, `ai-suggest`) · Đề kiểm tra (`/teacher/exams`, create, `[id]/results`) · Lớp học (`/teacher/classes`, sessions, điểm danh) · Khóa học online (`/teacher/courses`, lessons) · **Lịch rảnh** (`/teacher/schedule`) · Đặt phòng.
 
 ### `/student` — Học sinh
-- Bài kiểm tra (`/student/exams`, `[id]/take`, results) · Flashcard (`/student/flashcards`, `random`) · Tiến trình (`/student/progress`) · Khóa học (`/student/courses`, `[id]/learn/[lessonId]`) · **Lịch rảnh** (`/student/schedule`).
+- Bài kiểm tra (`/student/exams`, `[id]/take`, results) · Flashcard (`/student/flashcards`, `random`) · Tiến trình (`/student/progress`) · Khóa học (`/student/courses`, `[id]/learn/[lessonId]`) · **Lịch học** (`/student/classes` — buổi học lớp mình, đích deep-link của noti lớp/lịch) · **Lịch rảnh** (`/student/schedule` — khai báo availability).
 
 ### `/parent` — Phụ huynh
 - Con tôi (`/parent/children`) · Lịch học của con (`/parent/schedule`).
@@ -139,7 +140,7 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 
 ### Đánh giá năng lực & lớp học (`class.prisma`)
 - `Class` (subject, `advisorId`=CBĐT, `mode`, `targetLevel`, `sessionCount`, `startDate`, `status`) — độc lập hoàn toàn với Course.
-- `ClassWeeklySlot` (khung lịch tuần: dayOfWeek + start/end, **không** giữ phòng/GV).
+- `ClassWeeklySlot` (khung lịch tuần: dayOfWeek + start/end + `roomId` nullable — **mỗi khung tuần một phòng riêng**, đóng dấu lên các Session sinh ra; GV vẫn theo Session).
 - `ClassTeacher` (n-n GV↔lớp) · `ClassEnrollment` (HS trong lớp, `ACTIVE`/`DROPPED`).
 - `ClassSession` (buổi cụ thể: date, time, mode, roomId nullable, teacherId, `SessionStatus`).
 - `Attendance` (`PRESENT`/`ABSENT`/`LATE`/`EXCUSED`).
@@ -155,12 +156,12 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 ### Flashcard (`flashcard.prisma`)
 `FlashcardSet` (subject+grade+topicName+difficulty) · `FlashcardCard` (ảnh + caption + order) · `FlashcardSession` (phiên luyện của HS).
 
-### Phòng & đặt phòng (`booking.prisma`)
-`Room` (capacity, isActive) · `BookingReason` (label + priority) · `RoomBooking` (requester/bookedFor/reviewer, start/end, `BookingStatus`, conflict rule: `startAt < existing.endAt AND endAt > existing.startAt` trên APPROVED).
+### Phòng & đặt phòng (`booking.prisma`, `room_schedule.prisma`)
+`Room` (capacity, isActive, 1:1 `RoomLayoutImage`) · `BookingReason` (label + priority) · `RoomBooking` (requester/bookedFor/reviewer, start/end, `BookingStatus`) · `RoomLayoutImage` (ảnh sơ đồ vị trí phòng: `url` + `publicId` Cloudinary, 1:1 với Room) · `RoomOccupancy` (bảng `room_occupancies` — xem dưới).
 
-> ⚠️ **Chưa có trong schema** (đang là khái niệm/roadmap, xem §7): `RoomLayoutImage`, model `Quiz` riêng, mức `EXCELLENT` của `StudentLevel`.
+> ⚠️ **Chưa có trong schema** (đang là khái niệm/roadmap, xem §7): model `Quiz` riêng, mức `EXCELLENT` của `StudentLevel`.
 >
-> ⚠️ **`RoomSchedule`/`RoomOccupancy` chưa tồn tại như bảng** (ADR-0001 *quyết định* sẽ denormalize, nhưng **chưa triển khai**). Hiện tại việc detect xung đột phòng được **tính trực tiếp khi đọc**: `lib/classes/eligibility.ts` query thẳng `ClassSession` + `RoomBooking` (APPROVED) rồi so overlap (`getEligibleRoomsForSchedule`, `getRoomBusyCells`); `lib/booking/actions.ts::hasConflict()` cũng so trực tiếp trên `RoomBooking`. Khi nào áp dụng ADR-0001 thì chuyển sang bảng denormalized + unique constraint.
+> ✅ **RoomSchedule đã là bảng denormalized** (ADR-0001 đã triển khai, model `RoomOccupancy` trong `prisma/schema/room_schedule.prisma`): hợp nhất 2 nguồn — ClassSession (SCHEDULED/COMPLETED, có roomId) + RoomBooking (APPROVED) — mỗi block giữ FK về nguồn (`sessionId`/`bookingId`, onDelete Cascade nên xóa lớp/phòng/booking tự dọn block). **Mọi đường ghi** đi qua module thuần `lib/rooms/store.ts` (`syncSessionOccupancy`, `syncBookingOccupancy`, `occupyForSessions`) trong **cùng transaction** với hành động gốc; **mọi đường check/đọc lịch phòng** (`checkSessionConflict`, seam booking, `getEligibleRoomsBySlot`, `getAvailableRooms`, `getRoomUsageForDate`) đọc bảng này qua `findRoomConflict`/`getOccupanciesBetween`. Tầng cuối chống đua tranh: EXCLUDE constraint `room_occupancies_no_overlap` (btree_gist, khoảng nửa mở `[startsAt, endsAt)`) — DB từ chối hai block giao nhau trên cùng phòng, seam bắt `isOverlapViolation()` để trả lỗi thân thiện. Check **GV trùng giờ** vẫn query `ClassSession` (GV không phải phòng). Nghi drift: `npm run db:rebuild-occupancy` (dựng lại từ nguồn), `npm run db:check-occupancy` (đếm + kiểm constraint).
 
 ### Hệ thống (`notification.prisma`, `password_reset.prisma`, `security_question.prisma`)
 `Notification` (`NotificationType`, readAt, href deep-link) · reset mật khẩu · câu hỏi bảo mật.
@@ -169,42 +170,47 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 
 ## 6. Vòng đời & workflow cốt lõi
 
-- **Đánh giá năng lực (Assessment):** hiện **thủ công** — CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction` trong `lib/classes/actions.ts`. Mức: `WEAK` / `AVERAGE` / `GOOD` (ngưỡng <50 / 50–79 / 80–100 là ý nghĩa tham chiếu, **chưa** tự tính từ điểm Exam — xem roadmap §7.3). Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
+- **Đánh giá năng lực (Assessment):** hiện **thủ công** — CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction` trong `lib/classes/actions.ts`. Mức: `WEAK` / `AVERAGE` / `GOOD` (ngưỡng <50 / 50–79 / 80–100 là ý nghĩa tham chiếu, **chưa** tự tính từ điểm Exam — xem roadmap §7.2). Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
 - **Phân học sinh:** CBDTS phân Student cho CBĐT (`StudentAdvisor`) → CBĐT mới được đánh giá & tạo lớp cho HS đó.
-- **Tạo lớp ràng buộc:** CBĐT vẽ Khung lịch tuần trên lưới ngày×giờ → hệ thống **lọc cứng** GV/phòng/HS khả thi (Availability cho người + RoomSchedule cho phòng + Session đã có); chỉ bên khả thi mới hiện. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action trước khi tạo. Danh sách HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp", lên đầu) lẫn nhóm **chưa từng được đánh giá môn đó** (nhãn "Chưa đánh giá", `level: null`) — hiển thị đồng thời để CBĐT tự chọn, không ẩn nhóm nào.
+- **Tạo lớp ràng buộc:** CBĐT vẽ Khung lịch tuần trên lưới ngày×giờ → hệ thống **lọc cứng** GV/phòng/HS khả thi (Availability cho người + RoomSchedule cho phòng + Session đã có); chỉ bên khả thi mới hiện. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action trước khi tạo. **Phòng chọn theo TỪNG khung tuần** (`getEligibleRoomsBySlot` trả phòng trống riêng cho mỗi khung — T2 và T4 có thể khác phòng); mỗi buổi sinh ra kế thừa phòng của khung tương ứng. GV/phòng/HS chọn qua **modal tìm-kiếm** (`PickEntityModal`, `components/staff/`) thay vì dropdown — danh sách HS/GV lớn không nhét vừa dropdown. Danh sách HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp", lên đầu) lẫn nhóm **chưa từng được đánh giá môn đó** (nhãn "Chưa đánh giá", `level: null`) — hiển thị đồng thời để CBĐT tự chọn, không ẩn nhóm nào.
 - **Phân công lớp:** xếp GV/HS vào lớp tại trang chi tiết qua bảng chọn tìm-kiếm (HS đúng môn+đúng trình độ mục tiêu gắn nhãn "Phù hợp", đẩy lên đầu). Một lần xác nhận phân nhiều người + gửi noti từng người.
 - **Buổi bù (makeup):** đánh dấu Session diễn ra/nghỉ; buổi nghỉ → nhập lý do → `CANCELLED`; hệ thống đề xuất ngày bù theo Khung lịch tuần, kiểm tra trùng phòng+GV rồi nối Session mới kế thừa phòng/GV gốc.
 - **Câu hỏi:** Teacher tạo → PENDING; Admin tạo/duyệt → APPROVED. Trường "Chủ đề" là option-list theo (môn+khối), server kiểm tra `topicName` thuộc đúng `subjectId+gradeId`.
 - **Khóa học:** Teacher soạn DRAFT → gửi PENDING → Admin duyệt PUBLISHED → ARCHIVED.
-- **Đặt phòng:** Teacher/Staff/CBĐT/Owner/Parent tạo (Student **không**, và **Admin bị chặn** các key booking), bắt buộc `reason` → NVLT (hoặc người có `booking.approve`) duyệt → APPROVED. Xung đột kiểm bằng `hasConflict()` (`lib/booking/actions.ts`) so trực tiếp trên các `RoomBooking` APPROVED (rule `startAt < existing.endAt AND endAt > existing.startAt`), check lại cả lúc tạo lẫn lúc duyệt. (Chưa có bảng RoomOccupancy — xem §5.)
+- **Đặt phòng:** Teacher/Staff/CBĐT/Owner/Parent tạo (Student **không**, và **Admin bị chặn** các key booking), bắt buộc `reason` → NVLT (hoặc người có `booking.approve`) duyệt → APPROVED. Xung đột kiểm trên bảng `room_occupancies` (`findRoomConflict`, `lib/rooms/store.ts`) — bắt **cả buổi học của lớp lẫn booking đã duyệt** — check lúc tạo + lúc duyệt; duyệt thì ghi block chiếm phòng trong cùng transaction, hai người duyệt đồng thời bị EXCLUDE constraint chặn (xem §5).
 
 ---
 
-## 7. Roadmap — tính năng dự kiến
+## 7. Roadmap — lộ trình theo giai đoạn
 
-> Phần này mô tả công việc **chưa hoàn thành / sắp xây**. Đánh dấu để agent phân biệt với hiện trạng. Khi một mục được build xong, chuyển mô tả lên §4–6 và xóa khỏi đây.
+> Phần này mô tả công việc **chưa hoàn thành / sắp xây**, xếp theo giai đoạn: giai đoạn trước là nền cho giai đoạn sau, trong cùng giai đoạn thứ tự bullet = thứ tự ưu tiên. Đánh dấu để agent phân biệt với hiện trạng. Khi một mục được build xong, chuyển mô tả lên §4–6 và xóa khỏi đây.
 
-### 7.1 Lỗi & cải thiện ưu tiên cao
-- 🔧 **Cập nhật RoomSchedule sau khi tạo lớp** để tránh trùng lịch khi tạo các lớp khác.
+### 7.1 Giai đoạn 1 — Nền tảng lịch phòng
+
+> ✅ **RoomSchedule / RoomOccupancy (ADR-0001) đã triển khai** — bảng `room_occupancies` + module `lib/rooms/store.ts` + EXCLUDE constraint, mọi đường check/đọc đã migrate (xem §5). Còn lại trong giai đoạn:
+
+- 📋 **Lưới xếp lịch hàng loạt:** lưới phòng × khung giờ 07:00–22:00 cho phép *chọn* phòng+giờ cho nhiều lớp/buổi trong một luồng — ô bị chiếm tô đỏ & khóa, bấm các ô trống liên tiếp để chọn. Khác hai thứ đã có: `SessionScheduler` (chọn cho *một* buổi lẻ) và `/staff/rooms/schedule` (chỉ *xem*, không chọn). Đọc occupancy qua `getOccupanciesBetween` (`lib/rooms/store.ts`).
+
+> ✅ **RoomLayoutImage đã triển khai** — model `RoomLayoutImage` (1:1 Room), upload `/api/rooms/upload` (permission-checked, trả url+publicId), `RoomFormModal` bắt buộc ảnh khi tạo + dọn ảnh cũ trên Cloudinary khi thay/xóa (`lib/booking/room-actions.ts`), nút "Xem vị trí" (`components/rooms/RoomLayoutButton.tsx`) ở `/staff/rooms` + `/admin/rooms`.
+
+### 7.2 Giai đoạn 2 — Hoàn thiện hạt nhân Assessment
+
+Assessment là tính năng cốt lõi (§6) nhưng đang **thủ công 100%** — CBĐT tự chọn mức, chưa dùng dữ liệu nào từ ExamAttempt/Attendance đã có sẵn. Giai đoạn này biến dữ liệu đó thành đầu vào đánh giá.
+
+- 📋 **Giáo viên đánh giá sau mỗi buổi học** (năng lực / chuyên cần / mức độ tiếp thu): cần model mới gắn (Session × Student) + permission key mới; làm dữ liệu để CBĐT đánh giá chính xác hơn & xếp lớp phù hợp.
+- 📋 **Assessment bán tự động từ điểm Exam:** quy tắc/AI tổng hợp ExamAttempt (+ đánh giá theo buổi nếu có) → **đề xuất** `StudentSubjectLevel`; CBĐT xác nhận mới ghi (human-in-the-loop, giữ `evaluatedById` + AuditLog như luồng thủ công).
+- 📋 Mức **`EXCELLENT`** cho HS đạt full GOOD trong quá trình học (mở rộng enum `StudentLevel` — xem **ProficiencyLevel** §8).
+- 📋 **Trang tổng quan CBĐT** theo dõi tiến độ HS trong lớp (điểm danh + kết quả đánh giá năng lực + tiến độ Course nếu có) — nơi tiêu thụ dữ liệu của các mục trên, nên làm sau cùng trong giai đoạn.
+
+### 7.3 Giai đoạn 3 — Thông báo & tiện ích vận hành
+
+- 📋 **Thông báo `SYSTEM`:** UI cho Admin soạn & gửi thông báo thủ công tới nhóm người nhận (enum đã có, **chưa nơi nào tạo** — xem **Notification** §8). Cần thêm permission key mới (vd `notification.send`) vào `lib/auth/permission-keys.ts` + seed.
+- 📋 **CBĐT xem-sửa lịch rảnh GV hộ:** hiện GV chỉ tự khai (`/teacher/schedule`), CBĐT mới sửa hộ được lịch HS (xem **Availability** §8). Module `lib/availability/` đã nhận `subject.kind: "teacher"` — chỉ thiếu seam + UI phía staff.
+- 📋 **Tách model `Quiz`** (bài kiểm tra nhỏ ~15 phút) khỏi Exam (hiện chưa có model riêng — xem **Quiz** §8).
+
+### 7.4 Cải thiện liên tục
+
 - 🔧 Rà soát lại các vùng UX/UI/logic chưa tốt để thiết kế lại (ghi nhận trong ADR-0001).
-
-### 7.2 Phòng học & lịch phòng
-- 📋 **RoomLayoutImage:** khi tạo Room bắt buộc upload ảnh sơ đồ (highlight đỏ vị trí phòng); nút "Xem vị trí" → modal. Cần thêm model + Cloudinary upload.
-- 📋 **RoomSchedule / RoomOccupancy** (theo **ADR-0001**): bảng denormalized hợp nhất 2 nguồn (Session của Class + RoomBooking đã duyệt), unique constraint chống double-booking, mọi đường ghi qua module `lib/rooms/` duy nhất, cập nhật trong cùng transaction. **Hiện chưa có** — xung đột đang tính on-the-fly (xem §5). Đây là quyết định ADR-0001 chưa triển khai.
-- 🚧 **Trang xem lịch sử dụng phòng:** đã có `getRoomUsageAction` (`lib/classes/actions.ts`) đọc occupancy của một phòng; còn thiếu trang tổng quan cho CBĐT xem chéo nhiều phòng & kiểm tra xung đột.
-- 📋 **Lưới xếp buổi học / lưới xếp phòng** (phòng × khung giờ 07:00–22:00), ô bị chiếm tô đỏ & khóa, chọn ô trống liên tiếp để chọn phòng+giờ trong một thao tác.
-
-### 7.3 Đánh giá năng lực nâng cao
-- 📋 **Giáo viên đánh giá sau mỗi buổi học** (năng lực / chuyên cần / mức độ tiếp thu) → làm dữ liệu để CBĐT đánh giá chính xác hơn & xếp lớp phù hợp.
-- 📋 **Assessment bán tự động từ điểm Exam** (AI/quy tắc tổng hợp ExamAttempt → đề xuất `StudentSubjectLevel`).
-- 📋 Mức **`EXCELLENT`** cho HS đạt full GOOD trong quá trình học (mở rộng enum `StudentLevel`).
-
-### 7.4 Theo dõi & thông báo
-- 📋 **Trang tổng quan CBĐT** theo dõi tiến độ HS trong lớp (điểm danh + kết quả đánh giá năng lực + tiến độ Course nếu có), tập trung hỗ trợ đánh giá.
-- 📋 **Mở rộng hệ thống thông báo** tới CBĐT/GV/HS/PH về lịch học, đánh giá năng lực, sự kiện quan trọng. Trong đó: enum `NotificationType` đã có `COURSE_APPROVED` (`approveCourseAction` trong `lib/courses/actions.ts` đổi status sang PUBLISHED nhưng chưa tạo Notification cho `authorId`) và `SYSTEM` (cần UI cho Admin gửi thông báo thủ công) — xem danh sách đầy đủ ở mục **Notification** trong §8.
-
-### 7.5 Kiểm tra
-- 📋 **Tách model `Quiz`** (bài kiểm tra nhỏ ~15 phút) khỏi Exam (hiện chưa có model riêng).
 
 ---
 
@@ -246,10 +252,10 @@ _Avoid_: Class (khi nói 1 buổi đơn lẻ), Meeting, Lesson, Lịch học
 **Phân công lớp** (workflow) — Xếp người vào lớp ngay tại trang chi tiết qua hai bảng chọn tìm-kiếm (GV / HS). Gõ tìm theo tên/email, tích nhiều người; HS phù hợp (đúng môn + đúng trình độ mục tiêu) gắn nhãn "Phù hợp" và đẩy lên đầu. Một lần xác nhận phân nhiều người + gửi thông báo từng người. Dùng chung component `PeoplePickerModal` (`components/staff/PeoplePickerModal.tsx`) và seam `enrollStudentsAction`/`assignClassTeachersAction` (`lib/classes/actions.ts`) ở cả `/staff/classes/[id]` lẫn `/admin/classes/[id]`. UI: "Phân giáo viên" / "Thêm học sinh".
 _Avoid_: Assign panel, Bulk picker, Multi-select dialog
 
-**ClassWeeklySlot** — Mẫu lịch học lặp theo tuần của Class: mỗi dòng là (thứ + giờ bắt đầu + giờ kết thúc), độc lập với phòng/GV (đóng dấu lên từng Session). Kết hợp `Class.startDate` + `sessionCount` để sinh danh sách Session ngày-giờ cụ thể. UI: "Khung lịch tuần".
+**ClassWeeklySlot** — Mẫu lịch học lặp theo tuần của Class: mỗi dòng là (thứ + giờ bắt đầu + giờ kết thúc + `roomId` riêng của khung đó). **Mỗi khung tuần có thể ở một phòng khác nhau** (T2 phòng A, T4 phòng B); phòng đóng dấu lên các Session sinh ra từ khung. GV vẫn theo từng Session. Kết hợp `Class.startDate` + `sessionCount` để sinh danh sách Session ngày-giờ cụ thể. UI: "Khung lịch tuần".
 _Avoid_: Recurrence, Timetable, WeeklySchedule, Lịch cố định
 
-**Tạo lớp ràng buộc** (workflow) — Tạo Class lấy Khung lịch tuần làm xương sống: CBĐT vẽ khung trên lưới ngày×giờ, tùy chọn "ưu tiên trước" một GV/phòng để xám/khóa ô không khả thi, rồi hệ thống **lọc cứng** GV/phòng/HS có thể nhận lịch (Availability + RoomSchedule + Session đã có). Chỉ bên khả thi hiện ra; bên chưa khai lịch bị ẩn. HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp") và nhóm chưa từng được đánh giá môn đó (nhãn "Chưa đánh giá", `level: null`), hiển thị đồng thời, nhóm "Phù hợp" lên đầu. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action. UI: "Tạo lớp học mới".
+**Tạo lớp ràng buộc** (workflow) — Tạo Class lấy Khung lịch tuần làm xương sống: CBĐT vẽ khung trên lưới ngày×giờ, tùy chọn "ưu tiên giáo viên" để xám/khóa ô GV bận, rồi hệ thống **lọc cứng** GV/phòng/HS có thể nhận lịch (Availability + RoomSchedule + Session đã có). Chỉ bên khả thi hiện ra; bên chưa khai lịch bị ẩn. **Phòng chọn theo từng khung tuần** (mỗi khung một phòng riêng, `getEligibleRoomsBySlot`); GV (1) / phòng-mỗi-khung (1) / HS (nhiều) chọn qua **modal tìm-kiếm `PickEntityModal`** (`components/staff/PickEntityModal.tsx`) — chọn tạm, mở lại nhớ lựa chọn, chỉ ghi khi bấm "Tạo lớp". (Khác `PeoplePickerModal` ở "Phân công lớp" vốn ghi DB ngay.) HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp") và nhóm chưa từng được đánh giá môn đó (nhãn "Chưa đánh giá", `level: null`), hiển thị đồng thời, nhóm "Phù hợp" lên đầu. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action (re-check từng buổi qua `findRoomConflict`). UI: "Tạo lớp học mới".
 _Avoid_: Class wizard, Smart scheduler, Auto-assign
 
 **Buổi bù** (makeup session) — Đánh dấu Session diễn ra (xanh) / nghỉ (đỏ); buổi nghỉ bắt buộc nhập lý do → `CANCELLED`. Hệ thống đề xuất ngày bù (dò Khung lịch tuần, tránh ngày đã có buổi) để CBĐT xác nhận/chỉnh; khi xác nhận kiểm tra lại trùng phòng & GV rồi nối Session mới kế thừa phòng/GV gốc. UI: "Buổi bù".
@@ -303,19 +309,19 @@ _Avoid_: Status, AvailabilityStatus, Mode (khi đứng một mình)
 **Room** — Phòng học vật lý, có sức chứa & trạng thái. Khi tạo bắt buộc đính 1 RoomLayoutImage. UI: "Phòng học".
 _Avoid_: Venue, Hall
 
-**RoomLayoutImage** — Ảnh sơ đồ phòng (toàn trung tâm/tầng) highlight đỏ vị trí phòng. Hiển thị qua nút "Xem vị trí" → modal. Giúp người mới định hướng.
+**RoomLayoutImage** — Ảnh sơ đồ phòng (toàn trung tâm/tầng) highlight đỏ vị trí phòng. Model `RoomLayoutImage` 1:1 với Room (`url` + `publicId` Cloudinary). Bắt buộc đính khi tạo Room (validate ở `createRoomAction`); thay ảnh thì dọn ảnh cũ trên Cloudinary (`updateRoomAction`/`deleteRoomAction`). Hiển thị qua nút "Xem vị trí" → modal (`components/rooms/RoomLayoutButton.tsx`, dùng ở `/staff/rooms` + `/admin/rooms`). Giúp người mới định hướng.
 _Avoid_: Floor plan, Map, Sơ đồ
 
-**RoomBooking** — Yêu cầu đặt phòng ad-hoc do Teacher/Staff/CBDT/Owner/Parent tạo (Student **không**; Admin **bị chặn** các key booking). Bắt buộc `reason` để NVLT cân nhắc ưu tiên. PENDING → APPROVED/REJECTED. (Khi có RoomOccupancy sẽ chiếm 1 block — hiện chưa có bảng đó, xem §5.) UI: "Đặt phòng".
+**RoomBooking** — Yêu cầu đặt phòng ad-hoc do Teacher/Staff/CBDT/Owner/Parent tạo (Student **không**; Admin **bị chặn** các key booking). Bắt buộc `reason` để NVLT cân nhắc ưu tiên. PENDING → APPROVED/REJECTED. Khi duyệt APPROVED chiếm 1 block RoomOccupancy trong cùng transaction (xem §5). UI: "Đặt phòng".
 _Avoid_: Reservation, Booking (đứng một mình), Yêu cầu phòng
 
-**RoomSchedule** — Khái niệm "tất cả khoảng thời gian một Room bị chiếm", từ 2 nguồn: Session của Class + RoomBooking đã duyệt. **Theo ADR-0001** sẽ là bảng denormalized làm nguồn sự thật duy nhất; **hiện chưa triển khai** — xung đột & disable ô UI đang tính on-the-fly từ ClassSession + RoomBooking (xem §5). UI: "Lịch phòng".
+**RoomSchedule** — "Tất cả khoảng thời gian một Room bị chiếm", từ 2 nguồn: Session của Class + RoomBooking đã duyệt. Là bảng denormalized `room_occupancies` làm nguồn sự thật duy nhất (**ADR-0001, đã triển khai** — xem §5): mọi đường ghi qua `lib/rooms/store.ts` trong cùng transaction với hành động gốc, DB chặn block giao nhau bằng EXCLUDE constraint. UI: "Lịch phòng".
 _Avoid_: RoomCalendar, RoomAvailability (ngược nghĩa), Room timetable
 
-**RoomOccupancy** — Một block thời gian đơn lẻ trên RoomSchedule (Room + start + end + source). `source` = `CLASS_SESSION` (→Session) hoặc `BOOKING` (→RoomBooking). UI: "Lịch sử dụng phòng".
+**RoomOccupancy** — Một block thời gian đơn lẻ trên RoomSchedule (model `RoomOccupancy`: roomId + `[startsAt, endsAt)` nửa mở + source + FK về nguồn). `source` = `CLASS_SESSION` (→Session) hoặc `BOOKING` (→RoomBooking). Trang `/staff/rooms/schedule` (`getRoomUsageForDate`, `lib/classes/queries.ts`) hiển thị lưới các Room khả dụng × khung giờ trong ngày, tô đỏ (CLASS_SESSION) / xanh (BOOKING) kèm danh sách chi tiết theo phòng — dùng để CBĐT xem chéo nhiều phòng & phát hiện xung đột trước khi xếp lịch. UI: "Lịch sử dụng phòng".
 _Avoid_: Slot, Block, Reservation
 
-**Lưới xếp buổi học** — Bảng phòng × khung giờ (07:00–22:00, mỗi cột 1 tiếng) để CBĐT xếp một Session: mỗi hàng một Room, ô bị chiếm theo RoomSchedule tô đỏ & khóa, bấm các ô trống liên tiếp cùng phòng để chọn phòng + khung giờ trong một thao tác. UI: "Chọn phòng & khung giờ".
+**Lưới xếp buổi học** — Bảng phòng × khung giờ (07:00–22:00, mỗi cột 1 tiếng) để CBĐT xếp một Session: mỗi hàng một Room, ô bị chiếm theo RoomSchedule tô đỏ & khóa, bấm các ô trống liên tiếp cùng phòng để chọn phòng + khung giờ trong một thao tác. Khác với trang "Lịch sử dụng phòng" (chỉ xem, đa phòng): lưới này dùng để **chọn** phòng+giờ cho một buổi cụ thể (`SessionScheduler`, `/staff/classes/[id]/sessions/new`). UI: "Chọn phòng & khung giờ".
 _Avoid_: Room picker grid, Timetable selector, Scheduler widget
 
 ### Phân loại nội dung
@@ -358,12 +364,13 @@ _Avoid_: Practice, Study session, Session (đã có nghĩa khác)
 - `EXAM_ASSIGNED` — GV giao đề mới cho lớp (`lib/teacher/actions/exam.ts`)
 - `EXAM_GRADED` — bài thi của HS đã được chấm (`lib/student/actions.ts`)
 - `QUESTION_APPROVED` — Admin duyệt câu hỏi GV tạo (`lib/admin/actions.ts`)
+- `COURSE_APPROVED` — Admin duyệt khóa học, chuyển status sang PUBLISHED (`approveCourseAction` trong `lib/courses/actions.ts`)
 - `BOOKING_APPROVED` / `BOOKING_REJECTED` — duyệt/từ chối yêu cầu đặt phòng (`lib/booking/actions.ts`)
 - `CLASS_ASSIGNED` — HS được thêm vào lớp (`lib/classes/actions.ts`)
 - `SCHEDULE_CHANGED` — buổi học bị nghỉ/hoãn/đổi lịch hoặc có buổi bù mới (`lib/classes/actions.ts`)
 - `STUDENT_ASSIGNED` — CBDTS phân HS mới cho CBĐT (`lib/classes/actions.ts`)
 
-`COURSE_APPROVED` và `SYSTEM` đã có trong enum nhưng **chưa có nơi nào tạo** — gap cho roadmap §7.4 (duyệt Course nên bắn `COURSE_APPROVED`; `SYSTEM` dành cho thông báo thủ công từ Admin, hiện chưa có UI để gửi).
+`SYSTEM` đã có trong enum nhưng **chưa có nơi nào tạo** — gap cho roadmap §7.3 (dành cho thông báo thủ công từ Admin, hiện chưa có UI để gửi).
 _Avoid_: Alert, Message
 
 **Permission framework** — Phân quyền table-driven: `can(user, key)` union quyền theo Role + StaffPosition; OWNER có mọi quyền, ADMIN có mọi quyền trừ nhóm booking; cache 5 phút. Key ở `lib/auth/permission-keys.ts`. Xem §2.3.
