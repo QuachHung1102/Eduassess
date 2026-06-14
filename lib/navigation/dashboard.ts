@@ -20,6 +20,9 @@ import {
   faToolbox,
   faUserGroup,
   faClock,
+  faBell,
+  faChalkboardUser,
+  faUserGraduate,
 } from "@fortawesome/free-solid-svg-icons";
 
 export type DashboardNavItem = {
@@ -57,6 +60,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/admin/flashcards",  label: "Flashcard",          icon: faLayerGroup,   permission: P.FLASHCARD_VIEW.key },
     { href: "/admin/questions",   label: "Ngân hàng câu hỏi",  icon: faDatabase,     permission: P.QUESTION_VIEW.key },
     { href: "/admin/courses",     label: "Khóa học online",    icon: faBookOpen,     permission: P.COURSE_VIEW.key },
+    { href: "/admin/notifications", label: "Gửi thông báo",     icon: faBell,         permission: P.NOTIFICATION_SEND.key },
   ],
 
   "/staff": [
@@ -66,6 +70,8 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/booking/approve",        label: "Duyệt đặt phòng", icon: faClipboardList, permission: P.BOOKING_APPROVE.key },
     { href: "/staff/overview",         label: "Tiến độ học sinh",icon: faChartLine,     permission: P.STUDENT_VIEW_ASSIGNED.key },
     { href: "/staff/students",         label: "Học sinh",        icon: faChildren,      permission: P.STUDENT_VIEW_ASSIGNED.key },
+    { href: "/staff/students/all",     label: "Tất cả học sinh", icon: faUserGraduate,  permission: P.STUDENT_VIEW_ALL.key },
+    { href: "/staff/teachers",         label: "Giáo viên",       icon: faChalkboardUser, permission: P.CLASS_CREATE.key },
     { href: "/staff/students/assign",  label: "Phân công CBDT",  icon: faUserGroup,     permission: P.STUDENT_ASSIGN.key },
     { href: "/staff/classes",          label: "Lớp học",         icon: faSchool,        permission: P.CLASS_VIEW_ALL.key },
   ],

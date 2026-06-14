@@ -48,6 +48,11 @@ enum NotificationType {
   STUDENT_ASSIGNED // CBDT được phân học sinh mới
 }
 
+enum ExamKind {
+  EXAM // Bài kiểm tra lớn (~45 phút)
+  QUIZ // Bài kiểm tra nhỏ (~15 phút)
+}
+
 enum CourseStatus {
   DRAFT // Giáo viên đang soạn thảo
   PENDING // Chờ admin duyệt

@@ -66,7 +66,7 @@ Quy tắc `can(user, key)`:
 4. Kết quả cache trong process **5 phút**; gọi `invalidatePermissionCache()` sau khi sửa matrix.
 
 - **Source of truth của key:** `lib/auth/permission-keys.ts` (`PERMISSIONS`). Quy ước key `<domain>.<action>`. Thêm feature có phân quyền ⇒ thêm key ở đây **+ cập nhật seed**.
-- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
+- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction), gửi thông báo hệ thống (`sendSystemNotificationAction`). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
 
 ### 2.4 Routing & navigation
 
@@ -109,10 +109,10 @@ Trạng thái: ✅ đã có · 🚧 một phần / cần sửa · 📋 roadmap (
 - Tổng quan · Nhật ký (`/owner/audit`, `audit.view`) · Hệ thống/debug (`/owner/system`, `system.debug`) · lối tắt sang khu Admin.
 
 ### `/admin` — Quản trị
-- Tài khoản (`/admin/users`) · Phân quyền vai trò (`/admin/role-permissions`) · Phòng (`/admin/rooms`) · Lớp học (`/admin/classes`) · Môn học (`/admin/subjects`) · Đề kiểm tra (`/admin/exams`) · Flashcard (`/admin/flashcards`) · Ngân hàng câu hỏi (`/admin/questions`, duyệt PENDING→APPROVED) · Khóa học online (`/admin/courses`, duyệt) · Quản lý permission (`/admin/permissions`).
+- Tài khoản (`/admin/users`) · Phân quyền vai trò (`/admin/role-permissions`) · Phòng (`/admin/rooms`) · Lớp học (`/admin/classes`) · Môn học (`/admin/subjects`) · Đề kiểm tra (`/admin/exams`) · Flashcard (`/admin/flashcards`) · Ngân hàng câu hỏi (`/admin/questions`, duyệt PENDING→APPROVED) · Khóa học online (`/admin/courses`, duyệt) · Gửi thông báo (`/admin/notifications`, `notification.send`) · Quản lý permission (`/admin/permissions`).
 
 ### `/staff` — Nhân viên (CBĐT/CBDTS/NVLT…)
-- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`, lịch sử dụng phòng `/staff/rooms/schedule`) · **Tiến độ học sinh** (`/staff/overview` — tổng quan mức năng lực + điểm danh + đánh giá-buổi của HS được phân) · Học sinh (`/staff/students`, `/staff/students/[id]`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
+- Đặt phòng (`/booking`) · Duyệt đặt phòng (`/booking/approve`, NVLT) · Phòng (`/staff/rooms`, lịch sử dụng phòng `/staff/rooms/schedule`) · **Tiến độ học sinh** (`/staff/overview` — tổng quan mức năng lực + điểm danh + đánh giá-buổi của HS được phân) · Học sinh (`/staff/students` — HS được phân cho CBĐT, `/staff/students/[id]`) · **Tất cả học sinh** (`/staff/students/all` — lọc toàn bộ HS để mở hồ sơ & đánh giá, gate `student.view_all`; lối vào của CBDTS) · **Giáo viên** (`/staff/teachers`, `/staff/teachers/[id]` — CBĐT khai/sửa lịch rảnh GV hộ, gate `class.create`) · Phân công CBDT (`/staff/students/assign`, CBDTS) · Lớp học (`/staff/classes`, `/staff/classes/new`, `/staff/classes/[id]`, sessions, makeup…).
 
 ### `/teacher` — Giáo viên
 - Ngân hàng câu hỏi (`/teacher/question-bank`, create, edit, `ai-suggest`) · Đề kiểm tra (`/teacher/exams`, create, `[id]/results`) · Lớp học (`/teacher/classes`, sessions, điểm danh) · Khóa học online (`/teacher/courses`, lessons) · **Lịch rảnh** (`/teacher/schedule`) · Đặt phòng.
@@ -149,7 +149,7 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 - `StudentSubjectLevel` (**lịch sử** đánh giá; lấy hiện tại = ORDER BY `evaluatedAt` DESC LIMIT 1) · `StudentAdvisor` (CBDTS phân HS cho CBĐT).
 
 ### Kiểm tra & câu hỏi (`exam.prisma`, `question.prisma`)
-`Question` (options JSON 4 đáp án, `difficulty`, `status` PENDING→APPROVED, `isUnivExam`, topic+subject) · `Exam` (gắn 1 Class, duration, showAnswer, allowRetake, dueAt) · `ExamQuestion` (thứ tự) · `ExamAttempt` (score 0–100, `aiFeedback` cache) · `ExamAnswer`.
+`Question` (options JSON 4 đáp án, `difficulty`, `status` PENDING→APPROVED, `isUnivExam`, topic+subject) · `Exam` (gắn 1 Class, `kind` EXAM/QUIZ, duration, showAnswer, allowRetake, dueAt) · `ExamQuestion` (thứ tự) · `ExamAttempt` (score 0–100, `aiFeedback` cache) · `ExamAnswer`.
 
 ### Khóa học online (`course.prisma`)
 `Course` (`CourseStatus` DRAFT→PENDING→PUBLISHED→ARCHIVED, isFree) · `Lesson` (markdown + video, order) · `Enrollment` · `LessonProgress` · `CourseReview` (1–5 sao) · `CourseQA` (thread câu hỏi/trả lời).
@@ -160,8 +160,6 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 ### Phòng & đặt phòng (`booking.prisma`, `room_schedule.prisma`)
 `Room` (capacity, isActive, 1:1 `RoomLayoutImage`) · `BookingReason` (label + priority) · `RoomBooking` (requester/bookedFor/reviewer, start/end, `BookingStatus`) · `RoomLayoutImage` (ảnh sơ đồ vị trí phòng: `url` + `publicId` Cloudinary, 1:1 với Room) · `RoomOccupancy` (bảng `room_occupancies` — xem dưới).
 
-> ⚠️ **Chưa có trong schema** (đang là khái niệm/roadmap, xem §7): model `Quiz` riêng.
->
 > ✅ **RoomSchedule đã là bảng denormalized** (ADR-0001 đã triển khai, model `RoomOccupancy` trong `prisma/schema/room_schedule.prisma`): hợp nhất 2 nguồn — ClassSession (SCHEDULED/COMPLETED, có roomId) + RoomBooking (APPROVED) — mỗi block giữ FK về nguồn (`sessionId`/`bookingId`, onDelete Cascade nên xóa lớp/phòng/booking tự dọn block). **Mọi đường ghi** đi qua module thuần `lib/rooms/store.ts` (`syncSessionOccupancy`, `syncBookingOccupancy`, `occupyForSessions`) trong **cùng transaction** với hành động gốc; **mọi đường check/đọc lịch phòng** (`checkSessionConflict`, seam booking, `getEligibleRoomsBySlot`, `getAvailableRooms`, `getRoomUsageForDate`) đọc bảng này qua `findRoomConflict`/`getOccupanciesBetween`. Tầng cuối chống đua tranh: EXCLUDE constraint `room_occupancies_no_overlap` (btree_gist, khoảng nửa mở `[startsAt, endsAt)`) — DB từ chối hai block giao nhau trên cùng phòng, seam bắt `isOverlapViolation()` để trả lỗi thân thiện. Check **GV trùng giờ** vẫn query `ClassSession` (GV không phải phòng). Nghi drift: `npm run db:rebuild-occupancy` (dựng lại từ nguồn), `npm run db:check-occupancy` (đếm + kiểm constraint).
 
 ### Hệ thống (`notification.prisma`, `password_reset.prisma`, `security_question.prisma`)
@@ -174,7 +172,7 @@ Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 > Liệt kê theo vòng đời: **phân HS → đánh giá ban đầu → tạo lớp → phân công → dạy & đánh giá theo buổi → bù buổi**.
 
 - **Phân học sinh:** CBDTS phân Student cho CBĐT (`StudentAdvisor`) → CBĐT mới được **đánh giá** HS đó (enforce qua `canEvaluateStudent`). Đây là bước đầu của vòng đời. *Quyết định thiết kế:* giới hạn theo phân công **chỉ áp cho đánh giá năng lực**; danh sách HS khả thi khi **tạo lớp cố ý KHÔNG lọc theo advisor** (mọi HS đúng môn/level đều hiện) để CBĐT xếp lớp linh hoạt — **không phải gap, không cần siết**.
-- **Đánh giá năng lực (Assessment):** CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction`. **CBĐT chỉ đánh giá HS được phân công** cho mình (`canEvaluateStudent`; OWNER/ADMIN/CBDTS bỏ qua) — form bị ẩn nếu không phụ trách. **Test đầu vào hiện làm OFFLINE** ⇒ đánh giá **ban đầu** bắt buộc CBĐT nhập tay; chính mức này là đầu vào cho **bộ lọc năng lực khi xếp lớp** (HS chưa có mức → nhãn "Chưa đánh giá"). Quyết định vẫn thủ công nhưng form có **panel tham chiếu theo môn** (`getStudentSubjectReferenceAction`): điểm TB Exam + tỉ lệ điểm danh + trung bình `SessionEvaluation` (3 chiều) + **gợi ý mức** theo ngưỡng <50 / 50–79 / 80–100. Mức đề xuất (`suggestedLevel`) được **điền sẵn tự động** (ưu tiên điểm Exam theo ngưỡng <50/50–79/80–89/≥90, fallback trung bình đánh giá-buổi) — CBĐT chỉ xác nhận/chỉnh. Ghi `StudentSubjectLevel` + `AuditLog` cùng transaction. Mức: `WEAK` / `AVERAGE` / `GOOD` / `EXCELLENT`. Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
+- **Đánh giá năng lực (Assessment):** CBĐT chọn mức cho HS trên 1 Subject qua `EvaluateForm` (`/staff/students/[id]`), ghi `StudentSubjectLevel` (lưu lịch sử, `evaluatedById`). Seam: `evaluateStudentLevelAction`. **CBĐT chỉ đánh giá HS được phân công** cho mình (`canEvaluateStudent`; OWNER/ADMIN/CBDTS bỏ qua) — form bị ẩn nếu không phụ trách. **CBDTS** không nhận HS theo advisor nên vào qua `/staff/students/all` (lọc toàn bộ HS) rồi mở hồ sơ để đánh giá bất kỳ HS nào. **Test đầu vào hiện làm OFFLINE** ⇒ đánh giá **ban đầu** bắt buộc CBĐT nhập tay; chính mức này là đầu vào cho **bộ lọc năng lực khi xếp lớp** (HS chưa có mức → nhãn "Chưa đánh giá"). Quyết định vẫn thủ công nhưng form có **panel tham chiếu theo môn** (`getStudentSubjectReferenceAction`): điểm TB Exam + tỉ lệ điểm danh + trung bình `SessionEvaluation` (3 chiều) + **gợi ý mức** theo ngưỡng <50 / 50–79 / 80–100. Mức đề xuất (`suggestedLevel`) được **điền sẵn tự động** (ưu tiên điểm Exam theo ngưỡng <50/50–79/80–89/≥90, fallback trung bình đánh giá-buổi) — CBĐT chỉ xác nhận/chỉnh. Ghi `StudentSubjectLevel` + `AuditLog` cùng transaction. Mức: `WEAK` / `AVERAGE` / `GOOD` / `EXCELLENT`. Là **tính năng cốt lõi**, đầu vào cho xếp lớp.
 - **Tạo lớp ràng buộc:** CBĐT vẽ Khung lịch tuần trên lưới ngày×giờ → hệ thống **lọc cứng** GV/phòng/HS khả thi (Availability cho người + RoomSchedule cho phòng + Session đã có); chỉ bên khả thi mới hiện. Logic thuần `lib/classes/scheduling.ts`, query lọc `lib/classes/eligibility.ts`, kiểm tra lại tại server action trước khi tạo. **Phòng chọn theo TỪNG khung tuần** (`getEligibleRoomsBySlot` trả phòng trống riêng cho mỗi khung — T2 và T4 có thể khác phòng); mỗi buổi sinh ra kế thừa phòng của khung tương ứng. GV/phòng/HS chọn qua **modal tìm-kiếm** (`PickEntityModal`, `components/staff/`) thay vì dropdown — danh sách HS/GV lớn không nhét vừa dropdown. Danh sách HS khả thi gồm cả nhóm đúng `targetLevel` (nhãn "Phù hợp", lên đầu) lẫn nhóm **chưa từng được đánh giá môn đó** (nhãn "Chưa đánh giá", `level: null`) — hiển thị đồng thời để CBĐT tự chọn, không ẩn nhóm nào.
 - **Phân công lớp:** xếp GV/HS vào lớp tại trang chi tiết qua bảng chọn tìm-kiếm (HS đúng môn+đúng trình độ mục tiêu gắn nhãn "Phù hợp", đẩy lên đầu). Một lần xác nhận phân nhiều người + gửi noti từng người.
 - **Đánh giá sau buổi học:** trong quá trình học, GV (người dạy buổi / GV của lớp / advisor; OWNER/ADMIN/CBDTS bỏ qua) chấm mỗi HS 3 chiều 1–5 (năng lực/chuyên cần/tiếp thu) ở trang buổi học, ghi `SessionEvaluation` qua `saveSessionEvaluationsAction`. Trung bình theo môn nuôi panel tham chiếu của Assessment (vòng lặp về bước đánh giá).
@@ -202,11 +200,9 @@ Assessment là tính năng cốt lõi (§6). **Đã xong toàn bộ phần cốt
 - 📋 *(tùy chọn)* Thay quy tắc ngưỡng bằng **đề xuất AI** nếu cần tổng hợp tinh vi hơn.
 - 📋 *(mở rộng)* **Trang tổng quan CBĐT** (`/staff/overview`) hiện liệt kê HS được phân + mức năng lực + điểm danh + TB đánh giá-buổi; có thể bổ sung tiến độ Course / lọc theo lớp nếu cần.
 
-### 7.3 Giai đoạn 3 — Thông báo & tiện ích vận hành
+### 7.3 Giai đoạn 3 — Thông báo & tiện ích vận hành (đã xong)
 
-- 📋 **Thông báo `SYSTEM`:** UI cho Admin soạn & gửi thông báo thủ công tới nhóm người nhận (enum đã có, **chưa nơi nào tạo** — xem **Notification** §8). Cần thêm permission key mới (vd `notification.send`) vào `lib/auth/permission-keys.ts` + seed.
-- 📋 **CBĐT xem-sửa lịch rảnh GV hộ:** hiện GV chỉ tự khai (`/teacher/schedule`), CBĐT mới sửa hộ được lịch HS (xem **Availability** §8). Module `lib/availability/` đã nhận `subject.kind: "teacher"` — chỉ thiếu seam + UI phía staff.
-- 📋 **Tách model `Quiz`** (bài kiểm tra nhỏ ~15 phút) khỏi Exam (hiện chưa có model riêng — xem **Quiz** §8).
+> ✅ Hoàn thành & ghi ở §4–6/§8: thông báo `SYSTEM` (`/admin/notifications`), CBĐT khai/sửa lịch rảnh GV hộ (`/staff/teachers`), phân biệt Quiz qua `Exam.kind` (không tách model riêng — tái dùng hạ tầng Exam).
 
 ### 7.4 Cải thiện liên tục
 
@@ -280,10 +276,10 @@ _Avoid_: Mark, Grade, Result, Điểm (trong code)
 
 ### Kiểm tra & câu hỏi
 
-**Exam** — Bài kiểm tra lớn (~45 phút), template tái sử dụng, gồm nhiều Question + thời gian & điều kiện nộp. UI: "Bài kiểm tra"/"Đề kiểm tra".
+**Exam** — Bài kiểm tra lớn (~45 phút), template tái sử dụng, gồm nhiều Question + thời gian & điều kiện nộp. `kind = EXAM` (mặc định) phân biệt với **Quiz** (`kind = QUIZ`) trên cùng model. UI: "Bài kiểm tra"/"Đề kiểm tra".
 _Avoid_: Test, Assessment (đã có nghĩa khác), Bài thi
 
-**Quiz** — Bài kiểm tra nhỏ (~15 phút), template tái sử dụng. Hiện chưa tách model riêng — sẽ phân biệt với Exam khi triển khai. UI: "Bài kiểm tra nhỏ".
+**Quiz** — Bài kiểm tra nhỏ (~15 phút), template tái sử dụng. **Không phải model riêng** — là `Exam` có `kind = QUIZ` (dùng chung Question/Attempt/chấm/AI); khác EXAM ở duration mặc định (~15 vs ~45) + nhãn. UI: "Bài kiểm tra nhỏ".
 _Avoid_: Mini Exam, Short Test, Bài tập nhanh
 
 **ExamAttempt** — Một lượt một Student làm một Exam/Quiz: thời điểm bắt đầu, đáp án, điểm, feedback AI. UI: "Lượt làm bài".
@@ -295,7 +291,7 @@ _Avoid_: Item, Problem
 
 ### Lịch rảnh & xếp lớp
 
-**Availability** — Bản kê thời gian một chủ thể (Student/Teacher) có thể học/dạy: 105 ô (7 ngày × 15 TimeSlot) trong tuần điển hình. Lưu hai bảng (`StudentAvailability`, `TeacherAvailability`) nhưng mọi đường đọc/ghi qua module duy nhất `lib/availability/` — interface `subject: { kind: "student" \| "teacher"; id }`, permission ở seam. Route `/student/schedule` (HS tự khai) và `/teacher/schedule` (GV tự khai) dùng chung `components/availability/AvailabilityMatrix.tsx`; CBĐT xem-sửa **hộ học sinh** tại `/staff/students/[id]` (qua `saveStudentAvailabilityAction`). GV chỉ tự khai — **chưa** có luồng CBĐT sửa lịch GV hộ. UI: "Lịch rảnh".
+**Availability** — Bản kê thời gian một chủ thể (Student/Teacher) có thể học/dạy: 105 ô (7 ngày × 15 TimeSlot) trong tuần điển hình. Lưu hai bảng (`StudentAvailability`, `TeacherAvailability`) nhưng mọi đường đọc/ghi qua module duy nhất `lib/availability/` — interface `subject: { kind: "student" \| "teacher"; id }`, permission ở seam. Route `/student/schedule` (HS tự khai) và `/teacher/schedule` (GV tự khai) dùng chung `components/availability/AvailabilityMatrix.tsx`; CBĐT xem-sửa **hộ học sinh** tại `/staff/students/[id]` (`saveStudentAvailabilityAction`) **và hộ giáo viên** tại `/staff/teachers/[id]` (`saveTeacherAvailabilityAction`, gate `class.create`). UI: "Lịch rảnh".
 _Avoid_: Schedule (chỉ là tên route), Calendar, Free time, Lịch sẵn
 
 **TimeSlot** — Một ô 1 tiếng trong tuần (vd `MORNING_07_08`, `AFTERNOON_14_15`). Đơn vị nhỏ nhất của Availability. UI: "Khung giờ".
@@ -372,8 +368,9 @@ _Avoid_: Practice, Study session, Session (đã có nghĩa khác)
 - `CLASS_ASSIGNED` — HS được thêm vào lớp (`lib/classes/actions.ts`)
 - `SCHEDULE_CHANGED` — buổi học bị nghỉ/hoãn/đổi lịch hoặc có buổi bù mới (`lib/classes/actions.ts`)
 - `STUDENT_ASSIGNED` — CBDTS phân HS mới cho CBĐT (`lib/classes/actions.ts`)
+- `SYSTEM` — Admin soạn & gửi thủ công tới nhóm vai trò tại `/admin/notifications` (`sendSystemNotificationAction`, permission `notification.send`; ghi AuditLog)
 
-`SYSTEM` đã có trong enum nhưng **chưa có nơi nào tạo** — gap cho roadmap §7.3 (dành cho thông báo thủ công từ Admin, hiện chưa có UI để gửi).
+Mọi `NotificationType` nay đều có nơi tạo.
 _Avoid_: Alert, Message
 
 **Permission framework** — Phân quyền table-driven: `can(user, key)` union quyền theo Role + StaffPosition; OWNER có mọi quyền, ADMIN có mọi quyền trừ nhóm booking; cache 5 phút. Key ở `lib/auth/permission-keys.ts`. Xem §2.3.

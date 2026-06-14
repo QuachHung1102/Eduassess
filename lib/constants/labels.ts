@@ -33,3 +33,14 @@ export const STUDENT_LEVEL_COLOR: Record<string, string> = {
   GOOD: "bg-green-100 text-green-700",
   EXCELLENT: "bg-indigo-100 text-indigo-700",
 };
+
+// ── Loại bài kiểm tra (ExamKind) ─────────────────────────────
+export const EXAM_KIND_LABEL: Record<string, string> = {
+  EXAM: "Bài kiểm tra",
+  QUIZ: "Bài kiểm tra nhỏ",
+};
+
+export const EXAM_KIND_COLOR: Record<string, string> = {
+  EXAM: "bg-blue-100 text-blue-700",
+  QUIZ: "bg-purple-100 text-purple-700",
+};

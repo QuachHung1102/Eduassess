@@ -6,6 +6,7 @@ model Exam {
   subjectId   String
   classId     String
   createdById String
+  kind        ExamKind  @default(EXAM) // EXAM (~45ph) hoặc QUIZ (~15ph) — chung hạ tầng
   duration    Int // Thời gian làm bài (phút)
   showAnswer  Boolean   @default(true) // Cho phép học sinh xem đáp án sau khi nộp
   allowRetake Boolean   @default(false) // Cho phép làm lại

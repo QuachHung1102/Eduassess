@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTeacherExams } from "@/lib/teacher/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus, faFilePen } from "@fortawesome/free-solid-svg-icons";
+import { EXAM_KIND_LABEL, EXAM_KIND_COLOR } from "@/lib/constants/labels";
 
 export default async function ExamsPage() {
   const exams = await getTeacherExams();
@@ -57,6 +58,9 @@ export default async function ExamsPage() {
                     >
                       {exam.title}
                     </Link>
+                    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium ${EXAM_KIND_COLOR[exam.kind]}`}>
+                      {EXAM_KIND_LABEL[exam.kind]}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{exam.subject.name}</td>
                   <td className="px-4 py-3 text-gray-600">Lớp {exam.class.name}</td>

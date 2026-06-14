@@ -3,6 +3,7 @@ import { getStudentExams } from "@/lib/student/queries";
 import { startExamAction } from "@/lib/student/actions";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faTrophy, faBookOpen, faSchool, faFilePen, faClock, faCalendar, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
+import { EXAM_KIND_LABEL, EXAM_KIND_COLOR } from "@/lib/constants/labels";
 
 export default async function StudentExamsPage({
   searchParams,
@@ -54,6 +55,9 @@ export default async function StudentExamsPage({
                   <Link href={`/student/exams/${exam.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                     {exam.title}
                   </Link>
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium ${EXAM_KIND_COLOR[exam.kind]}`}>
+                    {EXAM_KIND_LABEL[exam.kind]}
+                  </span>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
                     <span className="flex items-center gap-1"><FaIcon icon={faBookOpen} />{exam.subject.name}</span>
                     <span className="flex items-center gap-1"><FaIcon icon={faSchool} />Lớp {exam.class.name}</span>
@@ -108,7 +112,12 @@ export default async function StudentExamsPage({
               return (
                 <div key={exam.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900">{exam.title}</p>
+                    <p className="font-semibold text-gray-900">
+                      {exam.title}
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium ${EXAM_KIND_COLOR[exam.kind]}`}>
+                        {EXAM_KIND_LABEL[exam.kind]}
+                      </span>
+                    </p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
                       <span className="flex items-center gap-1"><FaIcon icon={faBookOpen} />{exam.subject.name}</span>
                       <span className="flex items-center gap-1"><FaIcon icon={faSchool} />Lớp {exam.class.name}</span>

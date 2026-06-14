@@ -11,6 +11,7 @@ export async function createExamAction(formData: FormData) {
   const title = (formData.get("title") as string)?.trim();
   const subjectId = formData.get("subjectId") as string;
   const classId = formData.get("classId") as string;
+  const kind = (formData.get("kind") as string) === "QUIZ" ? "QUIZ" : "EXAM";
   const duration = parseInt(formData.get("duration") as string, 10);
   const showAnswer = formData.get("showAnswer") === "true";
   const allowRetake = formData.get("allowRetake") === "true";
@@ -63,6 +64,7 @@ export async function createExamAction(formData: FormData) {
       title,
       subjectId,
       classId,
+      kind,
       duration,
       showAnswer,
       allowRetake,
@@ -87,11 +89,12 @@ export async function createExamAction(formData: FormData) {
     const dueText = dueAt
       ? ` — Hạn nộp: ${dueAt.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`
       : "";
+    const kindWord = kind === "QUIZ" ? "bài kiểm tra nhỏ" : "đề kiểm tra";
     await prisma.notification.createMany({
       data: students.map((s) => ({
         userId: s.studentId,
-        title: "Đề kiểm tra mới",
-        message: `Giáo viên vừa giao đề "${title}" cho lớp ${exam.class.name}.${dueText}`,
+        title: kind === "QUIZ" ? "Bài kiểm tra nhỏ mới" : "Đề kiểm tra mới",
+        message: `Giáo viên vừa giao ${kindWord} "${title}" cho lớp ${exam.class.name}.${dueText}`,
         type: "EXAM_ASSIGNED" as const,
         href: `/student/exams`,
       })),

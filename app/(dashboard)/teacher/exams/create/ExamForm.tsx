@@ -18,9 +18,16 @@ export function ExamForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
+  const [kind, setKind] = useState<"EXAM" | "QUIZ">("EXAM");
+  const [duration, setDuration] = useState(45);
   const [easy, setEasy] = useState(10);
   const [medium, setMedium] = useState(8);
   const [hard, setHard] = useState(2);
+
+  function changeKind(k: "EXAM" | "QUIZ") {
+    setKind(k);
+    setDuration(k === "QUIZ" ? 15 : 45); // gợi ý thời lượng theo loại
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,6 +46,31 @@ export function ExamForm({
           {error}
         </div>
       )}
+
+      {/* Loại bài */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Loại bài</label>
+        <input type="hidden" name="kind" value={kind} />
+        <div className="flex gap-2">
+          {([
+            { value: "EXAM", label: "Bài kiểm tra", hint: "~45 phút" },
+            { value: "QUIZ", label: "Bài kiểm tra nhỏ", hint: "~15 phút" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => changeKind(opt.value)}
+              className={`flex-1 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
+                kind === opt.value
+                  ? "border-blue-600 bg-blue-50 text-blue-700 font-medium"
+                  : "border-gray-300 text-gray-600 hover:border-gray-400"
+              }`}
+            >
+              {opt.label} <span className="text-xs text-gray-400">({opt.hint})</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Tên đề */}
       <div>
@@ -150,7 +182,8 @@ export function ExamForm({
             name="duration"
             type="number"
             min={5}
-            defaultValue={45}
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
             required
             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
           />

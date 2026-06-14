@@ -295,6 +295,83 @@ export async function getMyStudentsOverview() {
   });
 }
 
+/**
+ * Lọc TOÀN BỘ học sinh (cho CBDTS/role có student.view_all để tìm & đánh giá).
+ * - q: tìm theo tên/email.
+ * - subjectId + level: lọc theo mức năng lực mới nhất ở một môn ("UNASSESSED" = chưa đánh giá môn đó).
+ * Trả kèm mức theo môn + CBĐT phụ trách để CBDTS giám sát.
+ */
+export async function getAllStudentsFiltered(filters: {
+  q?: string;
+  subjectId?: string;
+  level?: string;
+}) {
+  const q = filters.q?.trim();
+  const students = await prisma.user.findMany({
+    where: {
+      role: "STUDENT",
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      studentAdvisees: { select: { advisor: { select: { name: true } } } },
+    },
+    orderBy: { name: "asc" },
+    take: 300,
+  });
+  const ids = students.map((s) => s.id);
+  if (ids.length === 0) return [];
+
+  const levels = await prisma.studentSubjectLevel.findMany({
+    where: {
+      studentId: { in: ids },
+      ...(filters.subjectId ? { subjectId: filters.subjectId } : {}),
+    },
+    select: { studentId: true, subjectId: true, level: true, subject: { select: { name: true } } },
+    orderBy: { evaluatedAt: "desc" },
+  });
+
+  const latestBySubject = new Map<string, { subject: string; level: string }[]>();
+  const subjLevelByStudent = new Map<string, string>();
+  const seen = new Set<string>();
+  for (const lv of levels) {
+    const key = `${lv.studentId}:${lv.subjectId}`;
+    if (seen.has(key)) continue; // bản mới hơn đã thấy (orderBy desc)
+    seen.add(key);
+    const list = latestBySubject.get(lv.studentId) ?? [];
+    list.push({ subject: lv.subject.name, level: lv.level });
+    latestBySubject.set(lv.studentId, list);
+    if (filters.subjectId && lv.subjectId === filters.subjectId)
+      subjLevelByStudent.set(lv.studentId, lv.level);
+  }
+
+  let result = students.map((s) => ({
+    id: s.id,
+    name: s.name,
+    email: s.email,
+    advisors: s.studentAdvisees.map((a) => a.advisor.name).filter(Boolean) as string[],
+    levels: latestBySubject.get(s.id) ?? [],
+    subjectLevel: filters.subjectId ? subjLevelByStudent.get(s.id) ?? null : null,
+  }));
+
+  if (filters.subjectId && filters.level) {
+    result =
+      filters.level === "UNASSESSED"
+        ? result.filter((s) => s.subjectLevel === null)
+        : result.filter((s) => s.subjectLevel === filters.level);
+  }
+  return result;
+}
+
 /** Chi tiết học sinh: lịch rảnh + lịch sử năng lực + lớp đang học. */
 export async function getStudentDetail(studentId: string) {
   const [student, availability, levelHistory, advisorLinks] = await Promise.all([
@@ -370,6 +447,41 @@ export async function getAvailableRooms(
     },
     orderBy: { name: "asc" },
   });
+}
+
+/** Giáo viên + lịch rảnh hiện tại — cho CBĐT xem/sửa hộ tại /staff/teachers/[id]. */
+export async function getTeacherWithAvailability(teacherId: string) {
+  const [teacher, availability] = await Promise.all([
+    prisma.user.findFirst({
+      where: { id: teacherId, role: "TEACHER" },
+      select: { id: true, name: true, email: true },
+    }),
+    prisma.teacherAvailability.findMany({
+      where: { teacherId },
+      orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }],
+    }),
+  ]);
+  return { teacher, availability };
+}
+
+/** Danh sách giáo viên kèm số ô lịch rảnh đã khai — cho trang /staff/teachers. */
+export async function getTeachersWithAvailabilityCount() {
+  const teachers = await prisma.user.findMany({
+    where: { role: "TEACHER" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      _count: { select: { teacherAvailability: { where: { availabilityMode: { not: "BUSY" } } } } },
+    },
+    orderBy: { name: "asc" },
+  });
+  return teachers.map((t) => ({
+    id: t.id,
+    name: t.name,
+    email: t.email,
+    declaredSlots: t._count.teacherAvailability,
+  }));
 }
 
 /** Tất cả giáo viên trong hệ thống để chọn khi tạo buổi học. */

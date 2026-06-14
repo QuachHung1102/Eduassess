@@ -69,6 +69,9 @@ export const PERMISSIONS = {
   FLASHCARD_VIEW:      { key: "flashcard.view",      domain: "FLASHCARD", description: "Xem flashcard" },
   FLASHCARD_MANAGE:    { key: "flashcard.manage",    domain: "FLASHCARD", description: "Tạo / sửa flashcard" },
 
+  // ── NOTIFICATION ─────────────────────────────────────
+  NOTIFICATION_SEND:   { key: "notification.send",   domain: "NOTIFICATION", description: "Soạn & gửi thông báo hệ thống thủ công" },
+
   // ── AUDIT & SYSTEM (OWNER zone) ──────────────────────
   AUDIT_VIEW:          { key: "audit.view",          domain: "AUDIT",  description: "Xem nhật ký kiểm tra" },
   SYSTEM_DEBUG:        { key: "system.debug",        domain: "SYSTEM", description: "Truy cập công cụ debug hệ thống" },
