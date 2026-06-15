@@ -15,19 +15,19 @@ export async function startExamAction(examId: string): Promise<void> {
 
   const studentId = session.user.id;
 
-  // Kiểm tra học sinh có trong lớp được giao đề
+  // Kiểm tra học sinh có trong lớp được giao đề (chỉ HS đang học — không tính DROPPED)
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
-    select: { id: true, classId: true, allowRetake: true },
+    select: { id: true, classId: true, allowRetake: true, dueAt: true },
   });
   if (!exam) redirect("/student/exams");
 
   const inClass = await prisma.classEnrollment.findFirst({
-    where: { studentId, classId: exam.classId },
+    where: { studentId, classId: exam.classId, status: "ACTIVE" },
   });
   if (!inClass) redirect("/student/exams");
 
-  // Nếu đã có attempt chưa submit → tiếp tục
+  // Nếu đã có attempt chưa submit → tiếp tục (đã bắt đầu đúng hạn, cho làm tiếp)
   const existing = await prisma.examAttempt.findFirst({
     where: { studentId, examId, submittedAt: null },
   });
@@ -41,6 +41,11 @@ export async function startExamAction(examId: string): Promise<void> {
   });
   if (submitted && !exam.allowRetake) {
     redirect(`/student/exams/${examId}/results/${submitted.id}`);
+  }
+
+  // Quá hạn nộp → không cho BẮT ĐẦU lượt mới (lượt đang dở vẫn làm tiếp ở trên).
+  if (exam.dueAt && new Date() > exam.dueAt) {
+    redirect(`/student/exams/${examId}`);
   }
 
   const attempt = await prisma.examAttempt.create({

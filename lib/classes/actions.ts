@@ -5,6 +5,7 @@ import { saveAvailability } from "@/lib/availability/store";
 import { prisma } from "@/lib/db/prisma";
 import { can } from "@/lib/auth/permissions";
 import { getRoomUsageForDate, canEvaluateStudent, type RoomUsageForDate } from "@/lib/classes/queries";
+import { suggestProficiencyLevel, type LevelSuggestion } from "@/lib/ai";
 import {
   generateSessionPlan,
   weeklyPatternToCells,
@@ -1042,6 +1043,43 @@ export async function getStudentSubjectReferenceAction(
     suggestedLevel,
     suggestedReason,
   };
+}
+
+/**
+ * Đề xuất mức năng lực bằng AI (tổng hợp điểm Exam + điểm danh + đánh giá-buổi).
+ * On-demand: chỉ chạy khi CBĐT bấm nút — kiểm soát chi phí. CBĐT vẫn tự chốt.
+ */
+export async function getAiLevelSuggestionAction(
+  studentId: string,
+  subjectId: string,
+): Promise<{ error: string } | LevelSuggestion> {
+  const ref = await getStudentSubjectReferenceAction(studentId, subjectId);
+  if ("error" in ref) return ref; // đã kiểm quyền + canEvaluateStudent bên trong
+
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { name: true },
+  });
+  if (!subject) return { error: "Không tìm thấy môn học" };
+
+  const hasData =
+    ref.avgScore !== null || ref.attendance.total > 0 || ref.sessionEval.count > 0;
+  if (!hasData)
+    return { error: "Chưa có dữ liệu (điểm/điểm danh/đánh giá buổi) để AI phân tích." };
+
+  try {
+    return await suggestProficiencyLevel({
+      subject: subject.name,
+      avgScore: ref.avgScore,
+      examScores: ref.attempts
+        .map((a) => a.score)
+        .filter((s): s is number => s !== null),
+      attendance: ref.attendance,
+      sessionEval: ref.sessionEval,
+    });
+  } catch {
+    return { error: "AI không phản hồi được lúc này. Vui lòng thử lại." };
+  }
 }
 
 // ── Lịch rảnh học sinh ────────────────────────────────────────

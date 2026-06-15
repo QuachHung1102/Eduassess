@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import {
   evaluateStudentLevelAction,
   getStudentSubjectReferenceAction,
+  getAiLevelSuggestionAction,
   type StudentSubjectReference,
 } from "@/lib/classes/actions";
 import { STUDENT_LEVELS, STUDENT_LEVEL_LABEL as LEVEL_LABEL } from "@/lib/constants/labels";
 import type { StudentLevel } from "@/lib/types";
+
+type AiSuggestion = { level: StudentLevel; rationale: string };
 
 interface Subject {
   id: string;
@@ -49,6 +52,25 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
 
   const refLoading = !loaded || loaded.subjectId !== subjectId;
   const ref = refLoading ? null : loaded.data;
+
+  // Đề xuất AI (on-demand) — gắn theo subjectId để không hiện nhầm khi đổi môn.
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<
+    { subjectId: string; suggestion: AiSuggestion | null; error: string } | null
+  >(null);
+  const aiForCurrent = aiResult && aiResult.subjectId === subjectId ? aiResult : null;
+
+  async function handleAiSuggest() {
+    if (!subjectId) return;
+    setAiLoading(true);
+    const res = await getAiLevelSuggestionAction(studentId, subjectId);
+    setAiLoading(false);
+    setAiResult(
+      "error" in res
+        ? { subjectId, suggestion: null, error: res.error }
+        : { subjectId, suggestion: res, error: "" },
+    );
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -167,6 +189,36 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
                 </ul>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Đề xuất bằng AI (on-demand) */}
+      <div>
+        <button
+          type="button"
+          onClick={handleAiSuggest}
+          disabled={aiLoading || !subjectId}
+          className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-50 disabled:opacity-50"
+        >
+          {aiLoading ? "Đang phân tích…" : "✨ Phân tích bằng AI"}
+        </button>
+        {aiForCurrent?.error && (
+          <p className="mt-1 text-xs text-red-600">{aiForCurrent.error}</p>
+        )}
+        {aiForCurrent?.suggestion && (
+          <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs">
+            <p className="text-gray-800">
+              AI đề xuất: <strong>{LEVEL_LABEL[aiForCurrent.suggestion.level]}</strong>
+            </p>
+            <p className="mt-0.5 text-gray-600">{aiForCurrent.suggestion.rationale}</p>
+            <button
+              type="button"
+              onClick={() => setLevel(aiForCurrent.suggestion!.level)}
+              className="mt-1 font-medium text-indigo-700 underline"
+            >
+              Dùng mức này
+            </button>
           </div>
         )}
       </div>

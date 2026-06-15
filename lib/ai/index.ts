@@ -113,3 +113,64 @@ Hãy nhận xét bài làm cho học sinh này.`;
 
   return msg.content[0].type === "text" ? msg.content[0].text : "";
 }
+
+// ─── Prompt 3: Đề xuất mức năng lực môn (cho CBĐT) ───────────
+
+const LEVEL_SYSTEM = `\
+Bạn là cố vấn đào tạo, giúp CBĐT chốt mức năng lực môn học của một học sinh.
+Bốn mức: WEAK (Yếu), AVERAGE (Trung bình), GOOD (Khá/Giỏi), EXCELLENT (Xuất sắc).
+Tham chiếu ngưỡng điểm: <50 → WEAK, 50–79 → AVERAGE, 80–89 → GOOD, ≥90 → EXCELLENT.
+Nhưng hãy TỔNG HỢP cả điểm kiểm tra, tỉ lệ điểm danh và đánh giá theo buổi
+(năng lực/chuyên cần/tiếp thu thang 5) để chọn mức hợp lý nhất, không máy móc theo mỗi điểm.
+CHỈ trả về MỘT JSON object thuần, không markdown, không text thừa:
+{"level":"<WEAK|AVERAGE|GOOD|EXCELLENT>","rationale":"<1–2 câu tiếng Việt giải thích>"}`;
+
+export type LevelSuggestionParams = {
+  subject: string;
+  avgScore: number | null;
+  examScores: number[];
+  attendance: { present: number; total: number };
+  sessionEval: {
+    performance: number | null;
+    diligence: number | null;
+    comprehension: number | null;
+    count: number;
+  };
+};
+
+export type LevelSuggestion = {
+  level: "WEAK" | "AVERAGE" | "GOOD" | "EXCELLENT";
+  rationale: string;
+};
+
+export async function suggestProficiencyLevel(
+  params: LevelSuggestionParams,
+): Promise<LevelSuggestion> {
+  const { subject, avgScore, examScores, attendance, sessionEval } = params;
+  const attPct =
+    attendance.total > 0 ? Math.round((attendance.present / attendance.total) * 100) : null;
+  const se = sessionEval;
+
+  const userMessage = `\
+Môn: ${subject}.
+Điểm kiểm tra: ${examScores.length ? `${examScores.map((s) => s.toFixed(0)).join(", ")} (TB ${avgScore?.toFixed(1) ?? "—"})` : "chưa có"}.
+Điểm danh: ${attPct !== null ? `${attPct}% (${attendance.present}/${attendance.total} buổi)` : "chưa có"}.
+Đánh giá theo buổi (thang 5): ${se.count > 0 ? `năng lực ${se.performance?.toFixed(1) ?? "—"}, chuyên cần ${se.diligence?.toFixed(1) ?? "—"}, tiếp thu ${se.comprehension?.toFixed(1) ?? "—"} (${se.count} buổi)` : "chưa có"}.
+Hãy đề xuất mức năng lực phù hợp nhất.`;
+
+  const msg = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    system: LEVEL_SYSTEM,
+    messages: [{ role: "user", content: userMessage }],
+  });
+
+  const raw = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("No JSON object in response: " + raw.substring(0, 200));
+  const parsed = JSON.parse(match[0]) as Partial<LevelSuggestion>;
+  if (!parsed.level || !["WEAK", "AVERAGE", "GOOD", "EXCELLENT"].includes(parsed.level)) {
+    throw new Error("Invalid level from AI: " + raw.substring(0, 200));
+  }
+  return { level: parsed.level, rationale: String(parsed.rationale ?? "") };
+}

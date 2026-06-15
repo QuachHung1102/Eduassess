@@ -78,17 +78,34 @@ export default async function StudentExamsPage({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {exam.attempt && exam.attempt.submittedAt === null && (
-                    <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full whitespace-nowrap">Đang làm dở</span>
-                  )}
-                  <form action={startExamAction.bind(null, exam.id)}>
-                    <button
-                      type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
-                    >
-                      {exam.attempt && exam.attempt.submittedAt === null ? "Tiếp tục" : "Bắt đầu"}
-                    </button>
-                  </form>
+                  {(() => {
+                    const inProgress = exam.attempt && exam.attempt.submittedAt === null;
+                    const pastDue = exam.dueAt && new Date() > new Date(exam.dueAt);
+                    if (inProgress) {
+                      return (
+                        <>
+                          <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full whitespace-nowrap">Đang làm dở</span>
+                          <form action={startExamAction.bind(null, exam.id)}>
+                            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap">
+                              Tiếp tục
+                            </button>
+                          </form>
+                        </>
+                      );
+                    }
+                    if (pastDue) {
+                      return (
+                        <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-lg whitespace-nowrap">Quá hạn</span>
+                      );
+                    }
+                    return (
+                      <form action={startExamAction.bind(null, exam.id)}>
+                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap">
+                          Bắt đầu
+                        </button>
+                      </form>
+                    );
+                  })()}
                 </div>
               </div>
             ))

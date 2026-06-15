@@ -78,21 +78,6 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="role" className="mb-2 block text-sm font-semibold text-slate-700">
-                Vai trò
-              </label>
-              <select
-                id="role"
-                name="role"
-                defaultValue="STUDENT"
-                className="field-input min-h-11"
-              >
-                <option value="TEACHER">Giáo viên</option>
-                <option value="STUDENT">Học sinh</option>
-              </select>
-            </div>
-
-            <div>
               <label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-700">
                 Mật khẩu
               </label>

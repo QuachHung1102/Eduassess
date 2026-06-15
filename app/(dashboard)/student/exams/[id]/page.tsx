@@ -18,6 +18,7 @@ export default async function StudentExamDetailPage({
   const attempt = exam.attempt;
   const isSubmitted = attempt !== null && attempt.submittedAt !== null;
   const isInProgress = attempt !== null && attempt.submittedAt === null;
+  const isPastDue = exam.dueAt !== null && new Date() > new Date(exam.dueAt);
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-2xl">
@@ -100,6 +101,15 @@ export default async function StudentExamDetailPage({
             </Link>
           </div>
         </div>
+      ) : isPastDue ? (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5 md:p-6 shrink-0">
+          <p className="font-semibold text-red-900">
+            <FaIcon icon={faTriangleExclamation} className="mr-1.5" /> Đã quá hạn nộp bài
+          </p>
+          <p className="text-sm text-red-700 mt-1">
+            Hạn nộp: {exam.dueAt ? new Date(exam.dueAt).toLocaleString("vi-VN") : "—"}. Bạn không thể bắt đầu bài này nữa.
+          </p>
+        </div>
       ) : (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 md:p-6 shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -108,6 +118,7 @@ export default async function StudentExamDetailPage({
               <p className="text-sm text-blue-700 mt-1">
                 Bạn có {exam.duration} phút để hoàn thành {exam._count.examQuestions} câu hỏi.
                 Chú ý: không được làm lại sau khi nộp.
+                {exam.dueAt && ` Hạn nộp: ${new Date(exam.dueAt).toLocaleString("vi-VN")}.`}
               </p>
             </div>
             <form action={startExamAction.bind(null, id)} className="self-start sm:self-auto">

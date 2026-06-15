@@ -43,16 +43,38 @@ export default function TakeExamClient({
   const [showConfirm, setShowConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
   const autoSubmitted = useRef(false);
+  const storageKey = `exam-answers-${attemptId}`;
 
   const doSubmit = useCallback(() => {
     const payload = questions.map((q) => ({
       questionId: q.id,
       selectedOption: answers[q.id] ?? null,
     }));
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
     startTransition(() => {
       submitExamAction(attemptId, payload);
     });
-  }, [answers, attemptId, questions]);
+  }, [answers, attemptId, questions, storageKey]);
+
+  // Khôi phục đáp án đã lưu tạm khi mở lại bài (chống mất bài do reload/đóng tab/đứt mạng).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) setAnswers(JSON.parse(saved));
+    } catch {}
+    // Chỉ chạy một lần khi mở bài.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Lưu tạm mỗi khi đổi đáp án (bỏ qua khi rỗng để không ghi đè bản đã lưu).
+  useEffect(() => {
+    if (Object.keys(answers).length === 0) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(answers));
+    } catch {}
+  }, [answers, storageKey]);
 
   useEffect(() => {
     if (timeLeft <= 0) {

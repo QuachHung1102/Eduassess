@@ -16,4 +16,4 @@ Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `read
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Multi-context: `CONTEXT-MAP.md` (root) indexes per-context docs in `docs/context/` (`platform.md` shared + `back-office.md` + `student-facing.md`); ADRs in `docs/adr/`. See `docs/agents/domain.md`.

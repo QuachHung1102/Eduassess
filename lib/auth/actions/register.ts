@@ -1,6 +1,5 @@
 "use server";
 
-import type { Role } from "@/lib/types";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 
@@ -9,7 +8,6 @@ export async function registerAction(formData: FormData) {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirm-password") as string;
-  const role = (formData.get("role") as Role) ?? "STUDENT";
 
   if (!name || !email || !password) {
     return { error: "Vui lòng điền đầy đủ thông tin" };
@@ -20,18 +18,16 @@ export async function registerAction(formData: FormData) {
   if (password !== confirmPassword) {
     return { error: "Mật khẩu xác nhận không khớp" };
   }
-  if (!["TEACHER", "STUDENT"].includes(role)) {
-    return { error: "Vai trò không hợp lệ" };
-  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return { error: "Email này đã được đăng ký" };
   }
 
+  // Tự đăng ký chỉ tạo tài khoản HỌC SINH; GV/nhân viên do admin tạo.
   const hashedPassword = await bcrypt.hash(password, 12);
   await prisma.user.create({
-    data: { name, email, password: hashedPassword, role },
+    data: { name, email, password: hashedPassword, role: "STUDENT" },
   });
 
   return { success: true };
