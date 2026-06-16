@@ -142,7 +142,10 @@ export async function startFlashcardSessionAction(
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const studentId = session.user.id;
+  // Tra id User thật ứng với role STUDENT (chống lệch session.user.id vs bản ghi
+  // User — vd sau khi reseed DB, session cũ trỏ tới id không còn tồn tại).
+  const studentId = await resolveUserIdByRole(session.user, "STUDENT");
+  if (!studentId) redirect("/login");
 
   // Nếu đang có session chưa hoàn thành → dùng lại
   const existing = await prisma.flashcardSession.findFirst({
@@ -163,8 +166,11 @@ export async function completeFlashcardSessionAction(
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const studentId = await resolveUserIdByRole(session.user, "STUDENT");
+  if (!studentId) redirect("/login");
+
   await prisma.flashcardSession.updateMany({
-    where: { id: sessionId, studentId: session.user.id },
+    where: { id: sessionId, studentId },
     data: { completedAt: new Date() },
   });
 }

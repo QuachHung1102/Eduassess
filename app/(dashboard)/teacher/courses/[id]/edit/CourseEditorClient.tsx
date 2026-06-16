@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LessonEditor } from "@/components/courses/LessonEditor";
 import { LessonViewer } from "@/components/courses/LessonViewer";
 import { FaIcon } from "@/components/ui/FaIcon";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import {
   faPlus, faTrash, faChevronUp, faChevronDown,
   faPaperPlane, faEdit, faArrowLeft, faSave,
@@ -42,11 +43,12 @@ type Course = {
   _count: { enrollments: number; reviews: number };
 };
 
+// color = hex ngữ nghĩa; chip dùng tint color-mix nên đọc tốt cả light/dark.
 const STATUS_INFO: Record<string, { label: string; color: string; icon: typeof faCircleCheck }> = {
-  DRAFT: { label: "Nháp", color: "bg-gray-100 text-gray-700", icon: faEdit },
-  PENDING: { label: "Chờ duyệt", color: "bg-yellow-100 text-yellow-700", icon: faClock },
-  PUBLISHED: { label: "Đã xuất bản", color: "bg-green-100 text-green-700", icon: faCircleCheck },
-  ARCHIVED: { label: "Đã ẩn", color: "bg-red-100 text-red-600", icon: faArchive },
+  DRAFT: { label: "Nháp", color: "#64748b", icon: faEdit },
+  PENDING: { label: "Chờ duyệt", color: "#d97706", icon: faClock },
+  PUBLISHED: { label: "Đã xuất bản", color: "#16a34a", icon: faCircleCheck },
+  ARCHIVED: { label: "Đã ẩn", color: "#dc2626", icon: faArchive },
 };
 
 export function CourseEditorClient({
@@ -59,6 +61,7 @@ export function CourseEditorClient({
   userRole: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description ?? "");
@@ -83,7 +86,7 @@ export function CourseEditorClient({
     setMetaSaving(true); setMetaMsg("");
     const r = await updateCourseAction(course.id, { title, description, subjectId });
     setMetaSaving(false);
-    setMetaMsg(r.error ? `Lỗi: ${r.error}` : "Đã lưu ✓");
+    setMetaMsg("error" in r ? `Lỗi: ${r.error}` : "Đã lưu ✓");
     setTimeout(() => setMetaMsg(""), 2500);
   }
 
@@ -102,7 +105,7 @@ export function CourseEditorClient({
       videoUrl: editingLesson.videoUrl || undefined,
     });
     setLessonSaving(false);
-    if (r.error) { setLessonMsg(`Lỗi: ${r.error}`); }
+    if ("error" in r) { setLessonMsg(`Lỗi: ${r.error}`); }
     else {
       setLessons((prev) => prev.map((l) => l.id === lessonId ? { ...l, ...editingLesson, videoUrl: editingLesson.videoUrl || null } : l));
       setLessonMsg("Đã lưu ✓");
@@ -111,9 +114,17 @@ export function CourseEditorClient({
   }
 
   async function deleteLesson(lessonId: string) {
-    if (!confirm("Xóa bài giảng này?")) return;
+    if (
+      !(await confirm({
+        title: "Xóa bài giảng",
+        message: "Bài giảng này sẽ bị xóa vĩnh viễn. Tiếp tục?",
+        confirmLabel: "Xóa",
+        variant: "danger",
+      }))
+    )
+      return;
     const r = await deleteLessonAction(lessonId);
-    if (!r.error) {
+    if (!("error" in r)) {
       setLessons((prev) => prev.filter((l) => l.id !== lessonId));
       if (activeLessonId === lessonId) {
         const remaining = lessons.filter((l) => l.id !== lessonId);
@@ -134,17 +145,32 @@ export function CourseEditorClient({
   }
 
   async function submitForReview() {
-    if (!confirm("Gửi khóa học này cho admin duyệt?")) return;
+    if (
+      !(await confirm({
+        title: "Gửi duyệt",
+        message: "Gửi khóa học này cho admin duyệt? Khi đang chờ duyệt bạn sẽ không sửa được trạng thái.",
+        confirmLabel: "Gửi duyệt",
+      }))
+    )
+      return;
     setSubmitting(true); setSubmitMsg("");
     const r = await submitCourseForReviewAction(course.id);
     setSubmitting(false);
-    if (r.error) { setSubmitMsg(r.error); } else { router.refresh(); }
+    if ("error" in r) { setSubmitMsg(r.error); } else { router.refresh(); }
   }
 
   async function handleDelete() {
-    if (!confirm(`Xóa vĩnh viễn khóa học "${title}"?`)) return;
+    if (
+      !(await confirm({
+        title: "Xóa khóa học",
+        message: `Xóa vĩnh viễn khóa học "${title}"? Mọi bài giảng và dữ liệu liên quan sẽ mất.`,
+        confirmLabel: "Xóa khóa học",
+        variant: "danger",
+      }))
+    )
+      return;
     const r = await deleteCourseAction(course.id);
-    if (!r.error) router.push("/teacher/courses");
+    if (!("error" in r)) router.push("/teacher/courses");
   }
 
   const si = STATUS_INFO[course.status] ?? STATUS_INFO.DRAFT;
@@ -161,7 +187,13 @@ export function CourseEditorClient({
           <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={"text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 " + si.color}>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${si.color} 14%, transparent)`,
+              color: si.color,
+            }}
+          >
             <FaIcon icon={si.icon} /> {si.label}
           </span>
           {course.status === "PUBLISHED" && (
@@ -230,7 +262,7 @@ export function CourseEditorClient({
                   onClick={() => startEditLesson(l)}>
                   <span className="text-xs text-gray-400 w-4 shrink-0 text-center">{l.order}</span>
                   <span className="flex-1 text-sm truncate text-gray-800">{l.title}</span>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button type="button" onClick={(e) => { e.stopPropagation(); moveLesson(idx, -1); }} disabled={idx === 0}
                       className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs">
                       <FaIcon icon={faChevronUp} />

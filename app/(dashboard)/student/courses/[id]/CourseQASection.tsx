@@ -39,7 +39,7 @@ export function CourseQASection({
     setPostingQ(true);
     const r = await postQAAction({ courseId, content: question });
     setPostingQ(false);
-    if (!r.error && "qaId" in r) {
+    if ("qaId" in r) {
       setThreads((prev) => [
         {
           id: r.qaId as string,
@@ -59,7 +59,7 @@ export function CourseQASection({
     setPostingR(true);
     const r = await postQAAction({ courseId, content: replyText, parentId });
     setPostingR(false);
-    if (!r.error && "qaId" in r) {
+    if ("qaId" in r) {
       setThreads((prev) =>
         prev.map((t) =>
           t.id === parentId

@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/db/prisma";
 import { seedPermissions } from "./seedPermissions";
+import { seedContent } from "./seedContent";
 import fs from "fs";
 import path from "path";
 
@@ -548,6 +549,10 @@ async function main() {
     await prisma.bookingReason.upsert({ where: { label: reason.label }, update: {}, create: reason });
   }
   console.log(`✅ ${reasons.length} lý do đặt phòng`);
+
+  // 16. Nội dung demo: flashcard, khóa học, lớp học, đề KT, đánh giá năng lực
+  console.log("\n📦 Seeding nội dung demo...");
+  await seedContent();
 
   // Summary
   console.log("\n🎉 Seed hoàn tất!");

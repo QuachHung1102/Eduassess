@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { LessonViewer } from "./LessonViewer";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { SymbolToolbar } from "@/components/ui/SymbolToolbar";
+import { Modal } from "@/components/ui/Modal";
 import {
   faBold, faItalic, faHeading, faListUl, faListOl,
   faQuoteLeft, faCode, faSquareRootVariable, faImage,
@@ -23,6 +24,8 @@ export function LessonEditor({ value, onChange, placeholder }: Props) {
   const [mode, setMode] = useState<Mode>("split");
   const [uploading, setUploading] = useState(false);
   const [symbolOpen, setSymbolOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoInput, setVideoInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,8 +100,8 @@ export function LessonEditor({ value, onChange, placeholder }: Props) {
   }
 
   // ── Insert video embed ───────────────────────────────────────
-  function insertVideoEmbed() {
-    const url = prompt("Nhập URL video (YouTube hoặc Cloudinary):");
+  function submitVideoEmbed() {
+    const url = videoInput.trim();
     if (!url) return;
     // YouTube embed
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/);
@@ -109,6 +112,8 @@ export function LessonEditor({ value, onChange, placeholder }: Props) {
     } else {
       insert(`\n<video controls style="width:100%;border-radius:12px"><source src="${url}" /></video>\n`);
     }
+    setVideoInput("");
+    setVideoOpen(false);
   }
 
   // ── Handle paste (image paste) ───────────────────────────────
@@ -222,7 +227,7 @@ export function LessonEditor({ value, onChange, placeholder }: Props) {
         <button
           type="button"
           title="Chèn video"
-          onClick={insertVideoEmbed}
+          onClick={() => setVideoOpen(true)}
           className="w-7 h-7 rounded flex items-center justify-center text-xs transition-colors"
           style={{ color: "color-mix(in srgb, var(--foreground) 70%, transparent)" }}
           onMouseEnter={(e) =>
@@ -335,6 +340,54 @@ export function LessonEditor({ value, onChange, placeholder }: Props) {
           </div>
         </div>
       )}
+
+      {/* Video embed modal */}
+      <Modal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        maxWidthClassName="sm:max-w-md"
+        title="Chèn video"
+        description="Dán URL YouTube hoặc đường dẫn video (Cloudinary…)."
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(false)}
+              className="rounded-lg border px-4 py-1.5 text-sm transition-colors hover:bg-black/5"
+              style={{
+                borderColor: "var(--border-soft)",
+                color: "color-mix(in srgb, var(--foreground) 70%, transparent)",
+              }}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={submitVideoEmbed}
+              disabled={!videoInput.trim()}
+              className="rounded-lg px-4 py-1.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: "var(--primary)" }}
+            >
+              Chèn
+            </button>
+          </div>
+        }
+      >
+        <input
+          autoFocus
+          value={videoInput}
+          onChange={(e) => setVideoInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              submitVideoEmbed();
+            }
+          }}
+          placeholder="https://youtube.com/watch?v=…"
+          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={{ border: "1px solid var(--border-soft)" }}
+        />
+      </Modal>
     </div>
   );
 }

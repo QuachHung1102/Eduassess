@@ -23,7 +23,7 @@ export function CourseReviewSection({
     setMsg("");
     const r = await submitReviewAction({ courseId, rating, comment });
     setSaving(false);
-    if (r.error) {
+    if ("error" in r) {
       setMsg(r.error);
     } else {
       setMsg("Đã gửi đánh giá ✓");

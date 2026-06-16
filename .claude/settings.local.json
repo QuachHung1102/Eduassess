@@ -7,7 +7,15 @@
       "PowerShell(Write-Output \"=== project skills ===\"; Get-ChildItem -Path \"d:\\\\AS_Project\\\\apphotrochuandaura\\\\.claude\\\\skills\" -Directory -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"=== user skills ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\skills\" -Directory -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"=== plugins config ===\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\plugins\\\\config.json\" -ErrorAction SilentlyContinue; Write-Output \"=== plugin repos ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\plugins\" -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"=== search mattpocock ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\",\"d:\\\\AS_Project\\\\apphotrochuandaura\\\\.claude\" -Recurse -Filter \"SKILL.md\" -ErrorAction SilentlyContinue | Select-Object FullName -First 50)",
       "PowerShell(Write-Output \"=== ~/.claude contents ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\" -Force -ErrorAction SilentlyContinue | Select-Object Name, Mode; Write-Output \"=== plugins tree ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\plugins\" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object FullName; Write-Output \"=== settings files mention mattpocock/marketplace ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\",\"d:\\\\AS_Project\\\\apphotrochuandaura\" -Recurse -Include \"settings.json\",\"settings.local.json\",\"config.json\" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output \"--- $\\($_.FullName\\) ---\"; Get-Content $_.FullName -ErrorAction SilentlyContinue })",
       "PowerShell(Write-Output \"=== user skills ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\skills\" -Recurse -Filter \"SKILL.md\" -ErrorAction SilentlyContinue | Select-Object FullName; Write-Output \"=== project skills ===\"; Get-ChildItem -Path \"d:\\\\AS_Project\\\\apphotrochuandaura\\\\.claude\\\\skills\" -Recurse -Filter \"SKILL.md\" -ErrorAction SilentlyContinue | Select-Object FullName; Write-Output \"=== commands ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\commands\",\"d:\\\\AS_Project\\\\apphotrochuandaura\\\\.claude\\\\commands\" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName; Write-Output \"=== plugins dir ===\"; Get-ChildItem -Path \"$env:USERPROFILE\\\\.claude\\\\plugins\" -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object FullName)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(xargs grep -l \"evaluateStudentLevelAction\\\\|getStudentSubjectReferenceAction\\\\|getAiLevelSuggestionAction\")",
+      "Bash(grep -E \"store\\\\.ts$\")",
+      "Bash(start \"\" \"C:\\\\Users\\\\QUACHH~1\\\\AppData\\\\Local\\\\Temp\\\\architecture-review-20260615-174720.html\")",
+      "Bash(git stash *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"Total project errors: $\\(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)"
     ]
   }
 }

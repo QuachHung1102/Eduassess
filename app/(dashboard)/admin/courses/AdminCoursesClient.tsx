@@ -9,6 +9,7 @@ import {
   archiveCourseAction,
 } from "@/lib/courses/actions";
 import { FaIcon } from "@/components/ui/FaIcon";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import {
   faCheck, faTimes, faArchive, faEye, faFilter,
 } from "@fortawesome/free-solid-svg-icons";
@@ -32,11 +33,12 @@ const STATUS_TABS = [
   { label: "Đã ẩn", value: "ARCHIVED" },
 ];
 
-const STATUS_BADGE: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  PENDING: "bg-yellow-100 text-yellow-700",
-  PUBLISHED: "bg-green-100 text-green-700",
-  ARCHIVED: "bg-red-100 text-red-600",
+// hex ngữ nghĩa; chip dùng tint color-mix nên đọc tốt cả light/dark.
+const STATUS_COLOR: Record<string, string> = {
+  DRAFT: "#64748b",
+  PENDING: "#d97706",
+  PUBLISHED: "#16a34a",
+  ARCHIVED: "#dc2626",
 };
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Nháp",
@@ -53,6 +55,7 @@ export function AdminCoursesClient({
   activeStatus: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [, startTransition] = useTransition();
   const [rows, setRows] = useState(courses);
 
@@ -71,7 +74,15 @@ export function AdminCoursesClient({
     if (!('error' in r)) updateStatus(id, "DRAFT");
   }
   async function archive(id: string) {
-    if (!confirm("\u1EA8n kh\u00F3a h\u1ECDc n\u00E0y?")) return;
+    if (
+      !(await confirm({
+        title: "\u1EA8n kh\u00F3a h\u1ECDc",
+        message: "\u1EA8n kh\u00F3a h\u1ECDc n\u00E0y kh\u1ECFi danh s\u00E1ch c\u1EE7a h\u1ECDc sinh?",
+        confirmLabel: "\u1EA8n",
+        variant: "danger",
+      }))
+    )
+      return;
     const r = await archiveCourseAction(id);
     if (!('error' in r)) updateStatus(id, "ARCHIVED");
   }
@@ -154,9 +165,20 @@ export function AdminCoursesClient({
                   <td className="px-4 py-3 text-center text-gray-700">{c._count.lessons}</td>
                   <td className="px-4 py-3 text-center text-gray-700">{c._count.enrollments}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {STATUS_LABEL[c.status] ?? c.status}
-                    </span>
+                    {(() => {
+                      const sc = STATUS_COLOR[c.status] ?? "#64748b";
+                      return (
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${sc} 14%, transparent)`,
+                            color: sc,
+                          }}
+                        >
+                          {STATUS_LABEL[c.status] ?? c.status}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1.5 flex-wrap">

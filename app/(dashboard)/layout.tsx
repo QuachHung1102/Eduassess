@@ -7,6 +7,7 @@ import type { Role, StaffPosition } from "@/lib/types";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { DashboardRouteLoader } from "@/components/layout/DashboardRouteLoader";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
 
 // All dashboard pages are user-specific and require auth → always dynamic
 export const dynamic = "force-dynamic";
@@ -41,7 +42,9 @@ export default async function DashboardLayout({
         {/* Spacer for mobile fixed header (h-14 = 56px) */}
         <div className="h-14 shrink-0 lg:hidden" aria-hidden="true" />
         <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 overflow-y-auto flex flex-col themed-scrollbar">
-          <PageTransition>{children}</PageTransition>
+          <ConfirmProvider>
+            <PageTransition>{children}</PageTransition>
+          </ConfirmProvider>
         </main>
       </div>
     </div>
