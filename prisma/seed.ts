@@ -4,6 +4,8 @@ import { prisma } from "../lib/db/prisma";
 import { seedPermissions } from "./seedPermissions";
 import { seedContent } from "./seedContent";
 import { seedSystemCategories, assignCodesToUsersWithoutCode } from "../lib/users/seed-categories";
+import { makeRng } from "../lib/seed/rng";
+import { genTeacher } from "../lib/seed/names";
 import fs from "fs";
 import path from "path";
 
@@ -306,32 +308,48 @@ async function main() {
       }),
     ),
   );
-  console.log(`✅ 1 admin, ${teacherUsers.length} giáo viên`);
+  console.log(`✅ 1 admin, ${teacherUsers.length} giáo viên (JSON)`);
+
+  // GV sinh tự động cho seed test (giữ JSON teachers làm "mốc" cho e2e)
+  const EXTRA_TEACHERS = Number(process.env.SEED_TEACHERS ?? 30);
+  const teacherRng = makeRng(7);
+  const extraTeacherData = Array.from({ length: EXTRA_TEACHERS }, (_, i) => {
+    const g = genTeacher(i + 1, teacherRng);
+    return {
+      name: g.name,
+      email: g.email,
+      password: teacherPw,
+      role: "TEACHER" as const,
+      sex: g.sex,
+      dateOfBirth: g.dateOfBirth,
+      phoneNumber: g.phoneNumber,
+    };
+  });
+  for (let i = 0; i < extraTeacherData.length; i += 500) {
+    await prisma.user.createMany({ data: extraTeacherData.slice(i, i + 500), skipDuplicates: true });
+  }
+  console.log(`✅ +${extraTeacherData.length} giáo viên sinh tự động`);
 
   // 6. Students (40 học sinh demo cho trung tâm luyện thi)
   // Lớp học training center sẽ được tạo qua UI — không seed class ở đây.
-  const STUDENT_COUNT = 40;
-  let studentCount = 0;
-  for (let gi = 0; gi < STUDENT_COUNT; gi++) {
-    const email = `hs${String(gi + 1).padStart(4, "0")}@eduassess.vn`;
+  const STUDENT_COUNT = Number(process.env.SEED_STUDENTS ?? 400);
+  const studentData = Array.from({ length: STUDENT_COUNT }, (_, gi) => {
     const { name, sex } = genStudentName(gi);
-    await prisma.user.upsert({
-      where: { email },
-      update: {},
-      create: {
-        name,
-        email,
-        password: studentPw,
-        role: "STUDENT",
-        sex,
-        address: genAddress(gi),
-        dateOfBirth: genDob(10 + (gi % 3), gi),
-        phoneNumber: `09${String(gi).padStart(8, "0")}`.slice(0, 11),
-      },
-    });
-    studentCount++;
+    return {
+      name,
+      email: `hs${String(gi + 1).padStart(4, "0")}@eduassess.vn`,
+      password: studentPw,
+      role: "STUDENT" as const,
+      sex,
+      address: genAddress(gi),
+      dateOfBirth: genDob(10 + (gi % 3), gi),
+      phoneNumber: `09${String(gi).padStart(8, "0")}`.slice(0, 11),
+    };
+  });
+  for (let i = 0; i < studentData.length; i += 500) {
+    await prisma.user.createMany({ data: studentData.slice(i, i + 500), skipDuplicates: true });
   }
-  console.log(`✅ ${studentCount} học sinh`);
+  console.log(`✅ ${studentData.length} học sinh`);
 
   // 9. Topics
   const topicsJson = loadJson<TopicData[]>("topics.json");
