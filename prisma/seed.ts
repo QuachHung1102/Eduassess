@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/db/prisma";
 import { seedPermissions } from "./seedPermissions";
 import { seedContent } from "./seedContent";
+import { seedLarge } from "./seedLarge";
 import { seedSystemCategories, assignCodesToUsersWithoutCode } from "../lib/users/seed-categories";
 import { makeRng } from "../lib/seed/rng";
 import { genTeacher } from "../lib/seed/names";
@@ -572,6 +573,10 @@ async function main() {
   // 16. Nội dung demo: flashcard, khóa học, lớp học, đề KT, đánh giá năng lực
   console.log("\n📦 Seeding nội dung demo...");
   await seedContent();
+
+  // 16b. Seed test quy mô lớn: lớp OFFLINE + occupancy phòng
+  console.log("\n📦 Seeding quy mô lớn (lớp OFFLINE + occupancy)...");
+  await seedLarge();
 
   // 17. Mã định danh: tạo loại hệ thống + cấp mã cho mọi user
   await seedSystemCategories();
