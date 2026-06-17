@@ -3,7 +3,8 @@
  * + buổi/điểm danh/đánh giá + occupancy phòng. Chạy sau seedContent().
  * Idempotent: guard lớp theo name; con dùng createMany skipDuplicates.
  */
-import type { AttendanceStatus, ClassMode, ClassStatus, DayOfWeek, SessionStatus, StudentLevel } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import type { AttendanceStatus, BookingStatus, ClassMode, ClassStatus, DayOfWeek, NotificationType, SessionStatus, StudentLevel } from "@prisma/client";
 import { prisma } from "../lib/db/prisma";
 import { makeRng } from "../lib/seed/rng";
 import { allocateRooms } from "../lib/seed/room-allocator";
@@ -203,6 +204,120 @@ export async function seedLarge() {
     created += 1;
   }
   console.log(`✅ seedLarge: ${created} lớp OFFLINE (+ buổi/điểm danh/đánh giá), ${alloc.unassigned.length} khung không xếp được`);
+
+  // ── Lấp khoảng trống ─────────────────────────────────────────
+  const DEMO_IMG = "https://res.cloudinary.com/dwjziopfp/image/upload/v1780816970/flashcards/mzk60dlcwdt4lh5ru7fp.jpg";
+
+  // RoomLayoutImage (1:1, bắt buộc khi tạo phòng qua UI)
+  for (const r of rooms) {
+    await prisma.roomLayoutImage.upsert({
+      where: { roomId: r.id },
+      update: {},
+      create: { roomId: r.id, url: DEMO_IMG, publicId: `seed/room-${r.id}` },
+    });
+  }
+
+  // RoomBooking: APPROVED trên Thứ Bảy (không trùng buổi học MON–FRI) + PENDING/REJECTED
+  const reason = await prisma.bookingReason.findFirst({ select: { id: true } });
+  const reviewer = await prisma.user.findFirst({ where: { role: "STAFF", staffPosition: "NVLT" }, select: { id: true } });
+  if (reason && (await prisma.roomBooking.count()) === 0) {
+    const sat = addDays(mondayWeeksAgo(0), 5);
+    type Bk = {
+      roomId: string; requesterId: string; bookedForId: string; reasonId: string;
+      startAt: Date; endAt: Date; status: BookingStatus;
+      reviewerId: string | null; reviewedAt: Date | null; rejectReason: string | null;
+    };
+    const bookings: Bk[] = [];
+    let bi = 0;
+    for (const room of rooms) {
+      for (const h of [8, 12, 16]) {
+        if (bi >= 8) break;
+        const startAt = new Date(sat); startAt.setUTCHours(h, 0, 0, 0);
+        const endAt = new Date(sat); endAt.setUTCHours(h + 2, 0, 0, 0);
+        bookings.push({ roomId: room.id, requesterId: rng.pick(teachers).id, bookedForId: rng.pick(teachers).id, reasonId: reason.id, startAt, endAt, status: "APPROVED", reviewerId: reviewer?.id ?? null, reviewedAt: new Date(), rejectReason: null });
+        bi += 1;
+      }
+    }
+    for (let i = 0; i < 18; i += 1) {
+      const day = addDays(mondayWeeksAgo(rng.int(0, 2)), rng.int(0, 4));
+      const h = rng.pick([8, 10, 14, 16]);
+      const startAt = new Date(day); startAt.setUTCHours(h, 0, 0, 0);
+      const endAt = new Date(day); endAt.setUTCHours(h + 2, 0, 0, 0);
+      const rejected = i % 4 === 0;
+      bookings.push({ roomId: rng.pick(rooms).id, requesterId: rng.pick(teachers).id, bookedForId: rng.pick(teachers).id, reasonId: reason.id, startAt, endAt, status: rejected ? "REJECTED" : "PENDING", reviewerId: rejected ? reviewer?.id ?? null : null, reviewedAt: rejected ? new Date() : null, rejectReason: rejected ? "Phòng đã có lịch khác" : null });
+    }
+    await prisma.roomBooking.createMany({ data: bookings });
+    console.log(`✅ Booking: ${bookings.length} (8 APPROVED trên T7 + PENDING/REJECTED)`);
+  }
+
+  // Notification: vài bản ghi mỗi NotificationType
+  if ((await prisma.notification.count()) === 0) {
+    const notifs: { userId: string; title: string; message: string; type: NotificationType; href: string | null; readAt: Date | null }[] = [];
+    const push = (userId: string, type: NotificationType, title: string, message: string, href: string | null, read = false) =>
+      notifs.push({ userId, title, message, type, href, readAt: read ? new Date() : null });
+    students.slice(0, 20).forEach((s, i) => {
+      push(s.id, "EXAM_ASSIGNED", "Đề kiểm tra mới", "Bạn có đề kiểm tra mới cần làm.", "/student/exams", i % 2 === 0);
+      push(s.id, "EXAM_GRADED", "Bài đã chấm", "Bài kiểm tra của bạn đã được chấm điểm.", "/student/exams", i % 3 === 0);
+      push(s.id, "CLASS_ASSIGNED", "Được xếp lớp", "Bạn đã được thêm vào một lớp học.", "/student/classes", false);
+    });
+    teachers.slice(0, 5).forEach((t) => {
+      push(t.id, "QUESTION_APPROVED", "Câu hỏi được duyệt", "Câu hỏi bạn tạo đã được duyệt.", "/teacher/question-bank", true);
+      push(t.id, "COURSE_APPROVED", "Khóa học xuất bản", "Khóa học của bạn đã được duyệt.", "/teacher/courses", false);
+    });
+    push(teachers[0].id, "BOOKING_APPROVED", "Đặt phòng được duyệt", "Yêu cầu đặt phòng đã được duyệt.", "/booking", false);
+    push(teachers[0].id, "BOOKING_REJECTED", "Đặt phòng bị từ chối", "Yêu cầu đặt phòng bị từ chối.", "/booking", false);
+    push(teachers[0].id, "SCHEDULE_CHANGED", "Lịch thay đổi", "Một buổi học đã đổi lịch.", "/teacher/classes", false);
+    push(cbdtList[0].id, "STUDENT_ASSIGNED", "Học sinh mới", "Bạn được phân học sinh mới.", "/staff/students", false);
+    push(students[0].id, "SYSTEM", "Thông báo hệ thống", "Chào mừng đến với EduAssess!", "/notifications", false);
+    await prisma.notification.createMany({ data: notifs });
+    console.log(`✅ Notification: ${notifs.length} (đủ loại)`);
+  }
+
+  // ExamAttempt.aiFeedback cho vài lượt
+  const attemptsNoFb = await prisma.examAttempt.findMany({ where: { aiFeedback: null, score: { not: null } }, take: 10, select: { id: true } });
+  for (const a of attemptsNoFb) {
+    await prisma.examAttempt.update({
+      where: { id: a.id },
+      data: { aiFeedback: "Em làm tốt phần đầu nhưng cần xem lại các câu về phương trình bậc hai. Hãy luyện thêm dạng xét dấu tam thức." },
+    });
+  }
+  if (attemptsNoFb.length) console.log(`✅ AI feedback: ${attemptsNoFb.length} lượt`);
+
+  // FlashcardSession: nhiều HS × bộ thẻ
+  const sets = await prisma.flashcardSet.findMany({ select: { id: true } });
+  if (sets.length && (await prisma.flashcardSession.count()) === 0) {
+    const fsData: { setId: string; studentId: string; completedAt: Date | null }[] = [];
+    for (const st of students.slice(0, 60)) {
+      for (const set of rng.shuffle(sets).slice(0, rng.int(1, 3))) {
+        fsData.push({ setId: set.id, studentId: st.id, completedAt: rng.bool(0.6) ? new Date() : null });
+      }
+    }
+    for (let i = 0; i < fsData.length; i += 1000) await prisma.flashcardSession.createMany({ data: fsData.slice(i, i + 1000) });
+    console.log(`✅ FlashcardSession: ${fsData.length}`);
+  }
+
+  // SecurityAnswer cho vài HS
+  if ((await prisma.securityAnswer.count()) === 0) {
+    const hash = await bcrypt.hash("hanoi", 12);
+    const saData = students.slice(0, 10).flatMap((st) => [
+      { userId: st.id, questionNo: 1, questionText: "Thành phố bạn sinh ra?", answerHash: hash },
+      { userId: st.id, questionNo: 2, questionText: "Tên thú cưng đầu tiên?", answerHash: hash },
+      { userId: st.id, questionNo: 3, questionText: "Trường tiểu học của bạn?", answerHash: hash },
+    ]);
+    await prisma.securityAnswer.createMany({ data: saData });
+    console.log(`✅ SecurityAnswer: ${saData.length / 3} HS`);
+  }
+
+  // AuditLog vài bản ghi
+  if ((await prisma.auditLog.count()) === 0) {
+    await prisma.auditLog.createMany({
+      data: [
+        { actorId: cbdts?.id ?? null, action: "user.code.update", entityType: "User", entityId: students[0].id, payload: { before: null, after: "HS-2026-000001" } },
+        { actorId: reviewer?.id ?? null, action: "booking.approve", entityType: "RoomBooking", entityId: "seed", payload: { note: "seed" } },
+      ],
+    });
+    console.log("✅ AuditLog: 2");
+  }
 
   // Dựng occupancy từ MỌI session + booking (conflict-free nhờ allocator)
   const occ = await rebuildRoomOccupancies();
