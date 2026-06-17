@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAdminUsers, getCBDTSCandidates } from "@/lib/admin/queries";
+import { getAdminUsers, getCBDTSCandidates, getUserCategoryOptions } from "@/lib/admin/queries";
 import { AddUserForm } from "./AddUserForm";
 import { DeleteUserButton } from "./DeleteUserButton";
 import { FaIcon } from "@/components/ui/FaIcon";
@@ -67,7 +67,7 @@ export default async function AdminUsersPage({
     : undefined;
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10));
 
-  const [{ users, total }, cbdtsCandidates] = await Promise.all([
+  const [{ users, total }, cbdtsCandidates, categories] = await Promise.all([
     getAdminUsers({
       role,
       staffPosition,
@@ -78,6 +78,7 @@ export default async function AdminUsersPage({
       pageSize: PAGE_SIZE,
     }),
     getCBDTSCandidates(),
+    getUserCategoryOptions(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -103,7 +104,7 @@ export default async function AdminUsersPage({
           <h1 className="text-2xl font-bold text-gray-900">Tài khoản</h1>
           <p className="text-gray-500 text-sm mt-1">{total} người dùng</p>
         </div>
-        <AddUserForm cbdtsCandidates={cbdtsCandidates} />
+        <AddUserForm cbdtsCandidates={cbdtsCandidates} categories={categories} />
       </div>
 
       {/* Filters */}
@@ -138,7 +139,7 @@ export default async function AdminUsersPage({
             <input
               name="search"
               defaultValue={params.search ?? ""}
-              placeholder="Tìm theo tên hoặc email..."
+              placeholder="Tìm theo tên, email, mã..."
               className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
             {params.role && <input type="hidden" name="role" value={params.role} />}
@@ -230,7 +231,7 @@ export default async function AdminUsersPage({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
               <tr>
-                {["Họ tên", "Email", "Vai trò", "Chức danh", "Điện thoại", "Lớp / Môn dạy", ""].map((h) => (
+                {["Họ tên", "Email", "Mã", "Vai trò", "Chức danh", "Điện thoại", "Lớp / Môn dạy", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
                     {h}
                   </th>
@@ -240,7 +241,7 @@ export default async function AdminUsersPage({
             <tbody className="divide-y divide-gray-50">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-16 text-gray-400">
+                  <td colSpan={8} className="text-center py-16 text-gray-400">
                     <div className="text-3xl mb-2"><FaIcon icon={faUsers} /></div>
                     <p>Không tìm thấy người dùng nào</p>
                   </td>
@@ -259,6 +260,7 @@ export default async function AdminUsersPage({
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{u.email}</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs font-mono whitespace-nowrap">{u.code ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR[u.role] ?? "bg-gray-100 text-gray-700"}`}>
                         {ROLE_LABEL[u.role] ?? u.role}

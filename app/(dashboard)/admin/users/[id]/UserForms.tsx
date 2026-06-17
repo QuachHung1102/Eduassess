@@ -3,10 +3,14 @@
 import { useState, useTransition } from "react";
 import { updateUserAction, resetPasswordAction } from "@/lib/admin/actions";
 
+type CategoryOption = { id: string; label: string; prefix: string };
+
 interface UserDetail {
   id: string;
   name: string;
   email: string;
+  code: string | null;
+  categoryId: string | null;
   role: string;
   sex: string | null;
   phoneNumber: string | null;
@@ -14,7 +18,7 @@ interface UserDetail {
   dateOfBirth: Date | null;
 }
 
-export function EditUserForm({ user }: { user: UserDetail }) {
+export function EditUserForm({ user, categories }: { user: UserDetail; categories: CategoryOption[] }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -96,6 +100,28 @@ export function EditUserForm({ user }: { user: UserDetail }) {
             defaultValue={user.address ?? ""}
             placeholder="123 Đường ABC, Quận 1"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Loại tài khoản</label>
+          <select
+            name="categoryId"
+            defaultValue={user.categoryId ?? ""}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">— Không đổi —</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.label} ({c.prefix})</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mã định danh</label>
+          <input
+            name="code"
+            defaultValue={user.code ?? ""}
+            placeholder="Để trống = giữ nguyên"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>

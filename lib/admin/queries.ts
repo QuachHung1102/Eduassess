@@ -117,6 +117,7 @@ export async function getAdminUsers(filters?: {
           OR: [
             { name: { contains: filters.search, mode: "insensitive" as const } },
             { email: { contains: filters.search, mode: "insensitive" as const } },
+            { code: { contains: filters.search, mode: "insensitive" as const } },
           ],
         }
       : {}),
@@ -132,6 +133,7 @@ export async function getAdminUsers(filters?: {
         id: true,
         name: true,
         email: true,
+        code: true,
         role: true,
         staffPosition: true,
         sex: true,
@@ -159,6 +161,15 @@ export async function getCBDTSCandidates() {
     where: { role: "STAFF", staffPosition: "CBDTS" },
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true },
+  });
+}
+
+// Loại tài khoản đang bật — dùng cho dropdown trên form tạo/sửa user
+export async function getUserCategoryOptions() {
+  return prisma.userCategory.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, label: true, prefix: true },
   });
 }
 
@@ -378,6 +389,8 @@ export async function getAdminUserDetail(userId: string) {
       id: true,
       name: true,
       email: true,
+      code: true,
+      categoryId: true,
       role: true,
       sex: true,
       phoneNumber: true,
@@ -398,6 +411,8 @@ export async function getAdminUserDetail(userId: string) {
     id: string;
     name: string;
     email: string;
+    code: string | null;
+    categoryId: string | null;
     role: string;
     sex: string | null;
     phoneNumber: string | null;

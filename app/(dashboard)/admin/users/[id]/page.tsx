@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAdminUserDetail } from "@/lib/admin/queries";
+import { getAdminUserDetail, getUserCategoryOptions } from "@/lib/admin/queries";
 import { EditUserForm, ResetPasswordForm } from "./UserForms";
 import { DeleteUserButton } from "../DeleteUserButton";
 
@@ -23,6 +23,7 @@ export default async function AdminUserDetailPage({
   const { id } = await params;
   const user = await getAdminUserDetail(id);
   if (!user) notFound();
+  const categories = await getUserCategoryOptions();
 
   const isTeacher = user.role === "TEACHER";
   const isStudent = user.role === "STUDENT";
@@ -66,7 +67,7 @@ export default async function AdminUserDetailPage({
               <h2 className="font-semibold text-gray-800">Thông tin cá nhân</h2>
             </div>
             <div className="p-5">
-              <EditUserForm user={user} />
+              <EditUserForm user={user} categories={categories} />
             </div>
           </div>
 
