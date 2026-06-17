@@ -112,8 +112,8 @@ export default function Home() {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Link href="/register" className="primary-button">
-                Bắt đầu học miễn phí
+              <Link href="/login" className="primary-button">
+                Đăng nhập
                 <span aria-hidden="true">→</span>
               </Link>
               <a href="#features" className="secondary-button">
@@ -335,17 +335,11 @@ export default function Home() {
               Bắt đầu với bộ flashcard đầu tiên — miễn phí, không cần thẻ tín dụng.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-sky-50/90 sm:text-lg">
-              Đăng ký tài khoản để truy cập flashcard, bài kiểm tra và theo dõi tiến bộ
+              Đăng nhập để truy cập flashcard, bài kiểm tra và theo dõi tiến bộ
               của mình trong một nơi duy nhất — dễ dùng ngay từ lần đầu.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-              <Link href="/register" className="secondary-button bg-white px-7 text-sky-700">
-                Đăng ký miễn phí
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-full border border-white/35 px-7 py-4 font-bold text-white hover:bg-white/10"
-              >
+              <Link href="/login" className="secondary-button bg-white px-7 text-sky-700">
                 Vào hệ thống
               </Link>
             </div>

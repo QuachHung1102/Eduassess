@@ -7,8 +7,8 @@ export function appProxy(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
   const role = req.auth?.user?.role as Role | undefined;
 
-  // Đã đăng nhập mà còn ở public root/login/register → bật vào home theo role
-  if (role && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+  // Đã đăng nhập mà còn ở public root/login → bật vào home theo role
+  if (role && (pathname === "/" || pathname === "/login")) {
     return NextResponse.redirect(new URL(ROLE_HOME[role] ?? "/", req.url));
   }
 

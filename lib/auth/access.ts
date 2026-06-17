@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/types";
 
-export const PUBLIC_ROUTES = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
+export const PUBLIC_ROUTES = ["/", "/login", "/forgot-password", "/reset-password"];
 
 /**
  * Trang chủ mặc định sau khi đăng nhập theo Role.

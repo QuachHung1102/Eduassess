@@ -5,7 +5,7 @@ type AuthShellProps = {
   eyebrow: string;
   title: string;
   description: string;
-  footer: ReactNode;
+  footer?: ReactNode;
   children: ReactNode;
 };
 
@@ -95,7 +95,7 @@ export default function AuthShell({
             <div className="mt-6 sm:mt-7">{children}</div>
           </div>
 
-          <div className="px-2 pt-4 text-center text-sm text-slate-500">{footer}</div>
+          {footer && <div className="px-2 pt-4 text-center text-sm text-slate-500">{footer}</div>}
         </section>
       </div>
     </div>

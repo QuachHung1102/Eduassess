@@ -29,14 +29,6 @@ export default function LoginPage() {
       eyebrow="Đăng nhập"
       title="Quay lại không gian học của bạn"
       description="Đăng nhập để tiếp tục làm bài, ôn tập bằng flashcard và theo dõi tiến bộ theo từng chủ đề."
-      footer={
-        <>
-          Chưa có tài khoản? {" "}
-          <Link href="/register" className="font-semibold text-sky-700 hover:text-sky-800">
-            Đăng ký ngay
-          </Link>
-        </>
-      }
     >
         <div className="rounded-[1.5rem] bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:rounded-[1.75rem] sm:p-5">
           <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
