@@ -390,6 +390,16 @@ export async function updateUserAction(userId: string, formData: FormData) {
   });
   if (conflict) return { error: "Email này đã được dùng bởi tài khoản khác" };
 
+  const codeRaw = (formData.get("code") as string | null)?.trim() || null;
+  const categoryIdRaw = (formData.get("categoryId") as string | null)?.trim() || null;
+
+  if (codeRaw) {
+    const dupCode = await prisma.user.findFirst({ where: { code: codeRaw, NOT: { id: userId } } });
+    if (dupCode) return { error: "Mã này đã được dùng bởi tài khoản khác" };
+  }
+
+  const before = await prisma.user.findUnique({ where: { id: userId }, select: { code: true } });
+
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -399,8 +409,24 @@ export async function updateUserAction(userId: string, formData: FormData) {
       phoneNumber,
       address,
       dateOfBirth: dobStr ? new Date(dobStr) : null,
+      code: codeRaw ?? undefined,
+      categoryId: categoryIdRaw ?? undefined,
     },
   });
+
+  // Sửa mã là hành động nhạy cảm → ghi audit.
+  if (codeRaw && codeRaw !== before?.code) {
+    const session = await auth();
+    await prisma.auditLog.create({
+      data: {
+        actorId: session?.user?.id ?? null,
+        action: "user.code.update",
+        entityType: "User",
+        entityId: userId,
+        payload: { before: before?.code ?? null, after: codeRaw },
+      },
+    });
+  }
 
   revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/admin/users");
