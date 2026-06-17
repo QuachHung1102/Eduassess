@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/db/prisma";
 import { seedPermissions } from "./seedPermissions";
 import { seedContent } from "./seedContent";
+import { seedSystemCategories, assignCodesToUsersWithoutCode } from "../lib/users/seed-categories";
 import fs from "fs";
 import path from "path";
 
@@ -553,6 +554,11 @@ async function main() {
   // 16. Nội dung demo: flashcard, khóa học, lớp học, đề KT, đánh giá năng lực
   console.log("\n📦 Seeding nội dung demo...");
   await seedContent();
+
+  // 17. Mã định danh: tạo loại hệ thống + cấp mã cho mọi user
+  await seedSystemCategories();
+  const codedCount = await assignCodesToUsersWithoutCode();
+  console.log(`✅ ${codedCount} user được cấp mã`);
 
   // Summary
   console.log("\n🎉 Seed hoàn tất!");
