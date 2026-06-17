@@ -1,15 +1,25 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FaIcon } from "@/components/ui/FaIcon";
-import { faTrophy } from "@fortawesome/free-solid-svg-icons";
+import { faTrophy, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FlashcardCard } from "@/components/flashcards/FlashcardCard";
 import {
   completeFlashcardSessionAction,
   startFlashcardSessionAction,
 } from "@/lib/student/actions";
 import { DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/lib/constants/labels";
+import {
+  createStudyQueue,
+  rateCurrent,
+  currentCardId,
+  isComplete,
+  masteredCount,
+  remainingThisRound,
+  progressRatio,
+  type StudyQueueState,
+} from "@/lib/flashcards/study-queue";
 
 type Card = {
   id: string;
@@ -32,6 +42,9 @@ const DIFFICULTY_SKIN: Record<Props["difficulty"], string> = {
   HARD: "flashcard-rarity-hard",
 };
 
+const MUTED = "color-mix(in srgb, var(--foreground) 55%, transparent)";
+const MUTED_SOFT = "color-mix(in srgb, var(--foreground) 45%, transparent)";
+
 function shuffleCards(cards: Card[]) {
   const next = [...cards];
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -45,77 +58,118 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
   const router = useRouter();
   const [started, setStarted] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [studyCards, setStudyCards] = useState(cards);
+  const [queue, setQueue] = useState<StudyQueueState>(() => createStudyQueue([]));
 
-  const total = studyCards.length;
-  const current = studyCards[currentIndex];
+  const total = cards.length;
   const showcaseCard = cards[0];
-  const progress = useMemo(() => ((currentIndex + 1) / total) * 100, [currentIndex, total]);
+  const cardMap = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
+
+  const toggleFlip = useCallback(() => setFlipped((value) => !value), []);
 
   function handleStart() {
     startTransition(async () => {
       const { sessionId: nextSessionId } = await startFlashcardSessionAction(setId);
-      setStudyCards(shuffleCards(cards));
+      const ids = shuffleCards(cards).map((card) => card.id);
+      setQueue(createStudyQueue(ids));
       setSessionId(nextSessionId);
       setStarted(true);
-      setCurrentIndex(0);
       setFlipped(false);
       setCompleted(false);
     });
   }
 
-  function handleNext() {
-    if (currentIndex < total - 1) {
-      setCurrentIndex((value) => value + 1);
+  const handleRate = useCallback(
+    (known: boolean) => {
+      const next = rateCurrent(queue, known);
+      setQueue(next);
       setFlipped(false);
-      return;
-    }
-
-    startTransition(async () => {
-      if (sessionId) {
-        await completeFlashcardSessionAction(sessionId);
+      if (isComplete(next)) {
+        startTransition(async () => {
+          if (sessionId) await completeFlashcardSessionAction(sessionId);
+          setCompleted(true);
+        });
       }
-      setCompleted(true);
-    });
-  }
-
-  function handlePrev() {
-    if (currentIndex === 0) return;
-    setCurrentIndex((value) => value - 1);
-    setFlipped(false);
-  }
+    },
+    [queue, sessionId],
+  );
 
   function handleRestart() {
     setStarted(false);
     setSessionId(null);
-    setCurrentIndex(0);
     setFlipped(false);
     setCompleted(false);
-    setStudyCards(cards);
+    setQueue(createStudyQueue([]));
   }
 
+  // Phím tắt: Space lật thẻ; khi đã lật, 1 = chưa thuộc, 2 = đã thuộc.
+  useEffect(() => {
+    if (!started || completed) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.code === "Space") {
+        event.preventDefault();
+        toggleFlip();
+      } else if (flipped && event.key === "1") {
+        handleRate(false);
+      } else if (flipped && event.key === "2") {
+        handleRate(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [started, completed, flipped, toggleFlip, handleRate]);
+
   if (completed) {
+    const summary = [
+      { label: "Tổng thẻ", value: total },
+      { label: "Thuộc ngay lần đầu", value: queue.firstTryMastered },
+      { label: "Số vòng", value: queue.round },
+    ];
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-16 text-center">
-        <div className="text-5xl"><FaIcon icon={faTrophy} className="text-yellow-500" /></div>
-        <h2 className="text-2xl font-bold text-gray-900">Hoàn thành!</h2>
-        <p className="text-gray-500">Bạn đã ôn xong {total} thẻ trong bộ “{title}”.</p>
+        <FaIcon icon={faTrophy} className="text-5xl text-yellow-500" />
+        <div>
+          <h2 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
+            Hoàn thành!
+          </h2>
+          <p className="mt-2 text-sm" style={{ color: MUTED }}>
+            Bạn đã nắm hết {total} thẻ trong bộ “{title}”.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3">
+          {summary.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl px-5 py-3"
+              style={{ backgroundColor: "var(--surface-strong)", border: "1.5px solid var(--border-soft)" }}
+            >
+              <div className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
+                {item.value}
+              </div>
+              <div className="text-xs" style={{ color: MUTED }}>
+                {item.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
         <div className="flex gap-3">
           <button
             onClick={handleRestart}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--primary)" }}
           >
             Ôn lại
           </button>
           <button
             onClick={() => router.push("/student/flashcards")}
-            className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="rounded-xl px-6 py-2.5 text-sm font-semibold transition-opacity hover:opacity-75"
+            style={{ border: "1.5px solid var(--border-soft)", color: "var(--foreground)" }}
           >
-            Quay lại danh sách
+            Về danh sách
           </button>
         </div>
       </div>
@@ -131,74 +185,86 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
             alt={title}
             overlayChip="Nhấn để bắt đầu"
             onClick={handleStart}
-            disabled={isPending}
+            disabled={isPending || total === 0}
             aria-label={`Bắt đầu học bộ flashcard ${title}`}
             className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-50 sm:max-w-60 md:max-w-70 lg:max-w-80 text-left disabled:cursor-progress disabled:opacity-90`}
             priority
           />
         </div>
 
-        <div className="rounded-4xl border border-slate-200/80 bg-white/88 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Showcase Study Mode
+        <div
+          className="rounded-3xl p-6"
+          style={{
+            backgroundColor: "var(--surface-strong)",
+            border: "1.5px solid var(--border-soft)",
+          }}
+        >
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+            {title}
+          </h2>
+
+          <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className={`rounded-full px-3 py-1.5 ${DIFFICULTY_COLOR[difficulty]}`}>
+              {DIFFICULTY_LABEL[difficulty]}
+            </span>
+            <span
+              className="rounded-full px-3 py-1.5"
+              style={{ backgroundColor: "var(--surface-muted)", color: "var(--primary-dark)" }}
+            >
+              {total} thẻ
+            </span>
+            <span
+              className="rounded-full px-3 py-1.5"
+              style={{ backgroundColor: "var(--surface-muted)", color: "var(--primary-dark)" }}
+            >
+              {totalSessions} lượt ôn
+            </span>
           </div>
 
-          <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900">{title}</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-            Bộ thẻ này được trình bày theo phong cách trading card để việc ôn tập trực quan hơn. Mỗi thẻ có mặt trước là hình ảnh ghi nhớ và mặt sau là caption ngắn để tự kiểm tra kiến thức.
+          <p className="mt-4 text-sm leading-7" style={{ color: "color-mix(in srgb, var(--foreground) 65%, transparent)" }}>
+            Nhìn ảnh mặt trước, tự nhớ lại kiến thức rồi lật thẻ để xem đáp án. Mỗi thẻ tự chấm{" "}
+            <strong style={{ color: "var(--foreground)" }}>đã thuộc</strong> hoặc{" "}
+            <strong style={{ color: "var(--foreground)" }}>chưa thuộc</strong> — thẻ chưa thuộc sẽ
+            được lặp lại tới khi bạn nắm hết.
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-3 text-xs font-semibold">
-            <span className={`rounded-full px-3 py-1.5 ${DIFFICULTY_COLOR[difficulty]}`}>{DIFFICULTY_LABEL[difficulty]}</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{total} thẻ</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{totalSessions} lượt ôn</span>
-            <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Front ảnh · Back caption</span>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Visual Cue</p>
-              <p className="mt-2 text-sm leading-6 text-emerald-950">Nhìn ảnh trước, tự nhớ lại khái niệm rồi mới lật sang mặt sau.</p>
-            </div>
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Recall Loop</p>
-              <p className="mt-2 text-sm leading-6 text-amber-950">Học tốt nhất khi tự đoán đáp án trước khi xem caption xác nhận.</p>
-            </div>
-            <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-700">Session Mode</p>
-              <p className="mt-2 text-sm leading-6 text-sky-950">Các thẻ sẽ được xáo trộn để tránh học thuộc thứ tự cố định.</p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleStart}
-              disabled={isPending}
-              className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
-            >
-              {isPending ? "Đang tải..." : "Bắt đầu ôn tập"}
-            </button>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Nhấn vào card hoặc nút để vào phiên học</p>
-          </div>
+          <button
+            onClick={handleStart}
+            disabled={isPending || total === 0}
+            className="mt-6 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            style={{ backgroundColor: "var(--primary)" }}
+          >
+            {isPending ? "Đang tải..." : "Bắt đầu ôn tập"}
+          </button>
         </div>
       </div>
     );
   }
 
+  const currentId = currentCardId(queue);
+  const current = currentId ? cardMap.get(currentId) : undefined;
+  if (!current) return null;
+
+  const masteredN = masteredCount(queue);
+  const progress = progressRatio(queue) * 100;
+
   return (
     <div className="mx-auto flex w-full max-w-85 sm:max-w-95 md:max-w-105 lg:max-w-120 xl:max-w-130 flex-col gap-6">
       <div className="flex items-center gap-3">
-        <span className="shrink-0 text-sm text-gray-500">
-          {currentIndex + 1} / {total}
+        <span className="shrink-0 text-sm font-medium" style={{ color: MUTED }}>
+          {masteredN}/{total}
         </span>
-        <div className="h-2 flex-1 rounded-full bg-gray-100">
+        <div className="h-2 flex-1 rounded-full" style={{ backgroundColor: "var(--surface-muted)" }}>
           <div
-            className="h-2 rounded-full bg-blue-500 transition-all duration-300"
-            style={{ width: `${progress}%` }}
+            className="h-2 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%`, backgroundColor: "var(--primary)" }}
           />
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLOR[difficulty]}`}>
-          {DIFFICULTY_LABEL[difficulty]}
+        <span
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+          style={{ backgroundColor: "var(--surface-muted)", color: "var(--primary-dark)" }}
+        >
+          Vòng {queue.round} · còn {remainingThisRound(queue)}
         </span>
       </div>
 
@@ -210,38 +276,50 @@ export function FlashcardStudyClient({ setId, title, difficulty, cards, totalSes
           overlayChip={DIFFICULTY_LABEL[difficulty]}
           captionHint="Nhấn vào thẻ để quay lại mặt trước"
           flipped={flipped}
-          onClick={() => setFlipped((value) => !value)}
+          onClick={toggleFlip}
           className={`flashcard-shell flashcard-shell-study ${DIFFICULTY_SKIN[difficulty]} w-full max-w-55 sm:max-w-65 md:max-w-75 lg:max-w-85 xl:max-w-90 text-left transition-transform duration-200 hover:-translate-y-1`}
           loading="eager"
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <button
-          onClick={handlePrev}
-          disabled={currentIndex === 0}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          ← Trước
-        </button>
-
-        {!flipped ? (
+      {!flipped ? (
+        <div className="flex flex-col items-center gap-2">
           <button
-            onClick={() => setFlipped(true)}
-            className="rounded-lg bg-gray-100 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+            onClick={toggleFlip}
+            className="rounded-xl px-6 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--surface-muted)", color: "var(--primary-dark)" }}
           >
             Lật thẻ
           </button>
-        ) : (
-          <button
-            onClick={handleNext}
-            disabled={isPending}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
-          >
-            {currentIndex === total - 1 ? (isPending ? "Đang lưu..." : "Hoàn thành ✓") : "Tiếp theo →"}
-          </button>
-        )}
-      </div>
+          <p className="text-xs" style={{ color: MUTED_SOFT }}>
+            Phím tắt: <strong>Space</strong> lật thẻ
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-3">
+            <button
+              onClick={() => handleRate(false)}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-60"
+              style={{ border: "1.5px solid rgba(220,38,38,0.4)", color: "#dc2626", backgroundColor: "rgba(220,38,38,0.06)" }}
+            >
+              <FaIcon icon={faXmark} /> Chưa thuộc
+            </button>
+            <button
+              onClick={() => handleRate(true)}
+              disabled={isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              style={{ backgroundColor: "#16a34a" }}
+            >
+              <FaIcon icon={faCheck} /> Đã thuộc
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: MUTED_SOFT }}>
+            Phím tắt: <strong>1</strong> chưa thuộc · <strong>2</strong> đã thuộc
+          </p>
+        </div>
+      )}
     </div>
   );
 }
