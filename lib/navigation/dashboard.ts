@@ -52,6 +52,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
   "/admin": [
     { href: "/admin",             label: "Tổng quan",          icon: faChartBar },
     { href: "/admin/users",       label: "Tài khoản",          icon: faUsers,        permission: P.USER_VIEW.key },
+    { href: "/admin/user-categories", label: "Loại tài khoản & mã", icon: faUserGroup, permission: P.USER_VIEW.key },
     { href: "/admin/role-permissions", label: "Phân quyền vai trò", icon: faUserShield, permission: P.PERMISSION_MANAGE.key },
     { href: "/admin/rooms",       label: "Phòng",              icon: faDoorOpen,     permission: P.ROOM_VIEW.key },
     { href: "/admin/classes",     label: "Lớp học",            icon: faSchool,       permission: P.CLASS_VIEW_ALL.key },
