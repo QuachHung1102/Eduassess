@@ -275,7 +275,7 @@ npm run dev
 | Vai trò | Email | Mật khẩu |
 |---|---|---|
 | Owner | `owner@eduassess.vn` | `Owner123!` |
-| Admin | `quachhung389@gmail.com` | `ErwinRommel1102` |
+| Admin | `admin@eduassess.vn` | `Admin123!` |
 | Giáo viên | `gv.toan1@eduassess.vn` | `Teacher123!` |
 | Học sinh | `hs0001@eduassess.vn` | `Student123!` |
 

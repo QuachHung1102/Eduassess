@@ -88,16 +88,16 @@ async function main() {
 
   // 3. Passwords
   const [adminPw, teacherPw, studentPw] = await Promise.all([
-    bcrypt.hash("ErwinRommel1102", 12),
+    bcrypt.hash("Admin123!", 12),
     bcrypt.hash("Teacher123!", 12),
     bcrypt.hash("Student123!", 12),
   ]);
 
   // 4. Admin
   await prisma.user.upsert({
-    where:  { email: "quachhung389@gmail.com" },
+    where:  { email: "admin@eduassess.vn" },
     update: {},
-    create: { name: "Quách Ngọc Hưng", email: "quachhung389@gmail.com",
+    create: { name: "Quản trị viên", email: "admin@eduassess.vn",
               password: adminPw, role: "ADMIN", sex: "MALE",
               phoneNumber: "0900000000", address: "TP.HCM" },
   });
@@ -232,7 +232,7 @@ async function main() {
   // Summary
   console.log("\n🎉 Seed hoàn tất!");
   console.log("─".repeat(60));
-  console.log("  Admin     : quachhung389@gmail.com      / ErwinRommel1102");
+  console.log("  Admin     : admin@eduassess.vn          / Admin123!");
   console.log("  Giáo viên : gv.toan1@eduassess.vn       / Teacher123!");
   console.log("  Học sinh  : hs0001–hs1080@eduassess.vn  / Student123!");
   console.log("─".repeat(60));
