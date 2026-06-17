@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getMyStudents } from "@/lib/classes/queries";
+import { requirePageSession } from "@/lib/auth/page-guard";
+import { can } from "@/lib/auth/permissions";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faUserGraduate } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -8,6 +10,8 @@ import {
 } from "@/lib/constants/labels";
 
 export default async function StaffStudentsPage() {
+  const me = await requirePageSession();
+  const canCreate = await can(me, "student.create");
   const students = await getMyStudents();
 
   return (
@@ -18,6 +22,14 @@ export default async function StaffStudentsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Học sinh phụ trách</h1>
           <p className="text-gray-500 text-sm mt-1">{students.length} học sinh</p>
         </div>
+        {canCreate && (
+          <Link
+            href="/staff/students/new"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Thêm học sinh
+          </Link>
+        )}
       </div>
 
       {/* Empty state */}
