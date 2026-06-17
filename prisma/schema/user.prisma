@@ -13,12 +13,17 @@ model User {
   sex           String?
   phoneNumber   String?
   avatarUrl     String?   // Cloudinary URL
+  code          String?        @unique // Mã định danh (HS-2026-000001, CN-007…)
+  categoryId    String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   // Self-relation: CBDTS quản nhiều CBDT
   supervisor   User?  @relation("StaffSupervisor", fields: [supervisorId], references: [id])
   subordinates User[] @relation("StaffSupervisor")
+
+  // Loại tài khoản / mã định danh
+  category UserCategory? @relation(fields: [categoryId], references: [id])
 
   // Parent ↔ Student
   parentLinks  ParentStudent[] @relation("ParentSide") // khi user là PARENT
@@ -65,6 +70,7 @@ model User {
 
   @@index([role])
   @@index([staffPosition])
+  @@index([categoryId])
   @@map("users")
 }
 

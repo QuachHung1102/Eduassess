@@ -1,0 +1,32 @@
+// ─── User Category & Code (mã định danh người dùng) ──────────
+
+model UserCategory {
+  id          String   @id @default(cuid())
+  label       String
+  prefix      String   @unique
+  systemKey   String?  @unique // "STUDENT"/"OWNER"/"STAFF_NVSALE"… null cho loại admin tự thêm (Marketing)
+  includeYear Boolean  @default(false)
+  padWidth    Int      @default(6)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users    User[]
+  counters UserCodeCounter[]
+
+  @@map("user_categories")
+}
+
+// Bộ đếm atomic, tách riêng để reset theo năm (HS).
+model UserCodeCounter {
+  id         String @id @default(cuid())
+  categoryId String
+  year       Int // HS = năm tạo; loại không-năm = 0
+  nextSeq    Int    @default(1)
+
+  category UserCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, year])
+  @@map("user_code_counters")
+}
