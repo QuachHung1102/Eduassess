@@ -96,6 +96,35 @@ export async function seedContent() {
       difficulty: "EASY",
       captions: ["g ≈ 9,8 m/s²", "c = 3×10⁸ m/s", "1 N = 1 kg·m/s²", "1 J = 1 N·m"],
     },
+    // Hóa học — chỉ tạo khi môn Hóa đã được seed (subjectByName có "Hóa học").
+    ...(hoa
+      ? [
+          {
+            title: "Cấu tạo nguyên tử (Hóa 10)",
+            subjectId: hoa.id,
+            topicName: "Cấu tạo nguyên tử",
+            difficulty: "EASY" as const,
+            captions: [
+              "Số proton = số hiệu nguyên tử Z",
+              "Nguyên tử trung hòa: số p = số e",
+              "Số khối A = Z + N (proton + neutron)",
+              "Đồng vị: cùng số proton, khác số neutron",
+            ],
+          },
+          {
+            title: "Bảng tuần hoàn — chu kỳ & nhóm",
+            subjectId: hoa.id,
+            topicName: "Bảng tuần hoàn các nguyên tố hóa học",
+            difficulty: "MEDIUM" as const,
+            captions: [
+              "Số thứ tự chu kỳ = số lớp electron",
+              "Số thứ tự nhóm A = số e lớp ngoài cùng",
+              "Cùng nhóm A: tính chất hóa học tương tự nhau",
+              "Trong một chu kỳ, tính kim loại giảm từ trái sang phải",
+            ],
+          },
+        ]
+      : []),
   ];
   let flashCreated = 0;
   for (const fs of flashSeeds) {
@@ -146,6 +175,21 @@ export async function seedContent() {
         { title: "Bài 2 — Chuyển động biến đổi đều", content: "# Biến đổi đều\n\n$v = v_0 + at$, $s = v_0 t + \\dfrac{1}{2}at^2$." },
       ],
     },
+    // Hóa học — chỉ tạo khi môn Hóa đã được seed.
+    ...(hoa
+      ? [
+          {
+            title: "Hóa học 10 — Nguyên tử & Bảng tuần hoàn",
+            subjectId: hoa.id,
+            description: "Khóa học online Hóa 10: cấu tạo nguyên tử, cấu hình electron và bảng tuần hoàn các nguyên tố.",
+            lessons: [
+              { title: "Bài 1 — Thành phần nguyên tử", content: "# Thành phần nguyên tử\n\nNguyên tử gồm hạt nhân (proton, neutron) và vỏ electron.\n\nSố hiệu nguyên tử $Z$ = số proton = số electron." },
+              { title: "Bài 2 — Cấu hình electron", content: "# Cấu hình electron\n\nElectron sắp xếp theo các lớp và phân lớp.\n\nVí dụ Na ($Z = 11$): $1s^2 2s^2 2p^6 3s^1$." },
+              { title: "Bài 3 — Bảng tuần hoàn", content: "# Bảng tuần hoàn\n\nNguyên tố sắp theo chiều tăng điện tích hạt nhân.\n\nChu kỳ = số lớp electron; nhóm A = số electron lớp ngoài cùng." },
+            ],
+          },
+        ]
+      : []),
   ];
   let courseCreated = 0;
   for (const cs of courseSeeds) {
@@ -411,6 +455,35 @@ export async function seedContent() {
       console.log(`✅ Đề KT: 1 đề (${toanQuestions.length} câu) + ${examTakers.length} lượt làm đã chấm`);
     } else {
       console.log("✅ Đề KT: đã tồn tại, bỏ qua");
+    }
+
+    // Đề luyện tập (QUIZ) — KHÔNG hạn nộp + cho làm lại ⇒ HS luôn có thể bắt đầu.
+    // Phục vụ demo luồng "làm bài" và e2e (đề chính ở trên đã quá hạn nộp).
+    const PRACTICE_TITLE = "Luyện tập Đại số 10 (demo)";
+    const practiceExists = await prisma.exam.findFirst({
+      where: { title: PRACTICE_TITLE, classId: demoClass.id },
+    });
+    if (!practiceExists) {
+      const practice = await prisma.exam.create({
+        data: {
+          title: PRACTICE_TITLE,
+          subjectId: toan.id,
+          classId: demoClass.id,
+          createdById: teacher.id,
+          kind: "QUIZ",
+          duration: 15,
+          showAnswer: true,
+          allowRetake: true,
+          // dueAt bỏ trống ⇒ NULL ⇒ không giới hạn thời hạn nộp.
+        },
+      });
+      await prisma.examQuestion.createMany({
+        data: toanQuestions.map((q, i) => ({ examId: practice.id, questionId: q.id, order: i + 1 })),
+        skipDuplicates: true,
+      });
+      console.log(`✅ Đề luyện tập: 1 đề QUIZ (${toanQuestions.length} câu, không hạn nộp, cho làm lại)`);
+    } else {
+      console.log("✅ Đề luyện tập: đã tồn tại, bỏ qua");
     }
 
     // E. Đánh giá năng lực môn Toán cho HS trong lớp (guard: chưa có thì tạo)
