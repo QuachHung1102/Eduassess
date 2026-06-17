@@ -12,6 +12,8 @@ import {
   assertTopicExists,
   type QuestionWriteInput,
 } from "@/lib/questions/store";
+import { systemKeyFor } from "@/lib/users/categories";
+import { generateUserCode } from "@/lib/users/user-code-store";
 
 // ── Toggle canAddQuestions for a subject ─────────────────────
 export async function toggleSubjectQuestionsAction(
@@ -331,20 +333,40 @@ export async function createUserAction(formData: FormData) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { error: "Email này đã được sử dụng" };
 
+  // Resolve loại tài khoản: ưu tiên categoryId từ form, fallback theo (role, staffPosition).
+  const categoryIdRaw = (formData.get("categoryId") as string | null)?.trim() || null;
+  const codeOverride = (formData.get("code") as string | null)?.trim() || null;
+
+  const category = categoryIdRaw
+    ? await prisma.userCategory.findUnique({ where: { id: categoryIdRaw } })
+    : await prisma.userCategory.findFirst({
+        where: { systemKey: systemKeyFor(role as AllowedRole, staffPosition) },
+      });
+  if (!category) return { error: "Không tìm thấy loại tài khoản phù hợp" };
+
+  if (codeOverride && (await prisma.user.findUnique({ where: { code: codeOverride } }))) {
+    return { error: "Mã này đã được dùng" };
+  }
+
   const hashed = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashed,
-      role: role as AllowedRole,
-      staffPosition,
-      supervisorId,
-      sex: sex || null,
-      phoneNumber,
-      address,
-      dateOfBirth: dobStr ? new Date(dobStr) : null,
-    },
+  const user = await prisma.$transaction(async (tx) => {
+    const code = codeOverride ?? (await generateUserCode(tx, category));
+    return tx.user.create({
+      data: {
+        name,
+        email,
+        password: hashed,
+        role: role as AllowedRole,
+        staffPosition,
+        supervisorId,
+        sex: sex || null,
+        phoneNumber,
+        address,
+        dateOfBirth: dobStr ? new Date(dobStr) : null,
+        categoryId: category.id,
+        code,
+      },
+    });
   });
 
   revalidatePath("/admin/users");
