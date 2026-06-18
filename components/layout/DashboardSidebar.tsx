@@ -12,6 +12,7 @@ import { signOutAction } from "@/lib/auth/actions/sign-out";
 import type { DashboardNavItem } from "@/lib/navigation/dashboard";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { NotificationSound } from "@/components/notifications/NotificationSound";
 
 type Props = {
   navItems: DashboardNavItem[];
@@ -324,6 +325,9 @@ export function DashboardSidebar({
               </div>
             </>
           )}
+          <div className={`mt-2 flex ${isCollapsed ? "justify-center" : "justify-start"}`}>
+            <NotificationSound initialCount={unreadCount} />
+          </div>
         </div>
       </aside>
     </>

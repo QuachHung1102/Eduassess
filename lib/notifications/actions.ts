@@ -108,3 +108,10 @@ export async function searchUsersForNotificationAction(
     orderBy: { name: "asc" },
   });
 }
+
+/** Số thông báo chưa đọc của user hiện tại (cho client poll → phát âm thanh). */
+export async function getUnreadCountAction(): Promise<number> {
+  const session = await auth();
+  if (!session?.user?.id) return 0;
+  return prisma.notification.count({ where: { userId: session.user.id, readAt: null } });
+}
