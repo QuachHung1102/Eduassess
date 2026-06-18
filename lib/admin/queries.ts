@@ -139,14 +139,34 @@ export async function getAdminUsers(filters?: {
         sex: true,
         phoneNumber: true,
         createdAt: true,
+        // Học sinh
         classEnrollments: {
+          where: { status: "ACTIVE" },
           select: { class: { select: { name: true } } },
+          take: 3,
+        },
+        studentLevels: {
+          select: { level: true, subject: { select: { name: true } } },
+          orderBy: { evaluatedAt: "desc" },
+          take: 3,
+        },
+        studentAdvisees: {
+          select: { advisor: { select: { name: true } } },
           take: 1,
         },
+        // Giáo viên
         classTeachers: {
           select: { class: { select: { subject: { select: { name: true } } } } },
-          take: 5,
+          take: 10,
         },
+        // Nhân viên
+        supervisor: { select: { name: true } },
+        // Phụ huynh
+        parentLinks: {
+          select: { student: { select: { name: true } } },
+          take: 3,
+        },
+        _count: { select: { classTeachers: true, questionsCreated: true } },
       },
     }),
     prisma.user.count({ where }),

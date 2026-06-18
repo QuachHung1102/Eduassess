@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { getAdminUsers, getCBDTSCandidates, getUserCategoryOptions } from "@/lib/admin/queries";
 import { AddUserForm } from "./AddUserForm";
-import { DeleteUserButton } from "./DeleteUserButton";
-import { FaIcon } from "@/components/ui/FaIcon";
-import { faUsers } from "@fortawesome/free-solid-svg-icons";
+import { UsersTable } from "./UsersTable";
 
 const PAGE_SIZE = 20;
 
@@ -15,30 +13,6 @@ const VALID_ROLES: AdminRoleFilter[] = ["TEACHER", "STUDENT", "STAFF", "PARENT",
 const VALID_POSITIONS: AdminStaffPositionFilter[] = ["NVSALE", "NVLT", "CBNK", "CBDH", "CBDT", "CBDTS"];
 const VALID_SEX: AdminSexFilter[] = ["MALE", "FEMALE"];
 const VALID_HAS_PHONE: HasPhoneFilter[] = ["YES", "NO"];
-
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN:   "Admin",
-  STAFF:   "Nhân viên",
-  TEACHER: "Giáo viên",
-  STUDENT: "Học sinh",
-  PARENT:  "Phụ huynh",
-};
-const ROLE_COLOR: Record<string, string> = {
-  ADMIN:   "bg-rose-100 text-rose-700",
-  STAFF:   "bg-amber-100 text-amber-800",
-  TEACHER: "bg-purple-100 text-purple-700",
-  STUDENT: "bg-blue-100 text-blue-700",
-  PARENT:  "bg-teal-100 text-teal-700",
-};
-
-const POSITION_LABEL: Record<string, string> = {
-  NVSALE: "Tư vấn",
-  NVLT:   "Lễ tân",
-  CBNK:   "Ngoại khoá",
-  CBDH:   "Du học",
-  CBDT:   "Đào tạo",
-  CBDTS:  "Đào tạo (Super)",
-};
 
 export default async function AdminUsersPage({
   searchParams,
@@ -227,75 +201,7 @@ export default async function AdminUsersPage({
 
       {/* Table */}
       <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex-1 overflow-auto min-h-0">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
-              <tr>
-                {["Họ tên", "Email", "Mã", "Vai trò", "Chức danh", "Điện thoại", "Lớp / Môn dạy", ""].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-16 text-gray-400">
-                    <div className="text-3xl mb-2"><FaIcon icon={faUsers} /></div>
-                    <p>Không tìm thấy người dùng nào</p>
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      <Link href={`/admin/users/${u.id}`} className="hover:text-blue-600 hover:underline">
-                        {u.name}
-                      </Link>
-                      {u.sex && (
-                        <span className="ml-1.5 text-xs text-gray-400">
-                          ({u.sex === "MALE" ? "Nam" : "Nữ"})
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{u.email}</td>
-                    <td className="px-4 py-3 text-gray-700 text-xs font-mono whitespace-nowrap">{u.code ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR[u.role] ?? "bg-gray-100 text-gray-700"}`}>
-                        {ROLE_LABEL[u.role] ?? u.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {u.staffPosition ? POSITION_LABEL[u.staffPosition] ?? u.staffPosition : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                      {u.phoneNumber ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-50 truncate">
-                      {u.role === "STUDENT"
-                        ? (u.classEnrollments[0]?.class.name ?? "Chưa xếp lớp")
-                        : u.role === "TEACHER"
-                          ? u.classTeachers.map((ct) => ct.class.subject.name).join(", ") || "Chưa phân công"
-                          : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/users/${u.id}`}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          Chi tiết
-                        </Link>
-                        <DeleteUserButton userId={u.id} userName={u.name} />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <UsersTable users={users} role={role} />
 
         {/* Pagination */}
         <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
