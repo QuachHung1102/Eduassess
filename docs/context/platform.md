@@ -68,7 +68,7 @@ Quy tắc `can(user, key)`:
 4. Kết quả cache trong process **5 phút**; gọi `invalidatePermissionCache()` sau khi sửa matrix.
 
 - **Source of truth của key:** `lib/auth/permission-keys.ts` (`PERMISSIONS`). Quy ước key `<domain>.<action>`. Thêm feature có phân quyền ⇒ thêm key ở đây **+ cập nhật seed**.
-- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction), gửi thông báo hệ thống (`sendSystemNotificationAction`). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
+- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction), gửi thông báo hệ thống (`sendNotificationAction` trong `lib/notifications/actions.ts`). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
 
 ### 2.4 Routing & navigation
 
@@ -308,7 +308,7 @@ _Avoid_: Practice, Study session, Session (đã có nghĩa khác)
 - `CLASS_ASSIGNED` — HS được thêm vào lớp (`lib/classes/actions.ts`)
 - `SCHEDULE_CHANGED` — buổi học bị nghỉ/hoãn/đổi lịch hoặc có buổi bù mới (`lib/classes/actions.ts`)
 - `STUDENT_ASSIGNED` — CBDTS phân HS mới cho CBĐT (`lib/classes/actions.ts`)
-- `SYSTEM` — Admin soạn & gửi thủ công tới nhóm vai trò tại `/admin/notifications` (`sendSystemNotificationAction`, permission `notification.send`; ghi AuditLog)
+- `SYSTEM` — soạn & gửi thủ công (`sendNotificationAction`, `lib/notifications/actions.ts`, permission `notification.send`; ghi AuditLog). **Phạm vi người nhận theo vai trò người gửi** (`lib/notifications/targeting.ts`): ADMIN/OWNER gửi mọi nhóm role · CBĐT chỉ HS mình phụ trách · NVLT chỉ nhóm Nhân viên · và gửi **đích danh cá nhân** (tìm-chọn). Trang `/admin/notifications` + `/staff/notifications` (staff có quyền `notification.send`).
 
 Mọi `NotificationType` nay đều có nơi tạo.
 _Avoid_: Alert, Message
