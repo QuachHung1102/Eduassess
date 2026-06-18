@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { getMyClasses } from "@/lib/classes/queries";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus, faSchool } from "@fortawesome/free-solid-svg-icons";
 import { auth } from "@/auth";
+
+const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Soạn thảo",
@@ -39,113 +42,112 @@ export default async function StaffClassesPage() {
   const sortedSubjects = [...grouped.keys()].sort();
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      {/* Header */}
-      <div className="shrink-0 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lớp học</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {classes.length} lớp · {sortedSubjects.length} môn
-            {session?.user?.role === "STAFF" && " · lớp bạn phụ trách"}
-          </p>
-        </div>
-        <Link
-          href="/staff/classes/new"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          <FaIcon icon={faPlus} className="text-xs" />
-          Tạo lớp mới
-        </Link>
-      </div>
-
-      {/* Empty state */}
-      {classes.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-400">
-          <FaIcon icon={faSchool} className="text-4xl" />
-          <p className="text-sm">Chưa có lớp học nào</p>
+    <div className="flex flex-col h-full gap-4 sm:gap-6">
+      <PageHeader
+        icon={faSchool}
+        title="Lớp học"
+        subtitle={`${classes.length} lớp · ${sortedSubjects.length} môn${session?.user?.role === "STAFF" ? " · lớp bạn phụ trách" : ""}`}
+        actions={
           <Link
             href="/staff/classes/new"
-            className="text-sm text-emerald-600 hover:underline"
+            className="clay-btn flex items-center gap-2 px-4 py-2 text-sm font-medium text-white"
+            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
           >
+            <FaIcon icon={faPlus} className="text-xs" />
+            Tạo lớp mới
+          </Link>
+        }
+      />
+
+      {classes.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ color: mutedText }}>
+          <FaIcon icon={faSchool} className="text-4xl" />
+          <p className="text-sm">Chưa có lớp học nào</p>
+          <Link href="/staff/classes/new" className="text-sm hover:underline" style={{ color: "var(--primary)" }}>
             Tạo lớp đầu tiên
           </Link>
         </div>
-      )}
-
-      {/* Classes grouped by subject */}
-      <div className="flex-1 overflow-auto space-y-5 pb-4">
-        {sortedSubjects.map((subjectName) => {
-          const subjectClasses = grouped.get(subjectName)!;
-          return (
-            <div
-              key={subjectName}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-            >
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-800">{subjectName}</h2>
-                <span className="text-xs text-gray-500">{subjectClasses.length} lớp</span>
+      ) : (
+        <div className="flex-1 overflow-auto space-y-5 pb-4">
+          {sortedSubjects.map((subjectName) => {
+            const subjectClasses = grouped.get(subjectName)!;
+            return (
+              <div key={subjectName} className="clay-card overflow-hidden p-0">
+                <div
+                  className="px-4 py-3 flex items-center justify-between"
+                  style={{
+                    background: "color-mix(in srgb, var(--foreground) 5%, var(--surface-strong))",
+                    borderBottom: "1px solid var(--border-soft)",
+                  }}
+                >
+                  <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>{subjectName}</h2>
+                  <span className="text-xs" style={{ color: mutedText }}>{subjectClasses.length} lớp</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                        {["Tên lớp", "Hình thức", "Buổi học", "Học sinh", "Trạng thái", ""].map((h) => (
+                          <th
+                            key={h}
+                            className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wide"
+                            style={{ color: mutedText }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody style={{ color: "var(--foreground)" }}>
+                      {subjectClasses.map((cls) => (
+                        <tr
+                          key={cls.id}
+                          className="transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
+                          style={{ borderTop: "1px solid var(--border-soft)" }}
+                        >
+                          <td className="px-4 py-3">
+                            <Link href={`/staff/classes/${cls.id}`} className="font-medium hover:underline" style={{ color: "var(--primary)" }}>
+                              {cls.name}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                            {MODE_LABEL[cls.mode] ?? cls.mode}
+                          </td>
+                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                            {cls._count.sessions}
+                            {cls.sessionCount > 0 && <span> / {cls.sessionCount}</span>}
+                          </td>
+                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                            {cls._count.enrollments}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                STATUS_COLOR[cls.status] ?? "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {STATUS_LABEL[cls.status] ?? cls.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Link
+                              href={`/staff/classes/${cls.id}`}
+                              className="text-xs hover:underline"
+                              style={{ color: mutedText }}
+                            >
+                              Chi tiết →
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-50">
-                    {["Tên lớp", "Hình thức", "Buổi học", "Học sinh", "Trạng thái", ""].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {subjectClasses.map((cls) => (
-                    <tr key={cls.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/staff/classes/${cls.id}`}
-                          className="font-medium text-blue-600 hover:underline"
-                        >
-                          {cls.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {MODE_LABEL[cls.mode] ?? cls.mode}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {cls._count.sessions}
-                        {cls.sessionCount > 0 && (
-                          <span className="text-gray-400"> / {cls.sessionCount}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {cls._count.enrollments}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            STATUS_COLOR[cls.status] ?? "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {STATUS_LABEL[cls.status] ?? cls.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/staff/classes/${cls.id}`}
-                          className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
-                        >
-                          Chi tiết →
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
