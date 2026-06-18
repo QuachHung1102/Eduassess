@@ -68,19 +68,29 @@ export async function sendNotificationAction(input: {
   if (userIds.length === 0) return { error: "Không có người nhận nào" };
 
   const href = input.href?.trim() || null;
-  await prisma.$transaction([
-    prisma.notification.createMany({
-      data: userIds.map((id) => ({ userId: id, title, message, type: "SYSTEM" as const, href })),
-    }),
-    prisma.auditLog.create({
-      data: {
-        actorId: sender.id,
-        action: "notification.send",
-        entityType: "Notification",
-        payload: { title, target: t, count: userIds.length, href },
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.notification.createMany({
+        data: userIds.map((id) => ({ userId: id, title, message, type: "SYSTEM" as const, href })),
+      }),
+      prisma.auditLog.create({
+        data: {
+          actorId: sender.id,
+          action: "notification.send",
+          entityType: "Notification",
+          payload: { title, target: t, count: userIds.length, href },
+        },
+      }),
+    ]);
+  } catch (err) {
+    // Hiện nguyên nhân thật phía server (vd FK actorId, lỗi DB) thay vì để lỗi nổ
+    // thành màn hình trắng — người vận hành đọc log để chẩn đoán chính xác.
+    console.error(
+      `[notify] gửi thất bại — sender=${sender.id} role=${sender.role} target=${t.kind} recipients=${userIds.length}:`,
+      err,
+    );
+    return { error: "Gửi thông báo thất bại, vui lòng thử lại." };
+  }
 
   revalidatePath("/admin/notifications");
   revalidatePath("/staff/notifications");

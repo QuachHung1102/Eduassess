@@ -53,6 +53,7 @@ Mọi Server Component (`page.tsx`) cần đăng nhập vào qua seam chung `lib
 
 - `requirePageSession()` → trả `SessionUserBase` (đẩy `/login` nếu chưa đăng nhập).
 - `requirePageRole(...roles)` → thêm chặn theo Role (đẩy về `ROLE_HOME[role]` nếu sai vai trò).
+- `requirePageZone(prefix)` → guard **cả một khu** theo `ROUTE_ROLES[prefix]`; dùng ở `app/(dashboard)/<zone>/layout.tsx` để chặn role cho mọi trang con của khu (xem §2.4). Đây là lớp enforce route chính, không phụ thuộc từng page có nhớ guard hay không.
 - Khác với `requireSession`/`requireRole` trong `lib/auth/require.ts` (dành cho **server action**, trả `{ user, error }` để tự xử lý).
 - Kiểm tra quyền sở hữu đặc thù từng trang (tác giả Course, người tạo Question…) vẫn nằm tại chính trang đó **sau** guard.
 - `resolveUserIdByRole(sessionUser, role)` (cũng trong `lib/auth/require.ts`) → tra id `User` thực sự khớp `role` mong muốn: thử `session.user.id` trước, nếu role không khớp thì fallback tra theo `email`, trả `null` nếu không có bản ghi nào khớp. Dùng ở các seam Student/Teacher tự thao tác trên dữ liệu của chính mình (vd `saveMyAvailabilityAction`, `getMyTeacherAvailability`) để chống lệch giữa `session.user.id` và bản ghi `User` thật.
@@ -74,8 +75,13 @@ Quy tắc `can(user, key)`:
 
 - Route group: `app/(auth)/` (login, register, forgot/reset password, security-questions-reset) và `app/(dashboard)/` (toàn bộ khu đăng nhập).
 - Mỗi role có **home zone**: `ROLE_HOME` trong `lib/auth/access.ts` (`/owner`, `/admin`, `/staff`, `/teacher`, `/student`, `/parent`). STAFF dùng chung `/staff`, sub-tab ẩn/hiện theo permission.
-- `ROUTE_ROLES` map prefix → role được phép (OWNER/ADMIN truy cập được phần lớn prefix để giám sát). `PUBLIC_ROUTES` không cần đăng nhập.
-- Menu sidebar: `lib/navigation/dashboard.ts` (`NAV_BY_HOME` + `dashboardNavItemsFor()`), tự lọc theo role + permission.
+- `ROUTE_ROLES` map prefix → role được phép (OWNER/ADMIN truy cập được phần lớn prefix để giám sát). `PUBLIC_ROUTES` không cần đăng nhập. **`ROUTE_ROLES` là nguồn sự thật được enforce thật** (không còn là code chết) qua `requirePageZone` ở zone layout — xem mô hình 3 lớp dưới.
+- **Mô hình bảo vệ route trong `app/(dashboard)/` (3 lớp, xem ADR-0002):**
+  1. **Auth** — `app/(dashboard)/layout.tsx` chặn chưa-đăng-nhập (`redirect("/login")`).
+  2. **Role-gate theo khu** — mỗi khu nhà của role (`/owner /admin /staff /teacher /student /parent`) có `layout.tsx` gọi `requirePageZone("/<zone>")` → chặn theo `ROUTE_ROLES`. Một layout phủ mọi trang con. Khu dùng chung (`/notifications`, `/settings`) chỉ cần auth.
+  3. **Permission-gate tại page** — khu cắt ngang theo quyền (vd `/booking`: `can(BOOKING_CREATE)`) hoặc gate mịn theo tính năng (`/admin/role-permissions`: `permission.manage`) vẫn kiểm tra ngay trong `page.tsx` **sau** lớp 1–2. `/booking` cố ý KHÔNG role-gate vì `booking.create` có thể cấp cho nhiều role (kể cả Parent).
+  - Guardrail `tests/auth/route-coverage.test.ts` bắt buộc mọi zone mới rơi vào đúng một trong ba lớp (thêm khu mà quên gate ⇒ test đỏ).
+- Menu sidebar: `lib/navigation/dashboard.ts` (`NAV_BY_HOME` + `dashboardNavItemsFor()`), tự lọc theo role + permission (chỉ ẩn/hiện UI — **không** phải lớp bảo mật; enforce thật ở 3 lớp trên).
 
 ### 2.5 Quy ước chung
 
