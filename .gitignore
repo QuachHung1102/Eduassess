@@ -51,3 +51,4 @@ next-env.d.ts
 # agent skills (installed via `npx skills add`, bridged into .claude/skills)
 /.agents/
 /.claude/skills
+/.playwright-mcp/
