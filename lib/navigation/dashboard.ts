@@ -75,6 +75,7 @@ const NAV_BY_HOME: Record<string, DashboardNavItem[]> = {
     { href: "/staff/teachers",         label: "Giáo viên",       icon: faChalkboardUser, permission: P.CLASS_CREATE.key },
     { href: "/staff/students/assign",  label: "Phân công CBDT",  icon: faUserGroup,     permission: P.STUDENT_ASSIGN.key },
     { href: "/staff/classes",          label: "Lớp học",         icon: faSchool,        permission: P.CLASS_VIEW_ALL.key },
+    { href: "/staff/notifications",    label: "Gửi thông báo",   icon: faBell,          permission: P.NOTIFICATION_SEND.key },
   ],
 
   "/teacher": [

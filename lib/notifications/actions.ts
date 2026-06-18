@@ -86,3 +86,25 @@ export async function sendNotificationAction(input: {
   revalidatePath("/staff/notifications");
   return { success: true, count: userIds.length };
 }
+
+/** Tìm user để gửi đích danh (gate notification.send). */
+export async function searchUsersForNotificationAction(
+  query: string,
+): Promise<{ id: string; name: string; email: string; role: string; code: string | null }[]> {
+  const authResult = await requirePermission(PERMISSIONS.NOTIFICATION_SEND.key);
+  if (authResult.error !== null) return [];
+  const q = query.trim();
+  if (q.length < 2) return [];
+  return prisma.user.findMany({
+    where: {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { code: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, email: true, role: true, code: true },
+    take: 8,
+    orderBy: { name: "asc" },
+  });
+}

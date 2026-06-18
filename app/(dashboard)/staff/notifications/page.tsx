@@ -1,12 +1,15 @@
-import { requirePageRole } from "@/lib/auth/page-guard";
+import { redirect } from "next/navigation";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { requirePageSession } from "@/lib/auth/page-guard";
+import { can } from "@/lib/auth/permissions";
 import { NotificationComposer } from "@/components/notifications/NotificationComposer";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminNotificationsPage() {
-  await requirePageRole("ADMIN", "OWNER");
+export default async function StaffNotificationsPage() {
+  const me = await requirePageSession();
+  if (!(await can(me, "notification.send"))) redirect("/staff");
 
   return (
     <div className="flex flex-col gap-5">
@@ -15,10 +18,10 @@ export default async function AdminNotificationsPage() {
           <span className="text-xl text-blue-600">
             <FaIcon icon={faBell} />
           </span>
-          <h1 className="text-2xl font-bold text-gray-900">Gửi thông báo hệ thống</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Gửi thông báo</h1>
         </div>
         <p className="text-sm text-gray-500">
-          Soạn thông báo thủ công gửi tới các nhóm người dùng. Thông báo hiện ở chuông &amp; trang /notifications của họ.
+          Soạn thông báo gửi tới nhóm, học sinh phụ trách, hoặc một người cụ thể.
         </p>
       </div>
 
