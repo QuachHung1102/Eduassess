@@ -590,7 +590,7 @@ async function main() {
   console.log("  Admin     : admin@eduassess.vn           / Admin123!");
   console.log("  Staff     : nvsale1 | nvlt1 | cbnk1 | cbdh1 | cbdts1 | cbdt1 | cbdt2 @eduassess.vn / Staff123!");
   console.log("  Giáo viên : gv.toan1@eduassess.vn        / Teacher123!");
-  console.log("  Học sinh  : hs0001–hs0040@eduassess.vn   / Student123!");
+  console.log(`  Học sinh  : hs0001–hs${String(STUDENT_COUNT).padStart(4, "0")}@eduassess.vn / Student123!`);
   console.log("  Phụ huynh : ph1@eduassess.vn, ph2@...    / Parent123!");
   console.log("─".repeat(60));
 }

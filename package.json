@@ -22,7 +22,8 @@
     "db:studio": "prisma studio",
     "db:rebuild-occupancy": "tsx scripts/rebuild-room-occupancy.ts",
     "db:check-occupancy": "tsx scripts/check-occupancy.ts",
-    "db:backfill-codes": "tsx scripts/backfill-user-codes.ts"
+    "db:backfill-codes": "tsx scripts/backfill-user-codes.ts",
+    "db:check-seed": "tsx scripts/check-seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
