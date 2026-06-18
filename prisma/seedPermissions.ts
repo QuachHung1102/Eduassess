@@ -81,6 +81,7 @@ const POSITION_MATRIX: Record<StaffPosition, string[]> = {
     P.BOOKING_CREATE_FOR_OTHER.key,
     P.BOOKING_APPROVE.key,
     P.BOOKING_VIEW_ALL.key,
+    P.NOTIFICATION_SEND.key,
   ],
 
   CBNK: [
@@ -110,6 +111,7 @@ const POSITION_MATRIX: Record<StaffPosition, string[]> = {
     P.CLASS_EVALUATE_SESSION.key,
     P.SUBJECT_VIEW.key,
     P.COURSE_VIEW.key,
+    P.NOTIFICATION_SEND.key,
   ],
 
   CBDTS: [
