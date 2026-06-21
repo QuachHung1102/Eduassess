@@ -74,3 +74,20 @@ export function canTakeAttendance(s: SessionTimeInput, now: Date): boolean {
   const phase = getSessionPhase(s, now);
   return phase === "ONGOING" || phase === "OVERDUE" || phase === "COMPLETED";
 }
+
+/**
+ * Câu giải thích vì sao buổi KHÔNG điểm danh được — dùng chung cho cả trang
+ * điểm danh của CBĐT lẫn GV (chỉ gọi khi `canTakeAttendance` = false).
+ */
+export function attendanceGateMessage(phase: SessionPhase, startTime: string): string {
+  switch (phase) {
+    case "UPCOMING":
+      return `Buổi học chưa diễn ra. Điểm danh sẽ mở khi tới giờ học (${startTime}).`;
+    case "CANCELLED":
+      return "Buổi học đã nghỉ nên không điểm danh.";
+    case "POSTPONED":
+      return "Buổi học đang tạm hoãn.";
+    default:
+      return "Buổi học này không thể điểm danh.";
+  }
+}

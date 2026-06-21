@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getSessionPhase,
   canTakeAttendance,
+  attendanceGateMessage,
   SESSION_PHASE_LABEL,
 } from "@/lib/classes/session-status";
 
@@ -64,6 +65,20 @@ describe("canTakeAttendance — chỉ mở khi buổi đã bắt đầu, chưa h
   });
   it("nhận date dạng Date object", () => {
     expect(canTakeAttendance({ date: new Date("2026-06-21T00:00:00"), startTime: "09:00", endTime: "11:00", status: "SCHEDULED" }, before)).toBe(false);
+  });
+});
+
+describe("attendanceGateMessage — lý do không điểm danh được (pha không thao tác)", () => {
+  it("UPCOMING → nhắc giờ điểm danh sẽ mở (kèm giờ bắt đầu)", () => {
+    const msg = attendanceGateMessage("UPCOMING", "09:00");
+    expect(msg).toContain("09:00");
+    expect(msg).toContain("chưa diễn ra");
+  });
+  it("CANCELLED → đã nghỉ", () => {
+    expect(attendanceGateMessage("CANCELLED", "09:00")).toBe("Buổi học đã nghỉ nên không điểm danh.");
+  });
+  it("POSTPONED → tạm hoãn", () => {
+    expect(attendanceGateMessage("POSTPONED", "09:00")).toBe("Buổi học đang tạm hoãn.");
   });
 });
 

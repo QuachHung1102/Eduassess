@@ -3,27 +3,24 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { can } from "@/lib/auth/permissions";
 import { getTeacherSessionDetail } from "@/lib/teacher/queries";
-import { TeacherAttendanceForm } from "./TeacherAttendanceForm";
+import {
+  getSessionPhase,
+  canTakeAttendance,
+  attendanceGateMessage,
+  SESSION_PHASE_LABEL,
+  SESSION_PHASE_COLOR,
+} from "@/lib/classes/session-status";
+import { AttendanceForm } from "@/components/classes/AttendanceForm";
 import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faCalendarAlt,
   faClipboardList,
-  faCircleCheck,
-  faCircleXmark,
   faClock,
-  faHourglassHalf,
   faLocationDot,
   faChalkboardUser,
 } from "@fortawesome/free-solid-svg-icons";
 import type { AttendanceStatus } from "@/lib/types";
-
-const SESSION_STATUS_CONFIG = {
-  SCHEDULED: { label: "Sắp diễn ra", color: "bg-blue-100 text-blue-700",    icon: faHourglassHalf },
-  COMPLETED: { label: "Đã xong",     color: "bg-green-100 text-green-700",  icon: faCircleCheck   },
-  CANCELLED: { label: "Đã hủy",      color: "bg-red-100 text-red-700",      icon: faCircleXmark   },
-  POSTPONED: { label: "Tạm hoãn",    color: "bg-yellow-100 text-yellow-700", icon: faClock         },
-} as const;
 
 const MODE_LABEL: Record<string, string> = {
   ONLINE: "Online", OFFLINE: "Offline", HYBRID: "Hybrid",
@@ -48,12 +45,15 @@ export default async function TeacherSessionDetailPage({
   if (!data) notFound();
 
   const { session: s, enrollments } = data;
-  const statusConfig = SESSION_STATUS_CONFIG[s.status as keyof typeof SESSION_STATUS_CONFIG] ??
-    SESSION_STATUS_CONFIG.SCHEDULED;
 
-  const canAttend = s.status === "SCHEDULED" || s.status === "COMPLETED";
+  // Pha thời gian dẫn xuất + gate điểm danh — DÙNG CHUNG với trang CBĐT
+  // (buổi tương lai không điểm danh được; server action enforce lại).
+  const now = new Date();
+  const sessionTime = { date: s.date, startTime: s.startTime, endTime: s.endTime, status: s.status };
+  const phase = getSessionPhase(sessionTime, now);
+  const canTake = canTakeAttendance(sessionTime, now);
 
-  // Build initial attendance rows
+  // Build initial attendance rows (mặc định "Có mặt" — đồng bộ trang CBĐT).
   const attendanceMap = new Map(
     s.attendances.map((a) => [a.studentId, { status: a.status as AttendanceStatus, note: a.note ?? "" }])
   );
@@ -64,7 +64,7 @@ export default async function TeacherSessionDetailPage({
       studentId: e.student.id,
       studentName: e.student.name,
       email: e.student.email ?? "",
-      status: existing?.status ?? ("ABSENT" as AttendanceStatus),
+      status: existing?.status ?? ("PRESENT" as AttendanceStatus),
       note: existing?.note ?? "",
     };
   });
@@ -118,12 +118,11 @@ export default async function TeacherSessionDetailPage({
                 Buổi #{s.sessionNumber} – {s.class.name}
               </h1>
             </div>
-            <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${statusConfig.color}`}>
-              <FaIcon icon={statusConfig.icon} />
-              {statusConfig.label}
+            <span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-full font-medium ${SESSION_PHASE_COLOR[phase]}`}>
+              {SESSION_PHASE_LABEL[phase]}
             </span>
           </div>
-          {s.status === "COMPLETED" && (
+          {phase === "COMPLETED" && (
             <div className="text-right text-sm" style={{ color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}>
               <span className="font-medium text-green-700">{presentCount}</span>/{enrollments.length} có mặt
             </div>
@@ -171,12 +170,12 @@ export default async function TeacherSessionDetailPage({
           <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Điểm danh</h2>
         </div>
 
-        {!canAttend ? (
+        {!canTake ? (
           <div
             className="primary-panel flex items-center justify-center py-12 text-sm text-center"
             style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
           >
-            Buổi học đã bị hủy hoặc tạm hoãn — không thể điểm danh.
+            {attendanceGateMessage(phase, s.startTime)}
           </div>
         ) : enrollments.length === 0 ? (
           <div
@@ -186,7 +185,7 @@ export default async function TeacherSessionDetailPage({
             Lớp chưa có học sinh nào.
           </div>
         ) : (
-          <TeacherAttendanceForm
+          <AttendanceForm
             sessionId={sessionId}
             students={studentRows}
             redirectPath={`/teacher/classes/${id}/sessions`}
@@ -195,7 +194,7 @@ export default async function TeacherSessionDetailPage({
       </div>
 
       {/* Đánh giá sau buổi học */}
-      {canAttend && canEvaluate && enrollments.length > 0 && (
+      {canTake && canEvaluate && enrollments.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span style={{ color: "var(--primary)" }}><FaIcon icon={faClipboardList} /></span>

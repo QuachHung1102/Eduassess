@@ -6,10 +6,11 @@ import { getSessionWithAttendance } from "@/lib/classes/queries";
 import {
   getSessionPhase,
   canTakeAttendance,
+  attendanceGateMessage,
   SESSION_PHASE_LABEL,
   SESSION_PHASE_COLOR,
 } from "@/lib/classes/session-status";
-import { AttendanceForm } from "./AttendanceForm";
+import { AttendanceForm } from "@/components/classes/AttendanceForm";
 import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import type { AttendanceStatus } from "@/lib/types";
 
@@ -51,14 +52,7 @@ export default async function SessionDetailPage({
   const phase = getSessionPhase(sessionTime, now);
   const canTake = canTakeAttendance(sessionTime, now);
 
-  const blockedMessage =
-    phase === "UPCOMING"
-      ? `Buổi học chưa diễn ra. Điểm danh sẽ mở khi tới giờ học (${session.startTime}).`
-      : phase === "CANCELLED"
-        ? "Buổi học đã nghỉ nên không điểm danh."
-        : phase === "POSTPONED"
-          ? "Buổi học đang tạm hoãn."
-          : "Buổi học này không thể điểm danh.";
+  const blockedMessage = attendanceGateMessage(phase, session.startTime);
 
   const sessionUser = (await auth())?.user;
   const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
@@ -114,7 +108,7 @@ export default async function SessionDetailPage({
           <p>Lớp chưa có học sinh nào đang học.</p>
         </div>
       ) : canTake ? (
-        <AttendanceForm sessionId={sessionId} classId={id} students={rows} />
+        <AttendanceForm sessionId={sessionId} students={rows} redirectPath={`/staff/classes/${id}`} />
       ) : (
         /* Read-only view for non-actionable sessions */
         <div className="clay-card overflow-hidden p-0">

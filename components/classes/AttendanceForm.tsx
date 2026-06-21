@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { saveAttendanceAction } from "@/lib/classes/actions";
 import type { AttendanceStatus } from "@/lib/types";
 
+// Form điểm danh dùng chung cho cả trang CBĐT (/staff) lẫn GV (/teacher).
+// Trang gọi quyết định `redirectPath` sau khi lưu + dựng `students` (gồm default
+// trạng thái). Gate thời gian (ai/khi nào được điểm danh) do trang + server action
+// kiểm; form chỉ render khi đã qua gate.
+
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string; color: string }[] = [
   { value: "PRESENT",  label: "Có mặt",    color: "text-green-700 bg-green-100 border-green-200" },
   { value: "LATE",     label: "Đến muộn",  color: "text-yellow-700 bg-yellow-100 border-yellow-200" },
@@ -26,7 +31,7 @@ interface Props {
   redirectPath: string;
 }
 
-export function TeacherAttendanceForm({ sessionId, students: initial, redirectPath }: Props) {
+export function AttendanceForm({ sessionId, students: initial, redirectPath }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
