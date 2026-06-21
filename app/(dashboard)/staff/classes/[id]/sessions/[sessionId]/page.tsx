@@ -10,6 +10,7 @@ import {
   SESSION_PHASE_LABEL,
   SESSION_PHASE_COLOR,
 } from "@/lib/classes/session-status";
+import { canOperateClassSession } from "@/lib/classes/access";
 import { AttendanceForm } from "@/components/classes/AttendanceForm";
 import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import type { AttendanceStatus } from "@/lib/types";
@@ -52,10 +53,22 @@ export default async function SessionDetailPage({
   const phase = getSessionPhase(sessionTime, now);
   const canTake = canTakeAttendance(sessionTime, now);
 
-  const blockedMessage = attendanceGateMessage(phase, session.startTime);
-
+  // Khớp UI với server: chỉ cho thao tác khi có quyền VÀ đúng lớp (involvement).
   const sessionUser = (await auth())?.user;
-  const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
+  const canOperate = sessionUser
+    ? canOperateClassSession(sessionUser, {
+        advisorId: session.class.advisorId,
+        teacherIds: session.class.teachers.map((t) => t.teacherId),
+        sessionTeacherId: session.teacherId,
+      })
+    : false;
+  const canTakeAtt = canOperate && sessionUser ? await can(sessionUser, "class.take_attendance") : false;
+  const canEvaluate = canOperate && sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
+
+  const canEditAttendance = canTake && canTakeAtt;
+  const blockedMessage = !canTakeAtt
+    ? "Bạn không có quyền điểm danh buổi học này."
+    : attendanceGateMessage(phase, session.startTime);
   const evalMap = new Map(session.evaluations.map((e) => [e.studentId, e]));
   const evalRows = students.map((s) => {
     const ev = evalMap.get(s.id);
@@ -107,7 +120,7 @@ export default async function SessionDetailPage({
         <div className="clay-card p-12 text-center text-foreground/45">
           <p>Lớp chưa có học sinh nào đang học.</p>
         </div>
-      ) : canTake ? (
+      ) : canEditAttendance ? (
         <AttendanceForm sessionId={sessionId} students={rows} redirectPath={`/staff/classes/${id}`} />
       ) : (
         /* Read-only view for non-actionable sessions */

@@ -45,7 +45,7 @@ export async function getMyClasses() {
       include: {
         subject: true,
         advisor: { select: { id: true, name: true } },
-        _count: { select: { enrollments: true, sessions: true } },
+        _count: { select: { enrollments: { where: { status: "ACTIVE" } }, sessions: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -57,7 +57,7 @@ export async function getMyClasses() {
     include: {
       subject: true,
       advisor: { select: { id: true, name: true } },
-      _count: { select: { enrollments: true, sessions: true } },
+      _count: { select: { enrollments: { where: { status: "ACTIVE" } }, sessions: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -97,7 +97,7 @@ export async function getClassDetail(classId: string) {
         },
         orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
       },
-      _count: { select: { enrollments: true, sessions: true, exams: true } },
+      _count: { select: { enrollments: { where: { status: "ACTIVE" } }, sessions: true, exams: true } },
     },
   });
 }
@@ -123,6 +123,7 @@ export async function getSessionWithAttendance(sessionId: string) {
       class: {
         include: {
           subject: true,
+          teachers: { select: { teacherId: true } },
           enrollments: {
             where: { status: "ACTIVE" },
             include: { student: { select: { id: true, name: true, email: true, sex: true } } },

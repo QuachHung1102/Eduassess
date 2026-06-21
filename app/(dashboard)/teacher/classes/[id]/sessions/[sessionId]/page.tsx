@@ -74,6 +74,7 @@ export default async function TeacherSessionDetailPage({
   ).length;
 
   const sessionUser = (await auth())?.user;
+  const canTakeAtt = sessionUser ? await can(sessionUser, "class.take_attendance") : false;
   const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
   const evalMap = new Map(s.evaluations.map((e) => [e.studentId, e]));
   const evalRows = enrollments.map((e) => {
@@ -170,12 +171,12 @@ export default async function TeacherSessionDetailPage({
           <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>Điểm danh</h2>
         </div>
 
-        {!canTake ? (
+        {!canTake || !canTakeAtt ? (
           <div
             className="primary-panel flex items-center justify-center py-12 text-sm text-center"
             style={{ color: "color-mix(in srgb, var(--foreground) 45%, transparent)" }}
           >
-            {attendanceGateMessage(phase, s.startTime)}
+            {!canTakeAtt ? "Bạn không có quyền điểm danh buổi học này." : attendanceGateMessage(phase, s.startTime)}
           </div>
         ) : enrollments.length === 0 ? (
           <div

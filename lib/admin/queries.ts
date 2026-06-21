@@ -257,7 +257,7 @@ export async function getAdminClasses() {
       subject: { select: { name: true } },
       advisor: { select: { name: true } },
       _count: {
-        select: { enrollments: true, teachers: true },
+        select: { enrollments: { where: { status: "ACTIVE" } }, teachers: true },
       },
     },
   });
