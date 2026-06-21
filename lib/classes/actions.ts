@@ -1344,61 +1344,6 @@ export async function removeStudentAdvisorAction(studentId: string, advisorId: s
   return { success: true };
 }
 
-/**
- * Server action để fetch gợi ý học sinh cho form tạo lớp.
- * Không cần permission đặc biệt — chỉ cần là STAFF.
- */
-export async function getSuggestedStudentsAction(subjectId: string, targetLevel: string) {
-  await requireSession();
-  if (!subjectId || !targetLevel) return { students: [] };
-
-  // Step 1: find students with matching subject level (de-dup by studentId)
-  const levels = await prisma.studentSubjectLevel.findMany({
-    where: { subjectId, level: targetLevel as never },
-    select: { studentId: true, level: true },
-    orderBy: { evaluatedAt: "desc" },
-  });
-
-  const seen = new Set<string>();
-  const studentIds: string[] = [];
-  const levelMap = new Map<string, string>();
-  for (const l of levels) {
-    if (!seen.has(l.studentId)) {
-      seen.add(l.studentId);
-      studentIds.push(l.studentId);
-      levelMap.set(l.studentId, l.level);
-    }
-  }
-
-  if (studentIds.length === 0) return { students: [] };
-
-  // Step 2: load user details + count active class enrollments
-  const users = await prisma.user.findMany({
-    where: { id: { in: studentIds } },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      _count: {
-        select: {
-          classEnrollments: { where: { class: { status: { in: ["RECRUITING", "ONGOING"] } } } },
-        },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  const students = users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    level: levelMap.get(u.id) ?? targetLevel,
-    activeClassCount: u._count.classEnrollments,
-  }));
-
-  return { students };
-}
-
 // ── Lazy-load cho trang phân công CBDT ───────────────────────
 
 const PAGE_SIZE = 10;

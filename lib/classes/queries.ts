@@ -629,8 +629,10 @@ export async function getAllStudentsWithAdvisors() {
 }
 
 /**
- * Gợi ý học sinh phù hợp khi tạo lớp: lọc theo môn + trình độ từ StudentSubjectLevel.
- * Chỉ trả về students, kèm số lớp đang ở trạng thái RECRUITING/ONGOING.
+ * Gợi ý HS đúng môn + trình độ mục tiêu để ĐÁNH DẤU "Phù hợp" trong bảng "Thêm
+ * học sinh" ở trang chi tiết lớp ĐÃ CÓ (staff + admin). Chỉ khớp năng lực,
+ * KHÔNG lọc lịch rảnh/trùng buổi — khác getEligibleStudentsForSchedule (lọc cứng
+ * khi TẠO lớp). Kèm số lớp đang RECRUITING/ONGOING.
  */
 export async function getSuggestedStudents(subjectId: string, targetLevel: string) {
   if (!subjectId || !targetLevel) return [];
