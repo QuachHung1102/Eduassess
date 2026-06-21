@@ -20,8 +20,6 @@ function pct(present: number, total: number): string {
   return `${Math.round((present / total) * 100)}%`;
 }
 
-const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
-
 export default async function StaffOverviewPage() {
   await requirePageSession();
   const students = await getMyStudentsOverview();
@@ -46,7 +44,7 @@ export default async function StaffOverviewPage() {
       />
 
       {students.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3" style={{ color: mutedText }}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-foreground/60">
           <FaIcon icon={faUserGraduate} className="text-4xl" />
           <p className="text-sm">Chưa có học sinh nào được phân cho bạn.</p>
         </div>
@@ -64,34 +62,23 @@ export default async function StaffOverviewPage() {
             {/* ── md+ : bảng ───────────────────────────────── */}
             <div className="clay-card hidden overflow-hidden p-0 md:block">
               <table className="w-full text-sm">
-                <thead
-                  className="sticky top-0"
-                  style={{ background: "color-mix(in srgb, var(--foreground) 5%, var(--surface-strong))" }}
-                >
+                <thead className="sticky top-0 bg-surface-tint">
                   <tr>
                     {["Học sinh", "Năng lực theo môn", "Điểm danh", "TB đánh giá buổi", "Lớp đang học"].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide"
-                        style={{ color: mutedText }}
-                      >
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide text-foreground/60">
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody style={{ color: "var(--foreground)" }}>
+                <tbody className="text-foreground">
                   {students.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
-                      style={{ borderTop: "1px solid var(--border-soft)" }}
-                    >
+                    <tr key={s.id} className="border-t border-soft transition-colors hover:bg-foreground/5">
                       <td className="px-4 py-3">
-                        <Link href={`/staff/students/${s.id}`} className="font-medium hover:underline" style={{ color: "var(--primary)" }}>
+                        <Link href={`/staff/students/${s.id}`} className="font-medium text-primary hover:underline">
                           {s.name ?? s.email}
                         </Link>
-                        <p className="text-xs" style={{ color: mutedText }}>{s.email}</p>
+                        <p className="text-xs text-foreground/60">{s.email}</p>
                       </td>
                       <td className="px-4 py-3">
                         <SubjectLevels levels={s.levels} />
@@ -99,7 +86,7 @@ export default async function StaffOverviewPage() {
                       <td className="px-4 py-3">
                         {pct(s.attendance.present, s.attendance.total)}
                         {s.attendance.total > 0 && (
-                          <span className="ml-1 text-xs" style={{ color: mutedText }}>
+                          <span className="ml-1 text-xs text-foreground/60">
                             ({s.attendance.present}/{s.attendance.total})
                           </span>
                         )}
@@ -108,13 +95,13 @@ export default async function StaffOverviewPage() {
                         {s.evalAvg !== null ? (
                           <span>
                             {s.evalAvg.toFixed(1)}
-                            <span className="text-xs" style={{ color: mutedText }}>/5</span>
+                            <span className="text-xs text-foreground/60">/5</span>
                           </span>
                         ) : (
-                          <span style={{ color: mutedText }}>—</span>
+                          <span className="text-foreground/60">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3" style={{ color: mutedText }}>{s.activeClassCount}</td>
+                      <td className="px-4 py-3 text-foreground/60">{s.activeClassCount}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -131,20 +118,20 @@ export default async function StaffOverviewPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium truncate" style={{ color: "var(--foreground)" }}>{s.name ?? s.email}</p>
-                      <p className="text-xs truncate" style={{ color: mutedText }}>{s.email}</p>
+                      <p className="font-medium truncate text-foreground">{s.name ?? s.email}</p>
+                      <p className="text-xs truncate text-foreground/60">{s.email}</p>
                     </div>
-                    <span className="shrink-0 text-xs" style={{ color: mutedText }}>{s.activeClassCount} lớp</span>
+                    <span className="shrink-0 text-xs text-foreground/60">{s.activeClassCount} lớp</span>
                   </div>
                   <div className="mt-2">
                     <SubjectLevels levels={s.levels} />
                   </div>
-                  <div className="mt-2 flex gap-4 text-xs" style={{ color: mutedText }}>
+                  <div className="mt-2 flex gap-4 text-xs text-foreground/60">
                     <span>
-                      Điểm danh: <strong style={{ color: "var(--foreground)" }}>{pct(s.attendance.present, s.attendance.total)}</strong>
+                      Điểm danh: <strong className="text-foreground">{pct(s.attendance.present, s.attendance.total)}</strong>
                     </span>
                     <span>
-                      Đánh giá: <strong style={{ color: "var(--foreground)" }}>{s.evalAvg !== null ? `${s.evalAvg.toFixed(1)}/5` : "—"}</strong>
+                      Đánh giá: <strong className="text-foreground">{s.evalAvg !== null ? `${s.evalAvg.toFixed(1)}/5` : "—"}</strong>
                     </span>
                   </div>
                 </Link>
@@ -159,7 +146,7 @@ export default async function StaffOverviewPage() {
 
 function SubjectLevels({ levels }: { levels: { subject: string; level: string }[] }) {
   if (levels.length === 0) {
-    return <span className="text-xs" style={{ color: "color-mix(in srgb, #f59e0b 90%, transparent)" }}>Chưa đánh giá</span>;
+    return <span className="text-xs text-amber-500">Chưa đánh giá</span>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">

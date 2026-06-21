@@ -10,8 +10,6 @@ import {
   STUDENT_LEVEL_COLOR as LEVEL_COLOR,
 } from "@/lib/constants/labels";
 
-const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
-
 export default async function StaffStudentsPage() {
   const me = await requirePageSession();
   const canCreate = await can(me, "student.create");
@@ -25,11 +23,7 @@ export default async function StaffStudentsPage() {
         subtitle={`${students.length} học sinh`}
         actions={
           canCreate && (
-            <Link
-              href="/staff/students/new"
-              className="clay-btn px-4 py-2 text-sm font-medium text-white"
-              style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
-            >
+            <Link href="/staff/students/new" className="clay-btn bg-primary px-4 py-2 text-sm font-medium text-white">
               + Thêm học sinh
             </Link>
           )
@@ -37,7 +31,7 @@ export default async function StaffStudentsPage() {
       />
 
       {students.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ color: mutedText }}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-foreground/60">
           <FaIcon icon={faUserGraduate} className="text-4xl" />
           <p className="text-sm">Chưa có học sinh nào được giao cho bạn</p>
         </div>
@@ -53,17 +47,12 @@ export default async function StaffStudentsPage() {
                   className="clay-card hover-card-soft press-feedback-soft group p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <div
-                      className="w-9 h-9 rounded-full text-sm font-bold flex items-center justify-center shrink-0"
-                      style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}
-                    >
+                    <div className="w-9 h-9 rounded-full bg-primary/15 text-primary text-sm font-bold flex items-center justify-center shrink-0">
                       {student.name?.[0]?.toUpperCase() ?? "?"}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold truncate" style={{ color: "var(--foreground)" }}>
-                        {student.name}
-                      </p>
-                      <p className="text-xs truncate" style={{ color: mutedText }}>{student.email}</p>
+                      <p className="font-semibold truncate text-foreground">{student.name}</p>
+                      <p className="text-xs truncate text-foreground/60">{student.email}</p>
                     </div>
                   </div>
 
@@ -83,7 +72,7 @@ export default async function StaffStudentsPage() {
                     </div>
                   )}
 
-                  <p className="text-xs mt-3" style={{ color: mutedText }}>
+                  <p className="text-xs mt-3 text-foreground/60">
                     {activeCount > 0 ? `Đang học ${activeCount} lớp` : "Chưa có lớp"}
                   </p>
                 </Link>

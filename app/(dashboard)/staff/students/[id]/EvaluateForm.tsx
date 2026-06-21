@@ -20,15 +20,8 @@ interface Subject {
 
 const LEVELS = STUDENT_LEVELS.map((value) => ({ value, label: LEVEL_LABEL[value] }));
 
-const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
-const faintText = "color-mix(in srgb, var(--foreground) 45%, transparent)";
 const inputCls =
-  "w-full rounded-lg border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_45%,transparent)]";
-const inputStyle = {
-  borderColor: "var(--border-soft)",
-  background: "var(--surface-strong)",
-  color: "var(--foreground)",
-} as const;
+  "w-full rounded-lg border border-soft bg-surface-strong text-foreground px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary";
 
 export function EvaluateForm({ studentId, subjects }: { studentId: string; subjects: Subject[] }) {
   const router = useRouter();
@@ -113,16 +106,16 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Môn học</label>
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={inputCls} style={inputStyle}>
+          <label className="block text-xs font-medium mb-1 text-foreground/60">Môn học</label>
+          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={inputCls}>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Năng lực</label>
-          <select value={level} onChange={(e) => setLevel(e.target.value as StudentLevel)} className={inputCls} style={inputStyle}>
+          <label className="block text-xs font-medium mb-1 text-foreground/60">Năng lực</label>
+          <select value={level} onChange={(e) => setLevel(e.target.value as StudentLevel)} className={inputCls}>
             {LEVELS.map((l) => (
               <option key={l.value} value={l.value}>{l.label}</option>
             ))}
@@ -131,34 +124,31 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
       </div>
 
       {/* Dữ liệu tham chiếu để CBĐT quyết định mức */}
-      <div
-        className="rounded-lg border px-3 py-2.5 text-xs"
-        style={{ borderColor: "var(--border-soft)", background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}
-      >
+      <div className="rounded-lg border border-soft bg-foreground/5 px-3 py-2.5 text-xs">
         {refLoading ? (
-          <p style={{ color: faintText }}>Đang tải dữ liệu tham chiếu…</p>
+          <p className="text-foreground/45">Đang tải dữ liệu tham chiếu…</p>
         ) : !ref ? (
-          <p style={{ color: faintText }}>Chưa có dữ liệu tham chiếu cho môn này.</p>
+          <p className="text-foreground/45">Chưa có dữ liệu tham chiếu cho môn này.</p>
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span style={{ color: mutedText }}>
+              <span className="text-foreground/60">
                 Điểm TB:{" "}
                 {ref.avgScore !== null ? (
-                  <strong style={{ color: "var(--foreground)" }}>{ref.avgScore.toFixed(1)}</strong>
+                  <strong className="text-foreground">{ref.avgScore.toFixed(1)}</strong>
                 ) : (
-                  <span style={{ color: faintText }}>chưa có</span>
+                  <span className="text-foreground/45">chưa có</span>
                 )}
               </span>
-              <span style={{ color: mutedText }}>
+              <span className="text-foreground/60">
                 Điểm danh:{" "}
                 {ref.attendance.total > 0 ? (
-                  <strong style={{ color: "var(--foreground)" }}>
+                  <strong className="text-foreground">
                     {ref.attendance.present}/{ref.attendance.total} (
                     {Math.round((ref.attendance.present / ref.attendance.total) * 100)}%)
                   </strong>
                 ) : (
-                  <span style={{ color: faintText }}>chưa có</span>
+                  <span className="text-foreground/45">chưa có</span>
                 )}
               </span>
               {ref.suggestedLevel && (
@@ -169,24 +159,24 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
               )}
             </div>
             {ref.sessionEval.count > 0 && (
-              <p style={{ color: mutedText }}>
+              <p className="text-foreground/60">
                 Đánh giá buổi ({ref.sessionEval.count}):{" "}
-                <span style={{ color: "var(--foreground)" }}>
+                <span className="text-foreground">
                   NL {ref.sessionEval.performance?.toFixed(1) ?? "—"} · CC{" "}
                   {ref.sessionEval.diligence?.toFixed(1) ?? "—"} · TT{" "}
                   {ref.sessionEval.comprehension?.toFixed(1) ?? "—"}
                 </span>{" "}
-                <span style={{ color: faintText }}>(thang 5)</span>
+                <span className="text-foreground/45">(thang 5)</span>
               </p>
             )}
             {ref.attempts.length > 0 && (
               <div>
-                <p className="mb-1" style={{ color: mutedText }}>Bài kiểm tra gần đây:</p>
+                <p className="mb-1 text-foreground/60">Bài kiểm tra gần đây:</p>
                 <ul className="space-y-0.5">
                   {ref.attempts.map((a, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
-                      <span className="truncate" style={{ color: mutedText }}>{a.title}</span>
-                      <span className="shrink-0 font-medium" style={{ color: "var(--foreground)" }}>
+                      <span className="truncate text-foreground/60">{a.title}</span>
+                      <span className="shrink-0 font-medium text-foreground">
                         {a.score !== null ? a.score.toFixed(0) : "—"}
                       </span>
                     </li>
@@ -229,22 +219,20 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
       </div>
 
       <div>
-        <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Ghi chú</label>
+        <label className="block text-xs font-medium mb-1 text-foreground/60">Ghi chú</label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Nhận xét, điểm mạnh/yếu..."
           className={`${inputCls} resize-none`}
-          style={inputStyle}
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending || !subjectId}
-        className="clay-btn w-full py-2 text-sm font-medium text-white disabled:opacity-50"
-        style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
+        className="clay-btn bg-primary w-full py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {isPending ? "Đang lưu..." : "Lưu đánh giá"}
       </button>

@@ -161,6 +161,10 @@
   --color-primary-dark: var(--primary-dark);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
+  /* Hairline theo theme → utility `border-soft` (thay border-gray-* thô). */
+  --color-soft: var(--border-soft);
+  /* Nền tint ĐỤC cho thead/section (sticky header không lộ hàng) → `bg-surface-tint`. */
+  --color-surface-tint: color-mix(in srgb, var(--foreground) 5%, var(--surface-strong));
   --font-sans: var(--font-be-vietnam-pro), "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), "Courier New", "Consolas", monospace;
 }

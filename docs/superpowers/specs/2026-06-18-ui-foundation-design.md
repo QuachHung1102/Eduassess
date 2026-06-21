@@ -34,7 +34,30 @@ Trang dữ liệu (md+)                 Mobile (<md)
 
 - **"Signature":** không thêm chi tiết loè loẹt — điểm nhận diện là **tính nhất quán** + dải accent `--primary` của theme. Kỷ luật, không trang trí thừa.
 
-> Quyết định cần nêu riêng (chưa làm): có ép toàn bộ content theo theme token không, hay giữ một số vùng trung tính? Pass đầu ưu tiên cấu trúc/responsive; tô màu theme mở rộng dần.
+> ✅ **Đã chốt (2026-06-21):** content **theme-aware** qua **Tailwind utility** (không inline style). `@theme inline` trong `globals.css` đã map sẵn `foreground/surface*/primary*`; bổ sung `--color-soft` (border) + `--color-surface-tint` (nền thead đục). Đã kiểm chứng: đổi `data-theme="kim"` → toàn content tự chuyển tông vàng, không sửa code trang.
+
+## Bộ recipe chuẩn (utility — dùng cho TOÀN BỘ rollout)
+
+**Nguyên tắc: KHÔNG `bg-white`/`text-gray-*`, KHÔNG inline `style` màu, KHÔNG hằng `mutedText` lặp lại.** Chỉ dùng utility bám theme:
+
+| Mục đích | Thay vì (gray thô / inline) | Dùng utility |
+|---|---|---|
+| Chữ chính | `text-gray-900` / `style color foreground` | `text-foreground` |
+| Chữ phụ (muted) | `text-gray-500/600` / `mutedText` | `text-foreground/60` |
+| Chữ mờ (faint) | `text-gray-400` | `text-foreground/45` |
+| Nền card | `bg-white border-gray-100` | `clay-card` |
+| Nền thead/section (sticky) | `bg-gray-50` | `bg-surface-tint` (đục) |
+| Tint nhẹ / hover row | `bg-gray-50` | `bg-foreground/5` · `hover:bg-foreground/5` |
+| Viền hairline | `border-gray-100/200` | `border-soft` |
+| Link / accent | `text-blue-600` | `text-primary` |
+| Nút primary | `bg-blue/emerald-600` / gradient inline | `clay-btn bg-primary text-white` |
+| Nút outline phụ | `border-gray-200 text-gray-700` | `border border-soft text-foreground hover:bg-foreground/5` |
+| Input / select / textarea | `border-gray-200 focus:ring-blue-500` | `border border-soft bg-surface-strong text-foreground focus:ring-2 focus:ring-primary` |
+| Avatar tint | `bg-blue-100 text-blue-700` | `bg-primary/15 text-primary` |
+| Header trang | dựng tay icon+h1+p | `<PageHeader icon title subtitle actions />` |
+| Bảng responsive | bảng trần (vỡ mobile) | `hidden md:block` (bảng) + `md:hidden` (thẻ); hoặc `overflow-x-auto` |
+
+Token đăng ký 1 lần ở `@theme inline` (`globals.css`); badge **semantic** (level/status: green/red/amber/indigo…) **giữ nguyên**, không đổi theo theme.
 
 ## Primitive đã dựng
 

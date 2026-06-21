@@ -9,8 +9,6 @@ import { faChalkboardUser } from "@fortawesome/free-solid-svg-icons";
 
 export const dynamic = "force-dynamic";
 
-const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
-
 export default async function StaffTeachersPage() {
   const user = (await auth())?.user;
   if (!user || !(await can(user, "class.create"))) redirect("/staff");
@@ -26,7 +24,7 @@ export default async function StaffTeachersPage() {
       />
 
       {teachers.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3" style={{ color: mutedText }}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-foreground/60">
           <FaIcon icon={faChalkboardUser} className="text-4xl" />
           <p className="text-sm">Chưa có giáo viên nào.</p>
         </div>
@@ -35,41 +33,33 @@ export default async function StaffTeachersPage() {
           {/* md+ : bảng */}
           <div className="clay-card hidden overflow-hidden p-0 md:block">
             <table className="w-full text-sm">
-              <thead
-                className="sticky top-0"
-                style={{ background: "color-mix(in srgb, var(--foreground) 5%, var(--surface-strong))" }}
-              >
+              <thead className="sticky top-0 bg-surface-tint">
                 <tr>
                   {["Giáo viên", "Lịch rảnh đã khai", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: mutedText }}>
+                    <th key={h} className="text-left px-4 py-3 text-xs font-medium uppercase tracking-wide text-foreground/60">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody style={{ color: "var(--foreground)" }}>
+              <tbody className="text-foreground">
                 {teachers.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
-                    style={{ borderTop: "1px solid var(--border-soft)" }}
-                  >
+                  <tr key={t.id} className="border-t border-soft transition-colors hover:bg-foreground/5">
                     <td className="px-4 py-3">
                       <p className="font-medium">{t.name ?? t.email}</p>
-                      <p className="text-xs" style={{ color: mutedText }}>{t.email}</p>
+                      <p className="text-xs text-foreground/60">{t.email}</p>
                     </td>
                     <td className="px-4 py-3">
                       {t.declaredSlots > 0 ? (
                         <span>{t.declaredSlots} khung giờ</span>
                       ) : (
-                        <span className="text-xs" style={{ color: "color-mix(in srgb, #f59e0b 90%, transparent)" }}>Chưa khai lịch</span>
+                        <span className="text-xs text-amber-500">Chưa khai lịch</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/staff/teachers/${t.id}`}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]"
-                        style={{ color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 35%, transparent)" }}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-primary border border-primary/35 transition-colors hover:bg-primary/10"
                       >
                         Xem / sửa lịch
                       </Link>
@@ -84,9 +74,9 @@ export default async function StaffTeachersPage() {
           <div className="space-y-2 md:hidden">
             {teachers.map((t) => (
               <Link key={t.id} href={`/staff/teachers/${t.id}`} className="clay-card hover-card-soft press-feedback-soft block p-4">
-                <p className="font-medium" style={{ color: "var(--foreground)" }}>{t.name ?? t.email}</p>
-                <p className="text-xs" style={{ color: mutedText }}>{t.email}</p>
-                <p className="mt-2 text-xs" style={{ color: mutedText }}>
+                <p className="font-medium text-foreground">{t.name ?? t.email}</p>
+                <p className="text-xs text-foreground/60">{t.email}</p>
+                <p className="mt-2 text-xs text-foreground/60">
                   {t.declaredSlots > 0 ? `${t.declaredSlots} khung giờ đã khai` : "Chưa khai lịch"}
                 </p>
               </Link>

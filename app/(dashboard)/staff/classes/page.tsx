@@ -5,8 +5,6 @@ import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus, faSchool } from "@fortawesome/free-solid-svg-icons";
 import { auth } from "@/auth";
 
-const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
-
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Soạn thảo",
   RECRUITING: "Tuyển sinh",
@@ -48,11 +46,7 @@ export default async function StaffClassesPage() {
         title="Lớp học"
         subtitle={`${classes.length} lớp · ${sortedSubjects.length} môn${session?.user?.role === "STAFF" ? " · lớp bạn phụ trách" : ""}`}
         actions={
-          <Link
-            href="/staff/classes/new"
-            className="clay-btn flex items-center gap-2 px-4 py-2 text-sm font-medium text-white"
-            style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
-          >
+          <Link href="/staff/classes/new" className="clay-btn bg-primary flex items-center gap-2 px-4 py-2 text-sm font-medium text-white">
             <FaIcon icon={faPlus} className="text-xs" />
             Tạo lớp mới
           </Link>
@@ -60,10 +54,10 @@ export default async function StaffClassesPage() {
       />
 
       {classes.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ color: mutedText }}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-foreground/60">
           <FaIcon icon={faSchool} className="text-4xl" />
           <p className="text-sm">Chưa có lớp học nào</p>
-          <Link href="/staff/classes/new" className="text-sm hover:underline" style={{ color: "var(--primary)" }}>
+          <Link href="/staff/classes/new" className="text-sm text-primary hover:underline">
             Tạo lớp đầu tiên
           </Link>
         </div>
@@ -73,51 +67,37 @@ export default async function StaffClassesPage() {
             const subjectClasses = grouped.get(subjectName)!;
             return (
               <div key={subjectName} className="clay-card overflow-hidden p-0">
-                <div
-                  className="px-4 py-3 flex items-center justify-between"
-                  style={{
-                    background: "color-mix(in srgb, var(--foreground) 5%, var(--surface-strong))",
-                    borderBottom: "1px solid var(--border-soft)",
-                  }}
-                >
-                  <h2 className="font-semibold" style={{ color: "var(--foreground)" }}>{subjectName}</h2>
-                  <span className="text-xs" style={{ color: mutedText }}>{subjectClasses.length} lớp</span>
+                <div className="px-4 py-3 flex items-center justify-between bg-surface-tint border-b border-soft">
+                  <h2 className="font-semibold text-foreground">{subjectName}</h2>
+                  <span className="text-xs text-foreground/60">{subjectClasses.length} lớp</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[680px] text-sm">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                      <tr className="border-b border-soft">
                         {["Tên lớp", "Hình thức", "Buổi học", "Học sinh", "Trạng thái", ""].map((h) => (
-                          <th
-                            key={h}
-                            className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wide"
-                            style={{ color: mutedText }}
-                          >
+                          <th key={h} className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-foreground/60">
                             {h}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody style={{ color: "var(--foreground)" }}>
+                    <tbody className="text-foreground">
                       {subjectClasses.map((cls) => (
-                        <tr
-                          key={cls.id}
-                          className="transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]"
-                          style={{ borderTop: "1px solid var(--border-soft)" }}
-                        >
+                        <tr key={cls.id} className="border-t border-soft transition-colors hover:bg-foreground/5">
                           <td className="px-4 py-3">
-                            <Link href={`/staff/classes/${cls.id}`} className="font-medium hover:underline" style={{ color: "var(--primary)" }}>
+                            <Link href={`/staff/classes/${cls.id}`} className="font-medium text-primary hover:underline">
                               {cls.name}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                          <td className="px-4 py-3 text-xs text-foreground/60">
                             {MODE_LABEL[cls.mode] ?? cls.mode}
                           </td>
-                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                          <td className="px-4 py-3 text-xs text-foreground/60">
                             {cls._count.sessions}
                             {cls.sessionCount > 0 && <span> / {cls.sessionCount}</span>}
                           </td>
-                          <td className="px-4 py-3 text-xs" style={{ color: mutedText }}>
+                          <td className="px-4 py-3 text-xs text-foreground/60">
                             {cls._count.enrollments}
                           </td>
                           <td className="px-4 py-3">
@@ -130,11 +110,7 @@ export default async function StaffClassesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <Link
-                              href={`/staff/classes/${cls.id}`}
-                              className="text-xs hover:underline"
-                              style={{ color: mutedText }}
-                            >
+                            <Link href={`/staff/classes/${cls.id}`} className="text-xs text-foreground/60 hover:underline">
                               Chi tiết →
                             </Link>
                           </td>
