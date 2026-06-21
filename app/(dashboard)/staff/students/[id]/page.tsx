@@ -17,6 +17,9 @@ const CLASS_STATUS_LABEL: Record<string, string> = {
   RECRUITING: "Tuyển sinh", ONGOING: "Đang học",
 };
 
+const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
+const faintText = "color-mix(in srgb, var(--foreground) 45%, transparent)";
+
 export default async function StudentDetailPage({
   params,
 }: {
@@ -37,64 +40,58 @@ export default async function StudentDetailPage({
   return (
     <div className="flex flex-col gap-5">
       {/* Back */}
-      <Link href="/staff/students" className="text-sm text-blue-600 hover:underline">
+      <Link href="/staff/students" className="text-sm hover:underline" style={{ color: "var(--primary)" }}>
         ← Danh sách học sinh
       </Link>
 
       {/* Student header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="clay-card p-5">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 text-lg font-bold flex items-center justify-center shrink-0">
+          <div
+            className="w-12 h-12 rounded-full text-lg font-bold flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}
+          >
             {student.name?.[0]?.toUpperCase() ?? "?"}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{student.name}</h1>
-            <p className="text-gray-500 text-sm">{student.email}</p>
+            <h1 className="text-xl font-bold" style={{ color: "var(--foreground)" }}>{student.name}</h1>
+            <p className="text-sm" style={{ color: mutedText }}>{student.email}</p>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">Giới tính</p>
-            <p className="font-medium text-gray-800">
-              {student.sex === "MALE" ? "Nam" : student.sex === "FEMALE" ? "Nữ" : "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">Ngày sinh</p>
-            <p className="font-medium text-gray-800">
-              {student.dateOfBirth
-                ? new Date(student.dateOfBirth).toLocaleDateString("vi-VN")
-                : "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">Điện thoại</p>
-            <p className="font-medium text-gray-800">{student.phoneNumber ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">CBDT phụ trách</p>
-            <p className="font-medium text-gray-800">
-              {advisorLinks.map((a) => a.advisor.name).filter(Boolean).join(", ") || "—"}
-            </p>
-          </div>
+          {[
+            { label: "Giới tính", value: student.sex === "MALE" ? "Nam" : student.sex === "FEMALE" ? "Nữ" : "—" },
+            { label: "Ngày sinh", value: student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("vi-VN") : "—" },
+            { label: "Điện thoại", value: student.phoneNumber ?? "—" },
+            { label: "CBDT phụ trách", value: advisorLinks.map((a) => a.advisor.name).filter(Boolean).join(", ") || "—" },
+          ].map((f) => (
+            <div key={f.label}>
+              <p className="text-xs mb-0.5" style={{ color: faintText }}>{f.label}</p>
+              <p className="font-medium" style={{ color: "var(--foreground)" }}>{f.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Active classes */}
       {student.classEnrollments.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-800 text-sm">
+        <div className="clay-card overflow-hidden p-0">
+          <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border-soft)" }}>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>
               Lớp đang học ({student.classEnrollments.length})
             </h2>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div>
             {student.classEnrollments.map((e) => (
-              <div key={e.class.id} className="px-4 py-3 flex items-center justify-between">
+              <div
+                key={e.class.id}
+                className="px-4 py-3 flex items-center justify-between"
+                style={{ borderTop: "1px solid var(--border-soft)" }}
+              >
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{e.class.name}</p>
-                  <p className="text-xs text-gray-400">{e.class.subject.name} · CBDT: {e.class.advisor.name}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{e.class.name}</p>
+                  <p className="text-xs" style={{ color: mutedText }}>{e.class.subject.name} · CBDT: {e.class.advisor.name}</p>
                 </div>
                 <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
                   {CLASS_STATUS_LABEL[e.class.status] ?? e.class.status}
@@ -108,8 +105,8 @@ export default async function StudentDetailPage({
       {/* Two-column: availability + evaluation */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Availability matrix */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-4">Lịch rảnh hàng tuần</h2>
+        <div className="clay-card p-4">
+          <h2 className="font-semibold mb-4" style={{ color: "var(--foreground)" }}>Lịch rảnh hàng tuần</h2>
           <AvailabilityMatrix
             initial={availability.map((a) => ({
               dayOfWeek: a.dayOfWeek as DayOfWeek,
@@ -121,8 +118,8 @@ export default async function StudentDetailPage({
         </div>
 
         {/* Evaluation form */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <h2 className="font-semibold text-gray-800 mb-4">Đánh giá năng lực</h2>
+        <div className="clay-card p-4">
+          <h2 className="font-semibold mb-4" style={{ color: "var(--foreground)" }}>Đánh giá năng lực</h2>
           {canEvaluate ? (
             <EvaluateForm studentId={id} subjects={subjects} />
           ) : (
@@ -133,17 +130,17 @@ export default async function StudentDetailPage({
 
           {/* Level history */}
           <div className="mt-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Lịch sử đánh giá</h3>
+            <h3 className="text-sm font-medium mb-2" style={{ color: mutedText }}>Lịch sử đánh giá</h3>
             {levelHistory.length === 0 ? (
-              <p className="text-xs text-gray-400">Chưa có đánh giá nào</p>
+              <p className="text-xs" style={{ color: faintText }}>Chưa có đánh giá nào</p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-auto">
                 {levelHistory.map((lv) => (
                   <div key={lv.id} className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-gray-800">{lv.subject.name}</span>
+                      <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{lv.subject.name}</span>
                       {lv.note && (
-                        <span className="ml-2 text-xs text-gray-400 italic">{lv.note}</span>
+                        <span className="ml-2 text-xs italic" style={{ color: faintText }}>{lv.note}</span>
                       )}
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
@@ -154,7 +151,7 @@ export default async function StudentDetailPage({
                       >
                         {LEVEL_LABEL[lv.level]}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs" style={{ color: faintText }}>
                         {new Date(lv.evaluatedAt).toLocaleDateString("vi-VN")}
                       </span>
                     </div>

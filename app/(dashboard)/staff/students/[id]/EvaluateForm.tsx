@@ -20,6 +20,16 @@ interface Subject {
 
 const LEVELS = STUDENT_LEVELS.map((value) => ({ value, label: LEVEL_LABEL[value] }));
 
+const mutedText = "color-mix(in srgb, var(--foreground) 60%, transparent)";
+const faintText = "color-mix(in srgb, var(--foreground) 45%, transparent)";
+const inputCls =
+  "w-full rounded-lg border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_45%,transparent)]";
+const inputStyle = {
+  borderColor: "var(--border-soft)",
+  background: "var(--surface-strong)",
+  color: "var(--foreground)",
+} as const;
+
 export function EvaluateForm({ studentId, subjects }: { studentId: string; subjects: Subject[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -103,24 +113,16 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Môn học</label>
-          <select
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
+          <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Môn học</label>
+          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={inputCls} style={inputStyle}>
             {subjects.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Năng lực</label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value as StudentLevel)}
-            className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
+          <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Năng lực</label>
+          <select value={level} onChange={(e) => setLevel(e.target.value as StudentLevel)} className={inputCls} style={inputStyle}>
             {LEVELS.map((l) => (
               <option key={l.value} value={l.value}>{l.label}</option>
             ))}
@@ -129,31 +131,34 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
       </div>
 
       {/* Dữ liệu tham chiếu để CBĐT quyết định mức */}
-      <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-xs">
+      <div
+        className="rounded-lg border px-3 py-2.5 text-xs"
+        style={{ borderColor: "var(--border-soft)", background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}
+      >
         {refLoading ? (
-          <p className="text-gray-400">Đang tải dữ liệu tham chiếu…</p>
+          <p style={{ color: faintText }}>Đang tải dữ liệu tham chiếu…</p>
         ) : !ref ? (
-          <p className="text-gray-400">Chưa có dữ liệu tham chiếu cho môn này.</p>
+          <p style={{ color: faintText }}>Chưa có dữ liệu tham chiếu cho môn này.</p>
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="text-gray-600">
+              <span style={{ color: mutedText }}>
                 Điểm TB:{" "}
                 {ref.avgScore !== null ? (
-                  <strong className="text-gray-900">{ref.avgScore.toFixed(1)}</strong>
+                  <strong style={{ color: "var(--foreground)" }}>{ref.avgScore.toFixed(1)}</strong>
                 ) : (
-                  <span className="text-gray-400">chưa có</span>
+                  <span style={{ color: faintText }}>chưa có</span>
                 )}
               </span>
-              <span className="text-gray-600">
+              <span style={{ color: mutedText }}>
                 Điểm danh:{" "}
                 {ref.attendance.total > 0 ? (
-                  <strong className="text-gray-900">
+                  <strong style={{ color: "var(--foreground)" }}>
                     {ref.attendance.present}/{ref.attendance.total} (
                     {Math.round((ref.attendance.present / ref.attendance.total) * 100)}%)
                   </strong>
                 ) : (
-                  <span className="text-gray-400">chưa có</span>
+                  <span style={{ color: faintText }}>chưa có</span>
                 )}
               </span>
               {ref.suggestedLevel && (
@@ -164,24 +169,24 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
               )}
             </div>
             {ref.sessionEval.count > 0 && (
-              <p className="text-gray-600">
+              <p style={{ color: mutedText }}>
                 Đánh giá buổi ({ref.sessionEval.count}):{" "}
-                <span className="text-gray-900">
+                <span style={{ color: "var(--foreground)" }}>
                   NL {ref.sessionEval.performance?.toFixed(1) ?? "—"} · CC{" "}
                   {ref.sessionEval.diligence?.toFixed(1) ?? "—"} · TT{" "}
                   {ref.sessionEval.comprehension?.toFixed(1) ?? "—"}
                 </span>{" "}
-                <span className="text-gray-400">(thang 5)</span>
+                <span style={{ color: faintText }}>(thang 5)</span>
               </p>
             )}
             {ref.attempts.length > 0 && (
               <div>
-                <p className="mb-1 text-gray-500">Bài kiểm tra gần đây:</p>
+                <p className="mb-1" style={{ color: mutedText }}>Bài kiểm tra gần đây:</p>
                 <ul className="space-y-0.5">
                   {ref.attempts.map((a, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
-                      <span className="truncate text-gray-600">{a.title}</span>
-                      <span className="shrink-0 font-medium text-gray-900">
+                      <span className="truncate" style={{ color: mutedText }}>{a.title}</span>
+                      <span className="shrink-0 font-medium" style={{ color: "var(--foreground)" }}>
                         {a.score !== null ? a.score.toFixed(0) : "—"}
                       </span>
                     </li>
@@ -208,10 +213,10 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
         )}
         {aiForCurrent?.suggestion && (
           <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs">
-            <p className="text-gray-800">
+            <p className="text-indigo-900">
               AI đề xuất: <strong>{LEVEL_LABEL[aiForCurrent.suggestion.level]}</strong>
             </p>
-            <p className="mt-0.5 text-gray-600">{aiForCurrent.suggestion.rationale}</p>
+            <p className="mt-0.5 text-indigo-700">{aiForCurrent.suggestion.rationale}</p>
             <button
               type="button"
               onClick={() => setLevel(aiForCurrent.suggestion!.level)}
@@ -224,20 +229,22 @@ export function EvaluateForm({ studentId, subjects }: { studentId: string; subje
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Ghi chú</label>
+        <label className="block text-xs font-medium mb-1" style={{ color: mutedText }}>Ghi chú</label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="Nhận xét, điểm mạnh/yếu..."
-          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+          className={`${inputCls} resize-none`}
+          style={inputStyle}
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending || !subjectId}
-        className="w-full py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+        className="clay-btn w-full py-2 text-sm font-medium text-white disabled:opacity-50"
+        style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dark))" }}
       >
         {isPending ? "Đang lưu..." : "Lưu đánh giá"}
       </button>
