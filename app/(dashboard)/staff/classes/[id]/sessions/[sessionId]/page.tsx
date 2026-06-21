@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { can } from "@/lib/auth/permissions";
 import { getSessionWithAttendance } from "@/lib/classes/queries";
+import {
+  getSessionPhase,
+  canTakeAttendance,
+  SESSION_PHASE_LABEL,
+  SESSION_PHASE_COLOR,
+} from "@/lib/classes/session-status";
 import { AttendanceForm } from "./AttendanceForm";
 import { SessionEvaluationForm } from "@/components/classes/SessionEvaluationForm";
 import type { AttendanceStatus } from "@/lib/types";
@@ -10,10 +16,6 @@ import type { AttendanceStatus } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 const MODE_LABEL: Record<string, string> = { ONLINE: "Online", OFFLINE: "Offline", HYBRID: "Hybrid" };
-const SESSION_STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: "Đã lên lịch", COMPLETED: "Hoàn thành",
-  CANCELLED: "Đã hủy", POSTPONED: "Tạm hoãn",
-};
 
 export default async function SessionDetailPage({
   params,
@@ -38,7 +40,25 @@ export default async function SessionDetailPage({
     };
   });
 
-  const canTakeAttendance = session.status === "SCHEDULED" || session.status === "COMPLETED";
+  // Pha thời gian dẫn xuất + gate điểm danh (đồng bộ server action).
+  const sessionTime = {
+    date: session.date,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    status: session.status,
+  };
+  const now = new Date();
+  const phase = getSessionPhase(sessionTime, now);
+  const canTake = canTakeAttendance(sessionTime, now);
+
+  const blockedMessage =
+    phase === "UPCOMING"
+      ? `Buổi học chưa diễn ra. Điểm danh sẽ mở khi tới giờ học (${session.startTime}).`
+      : phase === "CANCELLED"
+        ? "Buổi học đã nghỉ nên không điểm danh."
+        : phase === "POSTPONED"
+          ? "Buổi học đang tạm hoãn."
+          : "Buổi học này không thể điểm danh.";
 
   const sessionUser = (await auth())?.user;
   const canEvaluate = sessionUser ? await can(sessionUser, "class.evaluate_session") : false;
@@ -60,13 +80,13 @@ export default async function SessionDetailPage({
     <div className="flex flex-col gap-4">
       {/* Breadcrumb + header */}
       <div className="shrink-0">
-        <Link href={`/staff/classes/${id}`} className="text-sm text-blue-600 hover:underline">
+        <Link href={`/staff/classes/${id}`} className="text-sm text-primary hover:underline">
           ← {session.class.name ?? "Lớp học"}
         </Link>
 
         <div className="flex items-start justify-between mt-2 gap-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-foreground">
               Buổi #{session.sessionNumber} —{" "}
               {new Date(session.date).toLocaleDateString("vi-VN", {
                 weekday: "long",
@@ -75,50 +95,46 @@ export default async function SessionDetailPage({
                 year: "numeric",
               })}
             </h1>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <p className="text-foreground/60 text-sm mt-0.5">
               {session.startTime} – {session.endTime} ·{" "}
               {MODE_LABEL[session.mode as string]} ·{" "}
               {session.room?.name ?? "Không có phòng"} ·{" "}
               GV: {session.teacher.name}
             </p>
           </div>
-          <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-            {SESSION_STATUS_LABEL[session.status] ?? session.status}
+          <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${SESSION_PHASE_COLOR[phase]}`}>
+            {SESSION_PHASE_LABEL[phase]}
           </span>
         </div>
       </div>
 
       {/* Attendance content */}
       {students.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center text-gray-400">
+        <div className="clay-card p-12 text-center text-foreground/45">
           <p>Lớp chưa có học sinh nào đang học.</p>
         </div>
-      ) : canTakeAttendance ? (
-        <AttendanceForm
-          sessionId={sessionId}
-          classId={id}
-          students={rows}
-        />
+      ) : canTake ? (
+        <AttendanceForm sessionId={sessionId} classId={id} students={rows} />
       ) : (
         /* Read-only view for non-actionable sessions */
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <p className="text-sm text-gray-600">Buổi học này không thể điểm danh.</p>
+        <div className="clay-card overflow-hidden p-0">
+          <div className="px-4 py-3 bg-surface-tint border-b border-soft">
+            <p className="text-sm text-foreground/70">{blockedMessage}</p>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-50">
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase">Học sinh</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase">Ghi chú</th>
+              <tr className="border-b border-soft">
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground/60 uppercase">Học sinh</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground/60 uppercase">Trạng thái</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-foreground/60 uppercase">Ghi chú</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-soft">
               {rows.map((r) => (
                 <tr key={r.studentId}>
-                  <td className="px-4 py-3 text-gray-800">{r.studentName ?? r.email}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.status}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{r.note}</td>
+                  <td className="px-4 py-3 text-foreground">{r.studentName ?? r.email}</td>
+                  <td className="px-4 py-3 text-foreground/60">{r.status}</td>
+                  <td className="px-4 py-3 text-foreground/45 text-xs">{r.note}</td>
                 </tr>
               ))}
             </tbody>
@@ -127,9 +143,9 @@ export default async function SessionDetailPage({
       )}
 
       {/* Đánh giá sau buổi học */}
-      {canTakeAttendance && canEvaluate && students.length > 0 && (
+      {canTake && canEvaluate && students.length > 0 && (
         <div className="mt-2">
-          <h2 className="font-semibold text-gray-800 mb-3">Đánh giá sau buổi học</h2>
+          <h2 className="font-semibold text-foreground mb-3">Đánh giá sau buổi học</h2>
           <SessionEvaluationForm sessionId={sessionId} students={evalRows} />
         </div>
       )}

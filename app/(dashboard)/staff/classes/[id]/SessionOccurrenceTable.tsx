@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { FaIcon } from "@/components/ui/FaIcon";
-import { faCheck, faXmark, faRotate, faCalendarPlus } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faRotate, faCalendarPlus, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { markSessionAction, createMakeupSessionAction } from "@/lib/classes/actions";
+import { getSessionPhase, SESSION_PHASE_LABEL, SESSION_PHASE_COLOR } from "@/lib/classes/session-status";
 
 export interface SessionRow {
   id: string;
@@ -19,19 +20,6 @@ export interface SessionRow {
   status: string;
   note: string | null;
 }
-
-const SESSION_STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: "Đã lên lịch",
-  COMPLETED: "Hoàn thành",
-  CANCELLED: "Nghỉ",
-  POSTPONED: "Tạm hoãn",
-};
-const SESSION_STATUS_COLOR: Record<string, string> = {
-  SCHEDULED: "bg-blue-100 text-blue-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-  POSTPONED: "bg-yellow-100 text-yellow-700",
-};
 
 function formatDate(ymd: string): string {
   return new Date(`${ymd}T00:00:00`).toLocaleDateString("vi-VN", {
@@ -68,14 +56,8 @@ export function SessionOccurrenceTable({
 
   const [error, setError] = useState<string | null>(null);
 
-  function markOccurred(s: SessionRow) {
-    setError(null);
-    startTransition(async () => {
-      const res = await markSessionAction(s.id, { cancelled: false });
-      if ("error" in res) setError(res.error);
-      else router.refresh();
-    });
-  }
+  // "Bây giờ" để suy pha thời gian của từng buổi (server enforce gate điểm danh thật).
+  const now = new Date();
 
   function openCancel(s: SessionRow) {
     setError(null);
@@ -146,7 +128,7 @@ export function SessionOccurrenceTable({
       <table className="w-full text-sm">
         <thead className="bg-surface-tint sticky top-0">
           <tr>
-            {["#", "Ngày", "Giờ", "Phòng", "Giáo viên", "Trạng thái", "Diễn ra?", ""].map((h) => (
+            {["#", "Ngày", "Giờ", "Phòng", "Giáo viên", "Trạng thái", "Thao tác"].map((h) => (
               <th
                 key={h}
                 className="text-left px-4 py-2.5 text-xs font-medium text-foreground/60 uppercase tracking-wide"
@@ -158,7 +140,12 @@ export function SessionOccurrenceTable({
         </thead>
         <tbody className="divide-y divide-soft">
           {sessions.map((s) => {
-            const cancelled = s.status === "CANCELLED";
+            const phase = getSessionPhase(
+              { date: s.date, startTime: s.startTime, endTime: s.endTime, status: s.status },
+              now,
+            );
+            const detailHref = `/staff/classes/${classId}/sessions/${s.id}`;
+            const canAttend = phase === "ONGOING" || phase === "OVERDUE";
             return (
               <tr key={s.id} className="hover:bg-foreground/5 transition-colors align-top">
                 <td className="px-4 py-2.5 text-foreground/45 text-xs">{s.sessionNumber}</td>
@@ -171,19 +158,15 @@ export function SessionOccurrenceTable({
                 </td>
                 <td className="px-4 py-2.5 text-foreground/60 text-xs">{s.teacherName}</td>
                 <td className="px-4 py-2.5">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      SESSION_STATUS_COLOR[s.status] ?? "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {SESSION_STATUS_LABEL[s.status] ?? s.status}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SESSION_PHASE_COLOR[phase]}`}>
+                    {SESSION_PHASE_LABEL[phase]}
                   </span>
-                  {cancelled && s.note && (
+                  {phase === "CANCELLED" && s.note && (
                     <p className="text-[11px] text-red-400 mt-1 italic max-w-40">{s.note}</p>
                   )}
                 </td>
                 <td className="px-4 py-2.5">
-                  {cancelled ? (
+                  {phase === "CANCELLED" ? (
                     <button
                       type="button"
                       onClick={() => openMakeup(s)}
@@ -192,36 +175,31 @@ export function SessionOccurrenceTable({
                     >
                       <FaIcon icon={faCalendarPlus} className="text-[11px]" /> Tạo buổi bù
                     </button>
+                  ) : phase === "COMPLETED" ? (
+                    <Link href={detailHref} className="text-xs text-primary hover:underline">
+                      Xem / sửa điểm danh
+                    </Link>
                   ) : (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => markOccurred(s)}
-                        disabled={pending}
-                        title="Đánh dấu buổi diễn ra"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-green-600 bg-green-50 hover:bg-green-100 transition-colors disabled:opacity-50"
-                      >
-                        <FaIcon icon={faCheck} className="text-xs" />
-                      </button>
+                    <div className="flex items-center gap-3">
+                      {canAttend ? (
+                        <Link href={detailHref} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                          <FaIcon icon={faClipboardCheck} className="text-[11px]" /> Điểm danh
+                        </Link>
+                      ) : (
+                        <Link href={detailHref} className="text-xs text-foreground/60 hover:underline">
+                          Chi tiết
+                        </Link>
+                      )}
                       <button
                         type="button"
                         onClick={() => openCancel(s)}
                         disabled={pending}
-                        title="Đánh dấu buổi nghỉ"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
-                        <FaIcon icon={faXmark} className="text-xs" />
+                        <FaIcon icon={faXmark} className="text-[11px]" /> Nghỉ
                       </button>
                     </div>
                   )}
-                </td>
-                <td className="px-4 py-2.5">
-                  <Link
-                    href={`/staff/classes/${classId}/sessions/${s.id}`}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {s.status === "SCHEDULED" ? "Điểm danh" : "Xem"}
-                  </Link>
                 </td>
               </tr>
             );

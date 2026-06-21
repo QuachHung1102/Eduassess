@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { can } from "@/lib/auth/permissions";
 import { getRoomUsageForDate, canEvaluateStudent, type RoomUsageForDate } from "@/lib/classes/queries";
 import { suggestProficiencyLevel, type LevelSuggestion } from "@/lib/ai";
+import { canTakeAttendance } from "@/lib/classes/session-status";
 import {
   generateSessionPlan,
   weeklyPatternToCells,
@@ -801,6 +802,12 @@ export async function saveAttendanceAction(
     where: { id: sessionId },
   });
   if (!classSession) return { error: "Không tìm thấy buổi học" };
+
+  // Gate theo thời gian (defense-in-depth, đồng bộ với UI): không cho điểm danh
+  // buổi chưa bắt đầu hoặc đã nghỉ/hoãn. Tránh lật buổi tương lai thành COMPLETED.
+  if (!canTakeAttendance(classSession, new Date())) {
+    return { error: "Buổi học chưa bắt đầu nên chưa thể điểm danh." };
+  }
 
   // Upsert tất cả trong 1 transaction
   await prisma.$transaction(
