@@ -318,17 +318,57 @@ export async function updateClassAction(
   if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
-  await prisma.class.update({
-    where: { id: classId },
-    data: {
-      ...(data.name ? { name: data.name.trim() } : {}),
-      ...(data.mode ? { mode: data.mode } : {}),
-      ...(data.targetLevel ? { targetLevel: data.targetLevel } : {}),
-      ...(data.sessionCount !== undefined ? { sessionCount: data.sessionCount } : {}),
-      ...(data.status ? { status: data.status } : {}),
-      ...(data.note !== undefined ? { note: data.note?.trim() || null } : {}),
-    },
+  const cancelling = data.status === "CANCELLED" && cls.status !== "CANCELLED";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.class.update({
+      where: { id: classId },
+      data: {
+        ...(data.name ? { name: data.name.trim() } : {}),
+        ...(data.mode ? { mode: data.mode } : {}),
+        ...(data.targetLevel ? { targetLevel: data.targetLevel } : {}),
+        ...(data.sessionCount !== undefined ? { sessionCount: data.sessionCount } : {}),
+        ...(data.status ? { status: data.status } : {}),
+        ...(data.note !== undefined ? { note: data.note?.trim() || null } : {}),
+      },
+    });
+
+    // Hủy lớp → hủy mọi buổi CHƯA diễn ra (SCHEDULED/POSTPONED) và nhả phòng đã
+    // chiếm; giữ buổi đã COMPLETED làm lịch sử.
+    if (cancelling) {
+      const pending = await tx.classSession.findMany({
+        where: { classId, status: { in: ["SCHEDULED", "POSTPONED"] } },
+        select: { id: true },
+      });
+      for (const p of pending) {
+        const updated = await tx.classSession.update({
+          where: { id: p.id },
+          data: { status: "CANCELLED" },
+        });
+        await syncSessionOccupancy(updated, tx);
+      }
+    }
   });
+
+  // Thông báo học sinh đang học khi lớp bị hủy.
+  if (cancelling) {
+    const enrollments = await prisma.classEnrollment.findMany({
+      where: { classId, status: "ACTIVE" },
+      select: { studentId: true },
+    });
+    if (enrollments.length > 0) {
+      await prisma.notification.createMany({
+        data: enrollments.map((e) => ({
+          userId: e.studentId,
+          title: "Lớp học đã bị hủy",
+          message: `Lớp "${cls.name}" đã bị hủy. Các buổi học chưa diễn ra đã được hủy theo.`,
+          type: "SCHEDULE_CHANGED" as const,
+          href: `/student/classes`,
+        })),
+        skipDuplicates: true,
+      });
+    }
+  }
 
   revalidatePath(`/staff/classes/${classId}`);
   revalidatePath("/staff/classes");
