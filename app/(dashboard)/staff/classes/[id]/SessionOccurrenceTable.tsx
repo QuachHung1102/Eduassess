@@ -144,32 +144,32 @@ export function SessionOccurrenceTable({
   return (
     <>
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 sticky top-0">
+        <thead className="bg-surface-tint sticky top-0">
           <tr>
             {["#", "Ngày", "Giờ", "Phòng", "Giáo viên", "Trạng thái", "Diễn ra?", ""].map((h) => (
               <th
                 key={h}
-                className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide"
+                className="text-left px-4 py-2.5 text-xs font-medium text-foreground/60 uppercase tracking-wide"
               >
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50">
+        <tbody className="divide-y divide-soft">
           {sessions.map((s) => {
             const cancelled = s.status === "CANCELLED";
             return (
-              <tr key={s.id} className="hover:bg-gray-50 transition-colors align-top">
-                <td className="px-4 py-2.5 text-gray-400 text-xs">{s.sessionNumber}</td>
-                <td className="px-4 py-2.5 font-medium text-gray-800 text-sm">{formatDate(s.date)}</td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">
+              <tr key={s.id} className="hover:bg-foreground/5 transition-colors align-top">
+                <td className="px-4 py-2.5 text-foreground/45 text-xs">{s.sessionNumber}</td>
+                <td className="px-4 py-2.5 font-medium text-foreground text-sm">{formatDate(s.date)}</td>
+                <td className="px-4 py-2.5 text-foreground/60 text-xs">
                   {s.startTime} – {s.endTime}
                 </td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">
-                  {s.roomName ?? <span className="text-gray-300">—</span>}
+                <td className="px-4 py-2.5 text-foreground/60 text-xs">
+                  {s.roomName ?? <span className="text-foreground/30">—</span>}
                 </td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">{s.teacherName}</td>
+                <td className="px-4 py-2.5 text-foreground/60 text-xs">{s.teacherName}</td>
                 <td className="px-4 py-2.5">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -218,7 +218,7 @@ export function SessionOccurrenceTable({
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/staff/classes/${classId}/sessions/${s.id}`}
-                    className="text-xs text-blue-500 hover:underline"
+                    className="text-xs text-primary hover:underline"
                   >
                     {s.status === "SCHEDULED" ? "Điểm danh" : "Xem"}
                   </Link>
@@ -241,7 +241,7 @@ export function SessionOccurrenceTable({
             <button
               type="button"
               onClick={() => setCancelTarget(null)}
-              className="px-3 py-1.5 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+              className="px-3 py-1.5 text-sm rounded-lg text-foreground/70 hover:bg-foreground/5"
             >
               Hủy
             </button>
@@ -249,8 +249,7 @@ export function SessionOccurrenceTable({
               type="button"
               onClick={confirmCancel}
               disabled={pending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-50"
-              style={{ background: "var(--primary)" }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg bg-primary hover:opacity-90 disabled:opacity-50"
             >
               <FaIcon icon={faXmark} className="text-xs" /> Xác nhận nghỉ
             </button>
@@ -258,13 +257,13 @@ export function SessionOccurrenceTable({
         }
       >
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Lý do nghỉ</label>
+          <label className="block text-sm font-medium text-foreground/70">Lý do nghỉ</label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="VD: Giáo viên bận đột xuất, mất điện…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-soft bg-surface-strong text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
@@ -282,7 +281,7 @@ export function SessionOccurrenceTable({
             <button
               type="button"
               onClick={() => setMakeup(null)}
-              className="px-3 py-1.5 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+              className="px-3 py-1.5 text-sm rounded-lg text-foreground/70 hover:bg-foreground/5"
             >
               Để sau
             </button>
@@ -290,8 +289,7 @@ export function SessionOccurrenceTable({
               type="button"
               onClick={confirmMakeup}
               disabled={pending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-50"
-              style={{ background: "var(--primary)" }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg bg-primary hover:opacity-90 disabled:opacity-50"
             >
               <FaIcon icon={faCalendarPlus} className="text-xs" /> Tạo buổi bù
             </button>
@@ -301,35 +299,35 @@ export function SessionOccurrenceTable({
         {makeup && (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bù</label>
+              <label className="block text-sm font-medium text-foreground/70 mb-1">Ngày bù</label>
               <input
                 type="date"
                 value={makeup.date}
                 onChange={(e) => setMakeup({ ...makeup, date: e.target.value })}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-lg border border-soft bg-surface-strong text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giờ bắt đầu</label>
+                <label className="block text-sm font-medium text-foreground/70 mb-1">Giờ bắt đầu</label>
                 <input
                   type="time"
                   value={makeup.startTime}
                   onChange={(e) => setMakeup({ ...makeup, startTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-soft bg-surface-strong text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giờ kết thúc</label>
+                <label className="block text-sm font-medium text-foreground/70 mb-1">Giờ kết thúc</label>
                 <input
                   type="time"
                   value={makeup.endTime}
                   onChange={(e) => setMakeup({ ...makeup, endTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-soft bg-surface-strong text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-400 flex items-center gap-1">
+            <p className="text-xs text-foreground/45 flex items-center gap-1">
               <FaIcon icon={faRotate} className="text-[10px]" /> Hệ thống sẽ kiểm tra trùng phòng & giáo viên trước khi tạo.
             </p>
             {error && <p className="text-xs text-red-500">{error}</p>}
