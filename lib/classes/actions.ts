@@ -31,6 +31,7 @@ import {
   syncSessionOccupancy,
 } from "@/lib/rooms/store";
 import { ymdToDbDate, dbDateToYmd } from "@/lib/date";
+import { canAdministerClass, canOperateClassSession } from "@/lib/classes/access";
 import { revalidatePath } from "next/cache";
 import type { ClassMode, ClassStatus, SessionStatus, AttendanceStatus, StudentLevel, DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
@@ -314,11 +315,8 @@ export async function updateClassAction(
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  // CBDT chỉ sửa lớp của mình
-  if (
-    session.user.role === "STAFF" &&
-    cls.advisorId !== session.user.id
-  ) return { error: "Bạn không phải cố vấn của lớp này" };
+  if (!canAdministerClass(session.user, cls))
+    return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.class.update({
     where: { id: classId },
@@ -355,6 +353,15 @@ export async function createSessionAction(
   const session = await requireSession();
   const hasPermission = await can(session.user, "class.manage_session");
   if (!hasPermission) return { error: "Không có quyền tạo buổi học" };
+
+  const cls = await prisma.class.findUnique({
+    where: { id: classId },
+    select: { advisorId: true },
+  });
+  if (!cls) return { error: "Không tìm thấy lớp" };
+  if (!canAdministerClass(session.user, cls))
+    return { error: "Bạn không phải cố vấn của lớp này" };
+
   if (!data.date || !data.startTime || !data.endTime || !data.teacherId)
     return { error: "Thiếu thông tin buổi học" };
   if (data.startTime >= data.endTime)
@@ -492,7 +499,7 @@ export async function markSessionAction(
     },
   });
   if (!sess) return { error: "Không tìm thấy buổi học" };
-  if (session.user.role === "STAFF" && sess.class.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, sess.class))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   if (!input.cancelled) {
@@ -593,7 +600,7 @@ export async function createMakeupSessionAction(
     include: { class: { select: { advisorId: true, name: true } } },
   });
   if (!sess) return { error: "Không tìm thấy buổi học gốc" };
-  if (session.user.role === "STAFF" && sess.class.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, sess.class))
     return { error: "Bạn không phải cố vấn của lớp này" };
   if (!input.date || !input.startTime || !input.endTime)
     return { error: "Thiếu thông tin buổi bù" };
@@ -697,10 +704,12 @@ export async function updateSessionAction(
   const sess = await prisma.classSession.findUnique({
     where: { id: sessionId },
     include: {
-      class: { select: { name: true } },
+      class: { select: { name: true, advisorId: true } },
     },
   });
   if (!sess) return { error: "Không tìm thấy buổi học" };
+  if (!canAdministerClass(session.user, sess.class))
+    return { error: "Bạn không phải cố vấn của lớp này" };
 
   if (data.startTime && data.endTime && data.startTime >= data.endTime)
     return { error: "Giờ bắt đầu phải trước giờ kết thúc" };
@@ -797,8 +806,19 @@ export async function saveAttendanceAction(
 
   const classSession = await prisma.classSession.findUnique({
     where: { id: sessionId },
+    include: {
+      class: { select: { advisorId: true, teachers: { select: { teacherId: true } } } },
+    },
   });
   if (!classSession) return { error: "Không tìm thấy buổi học" };
+  if (
+    !canOperateClassSession(session.user, {
+      advisorId: classSession.class.advisorId,
+      teacherIds: classSession.class.teachers.map((t) => t.teacherId),
+      sessionTeacherId: classSession.teacherId,
+    })
+  )
+    return { error: "Bạn không phụ trách lớp này" };
 
   // Gate theo thời gian (defense-in-depth, đồng bộ với UI): không cho điểm danh
   // buổi chưa bắt đầu hoặc đã nghỉ/hoãn. Tránh lật buổi tương lai thành COMPLETED.
@@ -906,14 +926,14 @@ export async function saveSessionEvaluationsAction(
   if (!sess) return { error: "Không tìm thấy buổi học" };
 
   // Chỉ người dạy buổi/GV của lớp/CBĐT phụ trách (hoặc OWNER/ADMIN/CBDTS) được đánh giá.
-  const u = session.user;
-  const privileged =
-    u.role === "OWNER" || u.role === "ADMIN" || (u.role === "STAFF" && u.staffPosition === "CBDTS");
-  const involved =
-    sess.teacherId === u.id ||
-    sess.class.advisorId === u.id ||
-    sess.class.teachers.some((t) => t.teacherId === u.id);
-  if (!privileged && !involved) return { error: "Bạn không phụ trách lớp này" };
+  if (
+    !canOperateClassSession(session.user, {
+      advisorId: sess.class.advisorId,
+      teacherIds: sess.class.teachers.map((t) => t.teacherId),
+      sessionTeacherId: sess.teacherId,
+    })
+  )
+    return { error: "Bạn không phụ trách lớp này" };
 
   const clamp = (n: number | null) =>
     n === null ? null : Math.min(5, Math.max(1, Math.round(n)));
@@ -1134,7 +1154,7 @@ export async function enrollStudentAction(classId: string, studentId: string) {
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.classEnrollment.upsert({
@@ -1167,7 +1187,7 @@ export async function enrollStudentsAction(classId: string, studentIds: string[]
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.$transaction([
@@ -1202,7 +1222,7 @@ export async function dropStudentAction(classId: string, studentId: string) {
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.classEnrollment.update({
@@ -1222,7 +1242,7 @@ export async function assignClassTeacherAction(classId: string, teacherId: strin
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.classTeacher.upsert({
@@ -1244,7 +1264,7 @@ export async function assignClassTeachersAction(classId: string, teacherIds: str
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.$transaction(
@@ -1270,7 +1290,7 @@ export async function removeClassTeacherAction(classId: string, teacherId: strin
 
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) return { error: "Không tìm thấy lớp" };
-  if (session.user.role === "STAFF" && cls.advisorId !== session.user.id)
+  if (!canAdministerClass(session.user, cls))
     return { error: "Bạn không phải cố vấn của lớp này" };
 
   await prisma.classTeacher.delete({
