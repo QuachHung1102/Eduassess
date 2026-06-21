@@ -10,6 +10,7 @@ import { AddTeachersButton } from "./AddTeachersButton";
 import { RemoveClassTeacherButton } from "./RemoveClassTeacherButton";
 import { SessionOccurrenceTable } from "./SessionOccurrenceTable";
 import { STUDENT_LEVEL_LABEL as LEVEL_LABEL } from "@/lib/constants/labels";
+import { dbDateToYmd } from "@/lib/date";
 import type { ClassStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -186,7 +187,7 @@ export default async function StaffClassDetailPage({
                 sessions={cls.sessions.map((s) => ({
                   id: s.id,
                   sessionNumber: s.sessionNumber,
-                  date: s.date.toISOString().slice(0, 10),
+                  date: dbDateToYmd(s.date),
                   startTime: s.startTime,
                   endTime: s.endTime,
                   roomName: s.room?.name ?? null,

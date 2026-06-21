@@ -30,6 +30,7 @@ import {
   sessionOccupancyRange,
   syncSessionOccupancy,
 } from "@/lib/rooms/store";
+import { ymdToDbDate, dbDateToYmd } from "@/lib/date";
 import { revalidatePath } from "next/cache";
 import type { ClassMode, ClassStatus, SessionStatus, AttendanceStatus, StudentLevel, DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
@@ -158,7 +159,7 @@ export async function createClassWithScheduleAction(data: {
         mode: data.mode,
         targetLevel: data.targetLevel,
         sessionCount: plan.length,
-        startDate: new Date(`${data.startDate}T00:00:00`),
+        startDate: ymdToDbDate(data.startDate),
         note: data.note?.trim() || null,
         status: "DRAFT",
       },
@@ -184,7 +185,7 @@ export async function createClassWithScheduleAction(data: {
       data: plan.map((p) => ({
         classId: cls.id,
         sessionNumber: p.sessionNumber,
-        date: new Date(`${p.date}T00:00:00`),
+        date: ymdToDbDate(p.date),
         startTime: p.startTime,
         endTime: p.endTime,
         mode: data.mode,
@@ -366,7 +367,7 @@ export async function createSessionAction(
   if (existing)
     return { error: `Buổi số ${data.sessionNumber} đã tồn tại trong lớp` };
 
-  const dateObj = new Date(`${data.date}T00:00:00`);
+  const dateObj = ymdToDbDate(data.date);
   const conflict = await checkSessionConflict({
     date: dateObj,
     startTime: data.startTime,
@@ -421,10 +422,6 @@ export async function getRoomUsageAction(
 }
 
 // ── Đánh dấu buổi & bù buổi ────────────────────────────────────
-
-function ymdLocal(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 /**
  * Kiểm tra GV/phòng có bị trùng giờ. GV check trên ClassSession; phòng check
@@ -536,7 +533,7 @@ export async function markSessionAction(
   });
 
   // Thông báo cho học sinh đang học + giáo viên dạy buổi này.
-  const dateLabel = new Date(`${ymdLocal(sess.date)}T00:00:00`).toLocaleDateString("vi-VN", {
+  const dateLabel = new Date(`${dbDateToYmd(sess.date)}T00:00:00`).toLocaleDateString("vi-VN", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -571,8 +568,8 @@ export async function markSessionAction(
     startTime: s.startTime,
     endTime: s.endTime,
   }));
-  const allDates = sess.class.sessions.map((s) => ymdLocal(s.date));
-  const lastDate = [...allDates].sort().at(-1) ?? ymdLocal(sess.date);
+  const allDates = sess.class.sessions.map((s) => dbDateToYmd(s.date));
+  const lastDate = [...allDates].sort().at(-1) ?? dbDateToYmd(sess.date);
   const suggestion = suggestMakeupDate({ afterDate: lastDate, weeklySlots, avoidDates: allDates });
 
   revalidatePath(`/staff/classes/${sess.classId}`);
@@ -603,7 +600,7 @@ export async function createMakeupSessionAction(
   if (input.startTime >= input.endTime)
     return { error: "Giờ bắt đầu phải trước giờ kết thúc" };
 
-  const dateObj = new Date(`${input.date}T00:00:00`);
+  const dateObj = ymdToDbDate(input.date);
 
   const conflict = await checkSessionConflict({
     date: dateObj,
@@ -710,7 +707,7 @@ export async function updateSessionAction(
 
   // Re-check trùng GV/phòng nếu thay đổi lịch (hoặc buổi quay lại trạng thái
   // chiếm phòng từ CANCELLED/POSTPONED) và buổi vẫn còn diễn ra.
-  const finalDate = data.date ? new Date(`${data.date}T00:00:00`) : sess.date;
+  const finalDate = data.date ? ymdToDbDate(data.date) : sess.date;
   const finalStartTime = data.startTime ?? sess.startTime;
   const finalEndTime = data.endTime ?? sess.endTime;
   const finalTeacherId = data.teacherId ?? sess.teacherId;
