@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { removeClassTeacherAction } from "@/lib/classes/actions";
+import { removeClassTeacherAction } from "@/lib/classes/actions/enrollment";
 
 export function RemoveClassTeacherButton({
   classId,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { enrollStudentsAction } from "@/lib/classes/actions";
+import { enrollStudentsAction } from "@/lib/classes/actions/enrollment";
 import { PeoplePickerModal, type PickablePerson } from "@/components/staff/PeoplePickerModal";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faUserPlus } from "@fortawesome/free-solid-svg-icons";

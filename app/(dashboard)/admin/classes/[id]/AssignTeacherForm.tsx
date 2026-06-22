@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { assignClassTeachersAction } from "@/lib/classes/actions";
+import { assignClassTeachersAction } from "@/lib/classes/actions/enrollment";
 import { PeoplePickerModal } from "@/components/staff/PeoplePickerModal";
 
 interface Teacher {

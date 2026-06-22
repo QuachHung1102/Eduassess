@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { dropStudentAction } from "@/lib/classes/actions";
+import { dropStudentAction } from "@/lib/classes/actions/enrollment";
 
 export function DropStudentButton({
   classId,

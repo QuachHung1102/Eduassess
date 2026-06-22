@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { enrollStudentAction } from "@/lib/classes/actions";
+import { enrollStudentAction } from "@/lib/classes/actions/enrollment";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
