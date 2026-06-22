@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { getStudentDetail, getSubjectsList, canEvaluateStudent } from "@/lib/classes/queries";
-import { saveStudentAvailabilityAction } from "@/lib/classes/actions";
+import { saveStudentAvailabilityAction } from "@/lib/classes/actions/availability";
 import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import { EvaluateForm } from "./EvaluateForm";
 import {

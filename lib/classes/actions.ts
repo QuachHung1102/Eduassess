@@ -1,7 +1,6 @@
 "use server";
 
 import { requireSession } from "@/lib/classes/actions/_shared";
-import { saveAvailability } from "@/lib/availability/store";
 import { prisma } from "@/lib/db/prisma";
 import { can } from "@/lib/auth/permissions";
 import { getRoomUsageForDate, canEvaluateStudent, type RoomUsageForDate } from "@/lib/classes/queries";
@@ -33,7 +32,7 @@ import {
 import { ymdToDbDate, dbDateToYmd } from "@/lib/date";
 import { canAdministerClass, canOperateClassSession } from "@/lib/classes/access";
 import { revalidatePath } from "next/cache";
-import type { ClassMode, ClassStatus, SessionStatus, AttendanceStatus, StudentLevel, DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
+import type { ClassMode, ClassStatus, SessionStatus, AttendanceStatus, StudentLevel } from "@/lib/types";
 
 // EXCLUDE constraint trên room_occupancies từ chối hai block giao nhau —
 // thông báo khi thua cuộc đua ghi đồng thời với một CBĐT/NVLT khác.
@@ -1156,44 +1155,6 @@ export async function getAiLevelSuggestionAction(
   } catch {
     return { error: "AI không phản hồi được lúc này. Vui lòng thử lại." };
   }
-}
-
-// ── Lịch rảnh học sinh ────────────────────────────────────────
-
-export async function saveStudentAvailabilityAction(
-  studentId: string,
-  slots: { dayOfWeek: DayOfWeek; slot: TimeSlot; availabilityMode: AvailabilityMode }[],
-) {
-  const session = await requireSession();
-  // Only CBDT (STAFF with student.evaluate) or the student themselves
-  if (
-    session.user.id !== studentId &&
-    !(await can(session.user, "student.evaluate"))
-  )
-    return { error: "Không có quyền cập nhật lịch rảnh" };
-
-  await saveAvailability({ kind: "student", id: studentId }, slots);
-
-  revalidatePath(`/staff/students/${studentId}`);
-  return { success: true };
-}
-
-/**
- * CBĐT khai/sửa lịch rảnh GIÁO VIÊN hộ (hỗ trợ xếp lớp). Gate bằng `class.create`
- * — cùng quyền lập lịch lớp; GV vẫn tự khai ở `/teacher/schedule`.
- */
-export async function saveTeacherAvailabilityAction(
-  teacherId: string,
-  slots: { dayOfWeek: DayOfWeek; slot: TimeSlot; availabilityMode: AvailabilityMode }[],
-) {
-  const session = await requireSession();
-  if (!(await can(session.user, "class.create")))
-    return { error: "Không có quyền cập nhật lịch rảnh giáo viên" };
-
-  await saveAvailability({ kind: "teacher", id: teacherId }, slots);
-
-  revalidatePath(`/staff/teachers/${teacherId}`);
-  return { success: true };
 }
 
 // ── Thành viên lớp (CBDT) ─────────────────────────────────────

@@ -7,7 +7,7 @@ import {
   normalizeAvailabilitySlots,
   type AvailabilityDigitalTimeSlot,
 } from "@/lib/availability/time-slots";
-import { saveStudentAvailabilityAction } from "@/lib/classes/actions";
+import { saveStudentAvailabilityAction } from "@/lib/classes/actions/availability";
 import type { AvailabilityMode, DayOfWeek, TimeSlot } from "@/lib/types";
 
 const DAYS: DayOfWeek[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];

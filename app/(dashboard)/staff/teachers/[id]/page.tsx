@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { can } from "@/lib/auth/permissions";
 import { getTeacherWithAvailability } from "@/lib/classes/queries";
-import { saveTeacherAvailabilityAction } from "@/lib/classes/actions";
+import { saveTeacherAvailabilityAction } from "@/lib/classes/actions/availability";
 import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import type { DayOfWeek, TimeSlot, AvailabilityMode } from "@/lib/types";
 
