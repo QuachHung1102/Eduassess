@@ -111,20 +111,26 @@ export async function cancelBookingAction(bookingId: string) {
   const booking = await prisma.roomBooking.findUnique({ where: { id: bookingId } });
   if (!booking) return { error: "Không tìm thấy lịch đặt phòng" };
 
-  // Chỉ người đặt mới được huỷ, và chỉ khi PENDING
+  // Chỉ người đặt mới được huỷ.
   if (booking.requesterId !== auth.user.id) {
     return { error: "Bạn không có quyền huỷ lịch đặt phòng này" };
   }
-  if (booking.status !== "PENDING") {
-    return { error: "Chỉ có thể huỷ yêu cầu đang chờ duyệt" };
+  // Huỷ được khi đang chờ duyệt HOẶC đã duyệt; đã duyệt thì nhả phòng đã chiếm.
+  if (booking.status !== "PENDING" && booking.status !== "APPROVED") {
+    return { error: "Yêu cầu này không thể huỷ" };
   }
 
-  await prisma.roomBooking.update({
-    where: { id: bookingId },
-    data: { status: "CANCELLED" },
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.roomBooking.update({
+      where: { id: bookingId },
+      data: { status: "CANCELLED" },
+    });
+    // CANCELLED → syncBookingOccupancy xoá block phòng (nếu trước đó APPROVED).
+    await syncBookingOccupancy(updated, tx);
   });
 
   revalidatePath("/booking");
+  revalidatePath("/booking/approve");
   return { success: true };
 }
 

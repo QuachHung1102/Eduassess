@@ -32,10 +32,16 @@ function BookingRow({ booking, userId }: { booking: BookingItem; userId: string 
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const canCancel = booking.status === "PENDING" && booking.requester.id === userId;
+  const canCancel =
+    (booking.status === "PENDING" || booking.status === "APPROVED") &&
+    booking.requester.id === userId;
 
   function handleCancel() {
-    if (!confirm("Bạn có chắc muốn huỷ yêu cầu này?")) return;
+    const msg =
+      booking.status === "APPROVED"
+        ? "Huỷ lịch đặt phòng đã duyệt? Phòng sẽ được nhả ra cho người khác."
+        : "Bạn có chắc muốn huỷ yêu cầu này?";
+    if (!confirm(msg)) return;
     startTransition(async () => {
       const res = await cancelBookingAction(booking.id);
       if (res.error) setError(res.error);
@@ -88,7 +94,7 @@ function BookingRow({ booking, userId }: { booking: BookingItem; userId: string 
           disabled={pending}
           className="self-end text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
         >
-          {pending ? "Đang huỷ..." : "Huỷ yêu cầu"}
+          {pending ? "Đang huỷ..." : booking.status === "APPROVED" ? "Huỷ đặt phòng" : "Huỷ yêu cầu"}
         </button>
       )}
     </div>
