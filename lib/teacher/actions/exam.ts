@@ -25,6 +25,19 @@ export async function createExamAction(formData: FormData) {
     return { error: "Vui lòng điền đầy đủ thông tin" };
   }
 
+  // Gate quyền: server action KHÔNG được zone-layout bảo vệ (OWASP A01), nên
+  // tự chặn — chỉ GV phụ trách lớp (hoặc ADMIN/OWNER) mới tạo đề cho lớp đó.
+  const role = session.user.role;
+  const isAdmin = role === "ADMIN" || role === "OWNER";
+  if (!isAdmin) {
+    if (role !== "TEACHER") return { error: "Không có quyền tạo đề kiểm tra" };
+    const teaches = await prisma.classTeacher.findFirst({
+      where: { classId, teacherId: session.user.id },
+      select: { classId: true },
+    });
+    if (!teaches) return { error: "Bạn không phụ trách lớp này nên không thể tạo đề" };
+  }
+
   const totalCount = easyCount + mediumCount + hardCount;
   if (totalCount === 0) {
     return { error: "Đề kiểm tra phải có ít nhất 1 câu hỏi" };
