@@ -15,7 +15,7 @@ import {
   searchAssignableStudentsAction,
   assignStudentAdvisorAction,
   removeStudentAdvisorAction,
-} from "@/lib/classes/actions";
+} from "@/lib/classes/actions/advisor";
 
 interface StudentRow {
   id: string;

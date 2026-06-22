@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { assignStudentAdvisorAction, removeStudentAdvisorAction } from "@/lib/classes/actions";
+import { assignStudentAdvisorAction, removeStudentAdvisorAction } from "@/lib/classes/actions/advisor";
 import { FaIcon } from "@/components/ui/FaIcon";
 import {
   faSearch,
