@@ -5,7 +5,7 @@ function getClient() {
   return new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 }
 
-const MODEL = "claude-opus-4-6";
+const MODEL = "claude-opus-4-8";
 
 // ─── Types ────────────────────────────────────────────────────
 
