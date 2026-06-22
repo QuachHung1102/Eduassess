@@ -21,7 +21,7 @@ export async function toggleSubjectQuestionsAction(
   enabled: boolean,
 ) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -36,7 +36,7 @@ export async function toggleSubjectQuestionsAction(
 // ── Delete a question ────────────────────────────────────────
 export async function adminDeleteQuestionAction(questionId: string) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -48,7 +48,7 @@ export async function adminDeleteQuestionAction(questionId: string) {
 // ── Delete an exam ────────────────────────────────────────────
 export async function adminDeleteExamAction(examId: string) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -63,7 +63,7 @@ export async function adminUpdateQuestionStatusAction(
   status: "APPROVED" | "PENDING",
 ) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -94,7 +94,7 @@ export async function adminUpdateQuestionStatusAction(
 // ── Create a question (manual, admin only) ────────────────────
 export async function adminCreateQuestionAction(formData: FormData) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -134,7 +134,7 @@ export async function adminUpdateQuestionAction(
   formData: FormData,
 ): Promise<{ error: string } | { success: true }> {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
@@ -173,7 +173,7 @@ export async function adminUpdateQuestionAction(
 // ── Update exam metadata (admin only) ────────────────────────
 export async function adminUpdateExamAction(examId: string, formData: FormData) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "OWNER")) {
     return { error: "Không có quyền thực hiện thao tác này" };
   }
 
