@@ -7,7 +7,7 @@ import {
   getStudentSubjectReferenceAction,
   getAiLevelSuggestionAction,
   type StudentSubjectReference,
-} from "@/lib/classes/actions";
+} from "@/lib/classes/actions/evaluation";
 import { STUDENT_LEVELS, STUDENT_LEVEL_LABEL as LEVEL_LABEL } from "@/lib/constants/labels";
 import type { StudentLevel } from "@/lib/types";
 

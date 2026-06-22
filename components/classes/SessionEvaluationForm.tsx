@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveSessionEvaluationsAction } from "@/lib/classes/actions";
+import { saveSessionEvaluationsAction } from "@/lib/classes/actions/evaluation";
 
 export interface EvalRow {
   studentId: string;
