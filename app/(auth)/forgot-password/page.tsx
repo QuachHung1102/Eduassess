@@ -5,10 +5,12 @@ import { useState } from "react";
 import AuthShell from "@/components/auth/AuthShell";
 import { forgotPasswordAction } from "@/lib/auth/actions/forgot-password";
 import { FaIcon } from "@/components/ui/FaIcon";
-import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faKey } from "@fortawesome/free-solid-svg-icons";
 
 export default function ForgotPasswordPage() {
-  const [status, setStatus] = useState<"idle" | "loading" | "sent">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "sent" | "unavailable"
+  >("idle");
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -20,6 +22,8 @@ export default function ForgotPasswordPage() {
     if (result?.error) {
       setError(result.error);
       setStatus("idle");
+    } else if (result?.emailDisabled) {
+      setStatus("unavailable");
     } else {
       setStatus("sent");
     }
@@ -48,6 +52,31 @@ export default function ForgotPasswordPage() {
                 khẩu. Vui lòng kiểm tra hộp thư đến (và thư mục Spam).
               </p>
               <p className="text-xs font-medium text-slate-400">Liên kết có hiệu lực trong 1 giờ.</p>
+              <Link
+                href="/login"
+                className="inline-block text-sm font-semibold text-sky-700 hover:text-sky-800"
+              >
+                Quay lại đăng nhập
+              </Link>
+            </div>
+          ) : status === "unavailable" ? (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-3xl">
+                <FaIcon icon={faKey} className="text-sky-600" />
+              </div>
+              <h2 className="text-lg font-black text-slate-900">
+                Đặt lại bằng câu hỏi bảo mật
+              </h2>
+              <p className="text-sm leading-7 text-slate-600">
+                Hệ thống hiện chưa bật gửi email đặt lại mật khẩu. Bạn có thể đặt lại ngay
+                bằng các câu hỏi bảo mật đã thiết lập cho tài khoản.
+              </p>
+              <Link
+                href="/security-questions-reset"
+                className="primary-button focus-ring-strong press-feedback-inset w-full justify-center"
+              >
+                Đặt lại bằng câu hỏi bảo mật
+              </Link>
               <Link
                 href="/login"
                 className="inline-block text-sm font-semibold text-sky-700 hover:text-sky-800"
