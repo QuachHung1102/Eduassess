@@ -69,7 +69,7 @@ Quy tắc `can(user, key)`:
 4. Kết quả cache trong process **5 phút**; gọi `invalidatePermissionCache()` sau khi sửa matrix.
 
 - **Source of truth của key:** `lib/auth/permission-keys.ts` (`PERMISSIONS`). Quy ước key `<domain>.<action>`. Thêm feature có phân quyền ⇒ thêm key ở đây **+ cập nhật seed**.
-- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction), gửi thông báo hệ thống (`sendNotificationAction` trong `lib/notifications/actions.ts`). **Dự kiến (chưa ghi):** duyệt/từ chối booking, tạo lớp, phân học sinh.
+- Hành động nhạy cảm ghi `AuditLog` (model `AuditLog`). **Hiện đã ghi:** sửa phân quyền (`lib/admin/permission-actions.ts`), đánh giá năng lực (`evaluateStudentLevelAction`, cùng transaction), gửi thông báo hệ thống (`sendNotificationAction` trong `lib/notifications/actions.ts`), duyệt/từ chối đặt phòng (`reviewBookingAction` — cùng transaction khi duyệt), tạo lớp (`createClassWithScheduleAction`, cùng transaction), phân/gỡ CBĐT cho học sinh (`assignStudentAdvisorAction`/`removeStudentAdvisorAction`).
 
 ### 2.4 Routing & navigation
 

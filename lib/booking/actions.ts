@@ -165,6 +165,15 @@ export async function reviewBookingAction(
           data: { status: "APPROVED", reviewerId: auth.user.id, reviewedAt: new Date() },
         });
         await syncBookingOccupancy(approved, tx);
+        await tx.auditLog.create({
+          data: {
+            actorId: auth.user.id,
+            action: "booking.approve",
+            entityType: "RoomBooking",
+            entityId: bookingId,
+            payload: { roomId: booking.roomId },
+          },
+        });
       });
     } catch (err) {
       if (isOverlapViolation(err))
@@ -182,6 +191,15 @@ export async function reviewBookingAction(
         reviewerId: auth.user.id,
         reviewedAt: new Date(),
         rejectReason: rejectReason.trim(),
+      },
+    });
+    await prisma.auditLog.create({
+      data: {
+        actorId: auth.user.id,
+        action: "booking.reject",
+        entityType: "RoomBooking",
+        entityId: bookingId,
+        payload: { reason: rejectReason.trim() },
       },
     });
   }

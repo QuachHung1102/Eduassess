@@ -224,6 +224,25 @@ export async function createClassWithScheduleAction(data: {
       });
     }
 
+    // Ghi AuditLog (tạo lớp) trong CÙNG transaction — hành động nhạy cảm.
+    await tx.auditLog.create({
+      data: {
+        actorId: session.user.id,
+        action: "class.create",
+        entityType: "Class",
+        entityId: cls.id,
+        payload: {
+          name: cls.name,
+          subjectId: data.subjectId,
+          mode: data.mode,
+          targetLevel: data.targetLevel,
+          sessionCount: plan.length,
+          teacherId: data.teacherId,
+          studentCount: data.studentIds.length,
+        },
+      },
+    });
+
     return cls.id;
     });
   } catch (err) {
@@ -1354,6 +1373,16 @@ export async function assignStudentAdvisorAction(studentId: string, advisorId: s
     create: { studentId, advisorId, assignedById: session.user.id },
   });
 
+  await prisma.auditLog.create({
+    data: {
+      actorId: session.user.id,
+      action: "advisor.assign",
+      entityType: "StudentAdvisor",
+      entityId: studentId,
+      payload: { advisorId },
+    },
+  });
+
   // Thông báo cho CBDT được phân
   await prisma.notification.create({
     data: {
@@ -1377,6 +1406,16 @@ export async function removeStudentAdvisorAction(studentId: string, advisorId: s
 
   await prisma.studentAdvisor.delete({
     where: { studentId_advisorId: { studentId, advisorId } },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: session.user.id,
+      action: "advisor.unassign",
+      entityType: "StudentAdvisor",
+      entityId: studentId,
+      payload: { advisorId },
+    },
   });
 
   revalidatePath("/staff/students/assign");
