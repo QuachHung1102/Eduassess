@@ -10,7 +10,7 @@
  *   - `ownerId = undefined` → thao tác trên mọi bản ghi (Admin).
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import type { CourseStatus } from "@prisma/client";
 
 type Err = { error: string };

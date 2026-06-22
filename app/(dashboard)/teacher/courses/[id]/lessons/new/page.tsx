@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { CreateLessonClient } from "./CreateLessonClient";
 

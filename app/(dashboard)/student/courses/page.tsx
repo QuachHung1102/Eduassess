@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPublishedCourses } from "@/lib/courses/queries";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { FaIcon } from "@/components/ui/FaIcon";
