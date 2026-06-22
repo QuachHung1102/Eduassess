@@ -20,6 +20,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { dbDateToYmd } from "@/lib/date";
 import type { Prisma } from "@prisma/client";
 import type { BookingStatus, OccupancySource, SessionStatus } from "@prisma/client";
 
@@ -30,17 +31,23 @@ export const NO_OVERLAP_CONSTRAINT = "room_occupancies_no_overlap";
 
 // ── Helpers thời gian ─────────────────────────────────────────
 
-function ymdLocal(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+/**
+ * Múi giờ vận hành cố định: Asia/Saigon (UTC+7, không DST). Ghép ngày-giờ theo
+ * offset TƯỜNG MINH để instant chiếm phòng không phụ thuộc TZ của máy chạy:
+ * trên host UTC+7 cho kết quả y hệt mẫu cũ `new Date("…T…")`, trên host UTC
+ * không còn lệch −7h. Xem thêm lib/date.ts cho cột @db.Date.
+ */
+const SAIGON_UTC_OFFSET = "+07:00";
 
 /**
- * Ghép ngày (Date hoặc "YYYY-MM-DD") + giờ "HH:mm" thành timestamp local —
- * cùng quy ước `new Date("YYYY-MM-DDT00:00:00")` dùng xuyên suốt codebase.
+ * Ghép ngày + giờ "HH:mm" thành instant tại giờ Asia/Saigon.
+ * - Chuỗi "YYYY-MM-DD" dùng trực tiếp.
+ * - Date của cột @db.Date (Prisma trả UTC nửa đêm) lấy phần ngày theo UTC
+ *   (`dbDateToYmd`) — KHÔNG dùng getter local, tránh lùi ngày trên host lệch âm.
  */
 export function combineDateTime(date: Date | string, hhmm: string): Date {
-  const ymd = typeof date === "string" ? date : ymdLocal(date);
-  return new Date(`${ymd}T${hhmm}:00`);
+  const ymd = typeof date === "string" ? date : dbDateToYmd(date);
+  return new Date(`${ymd}T${hhmm}:00${SAIGON_UTC_OFFSET}`);
 }
 
 /** Khoảng thời gian một buổi học chiếm phòng. */
