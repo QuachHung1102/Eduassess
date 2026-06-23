@@ -82,7 +82,8 @@
       "Bash(printf '%s\\\\n' '\"use server\";' '' 'import { prisma } from \"@/lib/db/prisma\";' 'import { can } from \"@/lib/auth/permissions\";' 'import { revalidatePath } from \"next/cache\";' 'import { requireSession } from \"./_shared\";' 'import { canEvaluateStudent } from \"@/lib/classes/queries\";' 'import { canOperateClassSession } from \"@/lib/classes/access\";' 'import { suggestProficiencyLevel, type LevelSuggestion } from \"@/lib/ai\";' 'import type { StudentLevel } from \"@/lib/types\";' '')",
       "Bash(sed -n '909,$p' actions.ts)",
       "Bash(sed -i '909,$d' actions.ts)",
-      "Bash(xargs echo \"test files:\")"
+      "Bash(xargs echo \"test files:\")",
+      "Bash(rtk lint *)"
     ]
   }
 }
