@@ -14,6 +14,21 @@ export async function getAdminStats() {
   return { teacherCount, studentCount, questionCount, examCount, classCount, topicCount };
 }
 
+// ── KPI "cần xử lý" / sức khỏe hệ thống (C4) ─────────────────
+export async function getAdminActionStats() {
+  const [pendingQuestions, pendingCourses, pendingBookings, attTotal, attPresent] =
+    await Promise.all([
+      prisma.question.count({ where: { status: "PENDING" } }),
+      prisma.course.count({ where: { status: "PENDING" } }),
+      prisma.roomBooking.count({ where: { status: "PENDING" } }),
+      prisma.attendance.count(),
+      prisma.attendance.count({ where: { status: { in: ["PRESENT", "LATE"] } } }),
+    ]);
+  const attendanceRatePct =
+    attTotal > 0 ? Math.round((attPresent / attTotal) * 100) : null;
+  return { pendingQuestions, pendingCourses, pendingBookings, attendanceRatePct };
+}
+
 // ── Subjects with canAddQuestions ───────────────────────────
 export async function getAdminSubjects() {
   return prisma.subject.findMany({

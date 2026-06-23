@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAdminStats } from "@/lib/admin/queries";
+import { getAdminStats, getAdminActionStats } from "@/lib/admin/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { StatCard } from "@/components/ui/StatCard";
 import {
@@ -13,11 +13,13 @@ import {
   faUserShield,
   faDoorOpen,
   faLayerGroup,
+  faCircleQuestion,
+  faUserCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 export default async function AdminDashboard() {
-  const stats = await getAdminStats();
+  const [stats, action] = await Promise.all([getAdminStats(), getAdminActionStats()]);
 
   const statCards: { label: string; value: number; icon: IconDefinition; href: string; color: string }[] = [
     { label: "Giáo viên", value: stats.teacherCount, icon: faChalkboardUser, href: "/admin/users?role=TEACHER", color: "text-purple-600" },
@@ -48,6 +50,17 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="flex-1 space-y-6 overflow-auto pb-4">
+        {/* Cần xử lý / sức khỏe hệ thống (C4) */}
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: "color-mix(in srgb, var(--foreground) 55%, transparent)" }}>Cần xử lý</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard icon={faCircleQuestion} value={action.pendingQuestions} label="Câu hỏi chờ duyệt" href="/admin/questions" />
+            <StatCard icon={faBookOpen} value={action.pendingCourses} label="Khóa học chờ duyệt" href="/admin/courses" />
+            <StatCard icon={faDoorOpen} value={action.pendingBookings} label="Đặt phòng chờ duyệt" />
+            <StatCard icon={faUserCheck} value={action.attendanceRatePct !== null ? `${action.attendanceRatePct}%` : "—"} label="Tỉ lệ điểm danh" />
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {statCards.map((s) => (
