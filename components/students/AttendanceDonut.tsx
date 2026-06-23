@@ -18,11 +18,11 @@ export function AttendanceDonut({ tally }: { tally: Tally }) {
     return <p className="text-xs text-foreground/45">Chưa có dữ liệu điểm danh</p>;
   }
   const rate = Math.round(((tally.present + tally.late) / tally.total) * 100);
-  let offset = 0;
-  const arcs = SEG.map((s) => {
-    const frac = tally[s.key] / tally.total;
-    const dash = frac * CIRC;
-    const el = (
+  const arcs = SEG.map((s, i) => {
+    const dash = (tally[s.key] / tally.total) * CIRC;
+    // offset = tổng các cung đứng trước (tính thuần, không mutate biến ngoài render).
+    const offset = SEG.slice(0, i).reduce((sum, prev) => sum + (tally[prev.key] / tally.total) * CIRC, 0);
+    return (
       <circle
         key={s.key}
         cx={C}
@@ -36,8 +36,6 @@ export function AttendanceDonut({ tally }: { tally: Tally }) {
         transform={`rotate(-90 ${C} ${C})`}
       />
     );
-    offset += dash;
-    return el;
   });
 
   return (
