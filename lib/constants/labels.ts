@@ -34,6 +34,14 @@ export const STUDENT_LEVEL_COLOR: Record<string, string> = {
   EXCELLENT: "bg-indigo-100 text-indigo-700",
 };
 
+/** Màu HEX (cho SVG fill/stroke ở biểu đồ) — khớp tông với STUDENT_LEVEL_COLOR. */
+export const STUDENT_LEVEL_HEX: Record<string, string> = {
+  WEAK: "#ef4444", // red-500
+  AVERAGE: "#eab308", // yellow-500
+  GOOD: "#22c55e", // green-500
+  EXCELLENT: "#6366f1", // indigo-500
+};
+
 // ── Loại bài kiểm tra (ExamKind) ─────────────────────────────
 export const EXAM_KIND_LABEL: Record<string, string> = {
   EXAM: "Bài kiểm tra",

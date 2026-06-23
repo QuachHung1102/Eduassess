@@ -5,6 +5,7 @@ import { getStudentDetail, getSubjectsList, canEvaluateStudent } from "@/lib/cla
 import { saveStudentAvailabilityAction } from "@/lib/classes/actions/availability";
 import { AvailabilityMatrix } from "@/components/availability/AvailabilityMatrix";
 import { EvaluateForm } from "./EvaluateForm";
+import { ProficiencyTrend } from "@/components/students/ProficiencyTrend";
 import {
   STUDENT_LEVEL_LABEL as LEVEL_LABEL,
   STUDENT_LEVEL_COLOR as LEVEL_COLOR,
@@ -152,6 +153,14 @@ export default async function StudentDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Tiến độ năng lực theo môn (C2) */}
+      {levelHistory.length > 0 && (
+        <div className="clay-card p-4">
+          <h2 className="font-semibold mb-4 text-foreground">Tiến độ năng lực theo môn</h2>
+          <ProficiencyTrend levelHistory={levelHistory} />
+        </div>
+      )}
     </div>
   );
 }
