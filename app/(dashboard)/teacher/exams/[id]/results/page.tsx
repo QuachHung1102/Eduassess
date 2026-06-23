@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTeacherExamAttempts } from "@/lib/teacher/queries";
 import { FaIcon } from "@/components/ui/FaIcon";
 import { faChartBar } from "@fortawesome/free-solid-svg-icons";
+import { ExportCsvButton } from "@/components/ui/ExportCsvButton";
 
 export default async function ExamResultsPage({
   params,
@@ -25,6 +26,18 @@ export default async function ExamResultsPage({
         submitted.filter((a) => a.score !== null).length
       : null;
 
+  // Bảng điểm để xuất CSV (định dạng sẵn ở server — props phải serializable).
+  const exportHeaders = ["Học sinh", "Email", "Bắt đầu", "Nộp lúc", "Điểm (%)", "Trạng thái"];
+  const exportRows = attempts.map((a) => [
+    a.student.name ?? "",
+    a.student.email ?? "",
+    new Date(a.startedAt).toLocaleString("vi-VN"),
+    a.submittedAt ? new Date(a.submittedAt).toLocaleString("vi-VN") : "",
+    a.score !== null ? a.score.toFixed(1) : "",
+    a.submittedAt ? "Đã nộp" : "Đang làm",
+  ]);
+  const exportName = `bang-diem-${exam.title.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-")}.csv`;
+
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Header */}
@@ -35,6 +48,12 @@ export default async function ExamResultsPage({
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">Kết quả: {exam.title}</h1>
         </div>
+        <ExportCsvButton
+          filename={exportName}
+          headers={exportHeaders}
+          rows={exportRows}
+          label="Xuất bảng điểm (CSV)"
+        />
       </div>
 
       {/* Summary */}
