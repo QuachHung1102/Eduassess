@@ -115,8 +115,8 @@ Quan hệ người: `User.supervisorId` (CBDTS → CBDT), `ParentStudent` (phụ
 
 Schema ở `prisma/schema/*.prisma`. Nhóm theo domain:
 
-### User & tổ chức (`user.prisma`, `permission.prisma`)
-`User` (role + staffPosition + supervisorId + hồ sơ) · `ParentStudent` · `Permission` / `RolePermission` / `PositionPermission` · `AuditLog`.
+### User & tổ chức (`user.prisma`, `permission.prisma`, `user_category.prisma`)
+`User` (role + staffPosition + supervisorId + hồ sơ + **`code`** mã định danh `@unique` + `categoryId`) · `ParentStudent` · `Permission` / `RolePermission` / `PositionPermission` · `AuditLog` · **`UserCategory`** (loại tài khoản: `label`+`prefix`+`systemKey`+`includeYear`+`padWidth`) / **`UserCodeCounter`** (bộ đếm atomic cấp mã, reset theo năm cho HS). Mã sinh tự động khi tạo user (`HS-2026-000001`, `CN-007`…), admin sửa được; xem spec `docs/superpowers/specs/2026-06-17-user-code-system-design.md`. Hiển thị ở `/admin/users`, `/settings`, và khu staff `/staff/students*`.
 
 ### Phân loại nội dung (`subject_grade_topic.prisma`)
 `Subject` (`canAddQuestions` để admin khóa thêm câu hỏi) · `Grade` (1–12, tier `SchoolLevel`) · `Topic` (thuộc 1 Subject + 1 Grade).
@@ -176,6 +176,9 @@ _Avoid_: Tutor, Instructor, GV (trong code)
 
 **Parent** — Phụ huynh liên kết ≥1 Student để theo dõi tiến độ & nhận thông báo. UI: "Phụ huynh".
 _Avoid_: Guardian, PH (trong code)
+
+**Mã định danh (code) / UserCategory** — Chuỗi người-đọc-được định danh một User theo loại (`User.code`, `@unique`, vd `HS-2026-000001`). Loại + prefix cấu hình ở `UserCategory`; số thứ tự cấp atomic qua `UserCodeCounter` (HS reset theo năm). Sinh tự động khi tạo, admin sửa được; **không** phải credential đăng nhập (vẫn đăng nhập bằng email). UI: "Mã".
+_Avoid_: Username, Mã số (khi đứng một mình), ID (khi nói về cuid `User.id`)
 
 ### Học tập
 
