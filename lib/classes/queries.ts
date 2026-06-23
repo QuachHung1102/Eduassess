@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/auth";
 import { getOccupanciesBetween } from "@/lib/rooms/store";
+import { buildStudentAnalytics, type StudentAnalytics } from "@/lib/students/analytics";
 import type { SessionUserBase } from "@/lib/types";
 
 // ── Phân quyền đánh giá theo phân công ─────────────────────────
@@ -165,6 +166,7 @@ export async function getMyStudents() {
           id: true,
           name: true,
           email: true,
+          code: true,
           sex: true,
           phoneNumber: true,
           dateOfBirth: true,
@@ -316,6 +318,7 @@ export async function getAllStudentsFiltered(filters: {
             OR: [
               { name: { contains: q, mode: "insensitive" as const } },
               { email: { contains: q, mode: "insensitive" as const } },
+              { code: { contains: q, mode: "insensitive" as const } },
             ],
           }
         : {}),
@@ -324,6 +327,7 @@ export async function getAllStudentsFiltered(filters: {
       id: true,
       name: true,
       email: true,
+      code: true,
       studentAdvisees: { select: { advisor: { select: { name: true } } } },
     },
     orderBy: { name: "asc" },
@@ -359,6 +363,7 @@ export async function getAllStudentsFiltered(filters: {
     id: s.id,
     name: s.name,
     email: s.email,
+    code: s.code,
     advisors: s.studentAdvisees.map((a) => a.advisor.name).filter(Boolean) as string[],
     levels: latestBySubject.get(s.id) ?? [],
     subjectLevel: filters.subjectId ? subjLevelByStudent.get(s.id) ?? null : null,
@@ -373,6 +378,57 @@ export async function getAllStudentsFiltered(filters: {
   return result;
 }
 
+/**
+ * Phân tích theo môn cho trang chi tiết HS: điểm Exam (đã nộp+chấm),
+ * điểm danh và đánh giá-buổi — gom theo môn qua module thuần.
+ */
+export async function getStudentAnalytics(studentId: string): Promise<StudentAnalytics> {
+  const [examAttempts, attendances, sessionEvals] = await Promise.all([
+    prisma.examAttempt.findMany({
+      where: { studentId, submittedAt: { not: null }, score: { not: null } },
+      select: {
+        score: true,
+        submittedAt: true,
+        exam: { select: { title: true, kind: true, subjectId: true, subject: { select: { name: true } } } },
+      },
+      orderBy: { submittedAt: "asc" },
+    }),
+    prisma.attendance.findMany({
+      where: { studentId },
+      select: { status: true, session: { select: { class: { select: { subjectId: true, subject: { select: { name: true } } } } } } },
+    }),
+    prisma.sessionEvaluation.findMany({
+      where: { studentId },
+      select: {
+        performance: true,
+        diligence: true,
+        comprehension: true,
+        session: { select: { class: { select: { subjectId: true, subject: { select: { name: true } } } } } },
+      },
+    }),
+  ]);
+
+  return buildStudentAnalytics({
+    examAttempts: examAttempts.map((a) => ({
+      score: a.score as number,
+      submittedAt: a.submittedAt as Date,
+      exam: { title: a.exam.title, kind: a.exam.kind, subjectId: a.exam.subjectId, subjectName: a.exam.subject.name },
+    })),
+    attendances: attendances.map((at) => ({
+      status: at.status,
+      subjectId: at.session.class.subjectId,
+      subjectName: at.session.class.subject.name,
+    })),
+    sessionEvals: sessionEvals.map((e) => ({
+      performance: e.performance,
+      diligence: e.diligence,
+      comprehension: e.comprehension,
+      subjectId: e.session.class.subjectId,
+      subjectName: e.session.class.subject.name,
+    })),
+  });
+}
+
 /** Chi tiết học sinh: lịch rảnh + lịch sử năng lực + lớp đang học. */
 export async function getStudentDetail(studentId: string) {
   const [student, availability, levelHistory, advisorLinks] = await Promise.all([
@@ -382,6 +438,7 @@ export async function getStudentDetail(studentId: string) {
         id: true,
         name: true,
         email: true,
+        code: true,
         sex: true,
         phoneNumber: true,
         dateOfBirth: true,
