@@ -64,7 +64,25 @@
       "Skill(update-config)",
       "PowerShell(npm update *)",
       "PowerShell(npm *)",
-      "Skill(claude-api)"
+      "Skill(claude-api)",
+      "Bash(npm test *)",
+      "Bash(mkdir -p actions)",
+      "Bash(printf '%s\\\\n' '\"use server\";' '' 'import { prisma } from \"@/lib/db/prisma\";' 'import { can } from \"@/lib/auth/permissions\";' 'import { revalidatePath } from \"next/cache\";' 'import { requireSession } from \"./_shared\";' '')",
+      "Bash(sed -n '1363,1511p' actions.ts)",
+      "Bash(sed -i 's#saveTeacherAvailabilityAction } from \"@/lib/classes/actions\"#saveTeacherAvailabilityAction } from \"@/lib/classes/actions/availability\"#' \"app/\\(dashboard\\)/staff/teachers/[id]/page.tsx\")",
+      "Bash(sed -i 's#saveStudentAvailabilityAction } from \"@/lib/classes/actions\"#saveStudentAvailabilityAction } from \"@/lib/classes/actions/availability\"#' \"app/\\(dashboard\\)/staff/students/[id]/page.tsx\" \"app/\\(dashboard\\)/staff/students/[id]/AvailabilityMatrix.tsx\")",
+      "Bash(printf '%s\\\\n' '\"use server\";' '' 'import { prisma } from \"@/lib/db/prisma\";' 'import { can } from \"@/lib/auth/permissions\";' 'import { revalidatePath } from \"next/cache\";' 'import { requireSession } from \"./_shared\";' 'import { canAdministerClass } from \"@/lib/classes/access\";' '')",
+      "Bash(sed -n '1160,$p' actions.ts)",
+      "Bash(sed -i '1160,$d' actions.ts)",
+      "Bash(sed -i 's#enrollStudentsAction } from __TRACKED_VAR__#enrollStudentsAction } from __TRACKED_VAR__#' 'app/\\(dashboard\\)/admin/classes/[id]/AssignStudentForm.tsx' 'app/\\(dashboard\\)/staff/classes/[id]/AddStudentsButton.tsx')",
+      "Bash(sed -i 's#assignClassTeachersAction } from __TRACKED_VAR__#assignClassTeachersAction } from __TRACKED_VAR__#' 'app/\\(dashboard\\)/admin/classes/[id]/AssignTeacherForm.tsx' 'app/\\(dashboard\\)/staff/classes/[id]/AddTeachersButton.tsx')",
+      "Bash(sed -i 's#dropStudentAction } from __TRACKED_VAR__#dropStudentAction } from __TRACKED_VAR__#' 'app/\\(dashboard\\)/staff/classes/[id]/DropStudentButton.tsx')",
+      "Bash(sed -i 's#assignClassTeacherAction } from __TRACKED_VAR__#assignClassTeacherAction } from __TRACKED_VAR__#' 'app/\\(dashboard\\)/staff/classes/[id]/AssignClassTeacherForm.tsx')",
+      "Bash(sed -i 's#enrollStudentAction } from __TRACKED_VAR__#enrollStudentAction } from __TRACKED_VAR__#' 'app/\\(dashboard\\)/staff/classes/[id]/EnrollStudentForm.tsx')",
+      "Bash(printf '%s\\\\n' '\"use server\";' '' 'import { prisma } from \"@/lib/db/prisma\";' 'import { can } from \"@/lib/auth/permissions\";' 'import { revalidatePath } from \"next/cache\";' 'import { requireSession } from \"./_shared\";' 'import { canEvaluateStudent } from \"@/lib/classes/queries\";' 'import { canOperateClassSession } from \"@/lib/classes/access\";' 'import { suggestProficiencyLevel, type LevelSuggestion } from \"@/lib/ai\";' 'import type { StudentLevel } from \"@/lib/types\";' '')",
+      "Bash(sed -n '909,$p' actions.ts)",
+      "Bash(sed -i '909,$d' actions.ts)",
+      "Bash(xargs echo \"test files:\")"
     ]
   }
 }
