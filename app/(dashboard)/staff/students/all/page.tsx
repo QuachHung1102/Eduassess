@@ -48,7 +48,7 @@ export default async function AllStudentsPage({
       <form method="get" className="shrink-0 flex flex-wrap items-end gap-2">
         <div className="flex flex-col">
           <label className="mb-1 text-xs font-medium text-gray-600">Tìm theo tên / email</label>
-          <input name="q" defaultValue={q} placeholder="Nhập tên hoặc email…" className={`${inputCls} w-64`} />
+          <input name="q" defaultValue={q} placeholder="Nhập tên, email hoặc mã…" className={`${inputCls} w-64`} />
         </div>
         <div className="flex flex-col">
           <label className="mb-1 text-xs font-medium text-gray-600">Môn</label>
@@ -95,7 +95,7 @@ export default async function AllStudentsPage({
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
                 <tr>
-                  {["Học sinh", "Năng lực theo môn", "CBĐT phụ trách", ""].map((h) => (
+                  {["Học sinh", "Mã", "Năng lực theo môn", "CBĐT phụ trách", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
                       {h}
                     </th>
@@ -108,6 +108,9 @@ export default async function AllStudentsPage({
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{s.name ?? s.email}</p>
                       <p className="text-xs text-gray-400">{s.email}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-gray-600">{s.code ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
                       {s.levels.length === 0 ? (
